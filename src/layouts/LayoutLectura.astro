@@ -1,13 +1,15 @@
 ---
-import { rutaMateria } from "../lib/rutas";
+import { rutaEntidad, rutaMateria } from "../lib/rutas";
 import Base from "./Base.astro";
 
 interface Props {
 	titulo: string;
 	resumen: string;
 	materiaSlug: string;
+	participantes: Array<{ id: string; nombre: string }>;
+	lugar: { id: string; nombre: string } | null;
 }
-const { titulo, resumen, materiaSlug } = Astro.props;
+const { titulo, resumen, materiaSlug, participantes, lugar } = Astro.props;
 ---
 
 <Base titulo={titulo}>
@@ -15,6 +17,30 @@ const { titulo, resumen, materiaSlug } = Astro.props;
     <h1>{titulo}</h1>
     <p class="resumen">{resumen}</p>
     <slot />
+
+    {
+      lugar && (
+        <p>
+          Lugar: <a href={rutaEntidad(materiaSlug, lugar.id)}>{lugar.nombre}</a>
+        </p>
+      )
+    }
+
+    {
+      participantes.length > 0 && (
+        <section>
+          <h2>Participantes</h2>
+          <ul>
+            {participantes.map((p) => (
+              <li>
+                <a href={rutaEntidad(materiaSlug, p.id)}>{p.nombre}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
     <p><a href={rutaMateria(materiaSlug)}>&larr; volver</a></p>
   </article>
 </Base>

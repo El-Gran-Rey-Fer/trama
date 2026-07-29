@@ -20,8 +20,28 @@ const entrada = relatos.find((r) => r.id === id);
 if (!entrada) throw new Error(`Relato no encontrado: ${id}`);
 
 const { Content } = await render(entrada);
+
+const entidades = await getCollection("entidades");
+const nombrePorId = new Map(entidades.map((e) => [e.id, e.data.nombre]));
+
+const participantes = (entrada.data.participantes ?? []).map((pid) => ({
+	id: pid,
+	nombre: nombrePorId.get(pid) ?? pid,
+}));
+const lugar = entrada.data.lugar
+	? {
+			id: entrada.data.lugar,
+			nombre: nombrePorId.get(entrada.data.lugar) ?? entrada.data.lugar,
+		}
+	: null;
 ---
 
-<LayoutLectura titulo={entrada.data.nombre} resumen={entrada.data.resumen} materiaSlug={materia}>
+<LayoutLectura
+  titulo={entrada.data.nombre}
+  resumen={entrada.data.resumen}
+  materiaSlug={materia}
+  participantes={participantes}
+  lugar={lugar}
+>
   <Content components={{ E, Fuente }} />
 </LayoutLectura>
