@@ -1,0 +1,89 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { rutaMateria } from "../../lib/rutas";
+import { generarTarjetas } from "../../lib/tarjetas";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	return materias.map((m) => ({
+		params: { materia: m.data.slug },
+		props: { materiaId: m.id },
+	}));
+}
+
+const { materia } = Astro.params;
+const { materiaId } = Astro.props;
+const tarjetas = await generarTarjetas(materiaId);
+---
+
+<Base titulo={`Practicar — ${materia}`}>
+  <article>
+    <h1>Practicar</h1>
+    <p id="contador"></p>
+
+    <button id="tarjeta" type="button">
+      <p id="pregunta"></p>
+      <p id="respuesta" hidden></p>
+    </button>
+
+    <p>
+      <button id="siguiente" type="button">Siguiente</button>
+    </p>
+
+    <p id="vacio" hidden>No hay tarjetas todavía.</p>
+    <p id="fin" hidden>Has terminado la baraja.</p>
+
+    <p><a href={rutaMateria(materia)}>&larr; volver</a></p>
+  </article>
+
+  <script define:vars={{ tarjetas }}>
+    const mazo = [...tarjetas];
+    for (let i = mazo.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [mazo[i], mazo[j]] = [mazo[j], mazo[i]];
+    }
+
+    let indice = 0;
+
+    const elTarjeta = document.getElementById("tarjeta");
+    const elPregunta = document.getElementById("pregunta");
+    const elRespuesta = document.getElementById("respuesta");
+    const elContador = document.getElementById("contador");
+    const elSiguiente = document.getElementById("siguiente");
+    const elVacio = document.getElementById("vacio");
+    const elFin = document.getElementById("fin");
+
+    function mostrar() {
+      if (mazo.length === 0) {
+        elTarjeta.hidden = true;
+        elSiguiente.hidden = true;
+        elContador.hidden = true;
+        elVacio.hidden = false;
+        return;
+      }
+      if (indice >= mazo.length) {
+        elTarjeta.hidden = true;
+        elSiguiente.hidden = true;
+        elContador.hidden = true;
+        elFin.hidden = false;
+        return;
+      }
+      elContador.textContent = `Quedan ${mazo.length - indice}`;
+      elPregunta.textContent = mazo[indice].pregunta;
+      elRespuesta.textContent = mazo[indice].respuesta;
+      elRespuesta.hidden = true;
+    }
+
+    elTarjeta.addEventListener("click", () => {
+      elRespuesta.hidden = !elRespuesta.hidden;
+    });
+
+    elSiguiente.addEventListener("click", () => {
+      indice += 1;
+      mostrar();
+    });
+
+    mostrar();
+  </script>
+</Base>

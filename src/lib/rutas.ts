@@ -14,3 +14,7 @@ export function rutaEntidad(materiaSlug: string, id: string): string {
 export function rutaRelato(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/m/${id}/`;
 }
+
+export function rutaPracticar(materiaSlug: string): string {
+	return `${base()}${materiaSlug}/practicar/`;
+}

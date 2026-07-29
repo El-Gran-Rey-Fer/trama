@@ -14,6 +14,13 @@ export interface RelacionResuelta extends RelacionCruda {
 
 export type TipoNodo = "entidad" | "relato";
 
+export interface RegistroRelacion {
+	inversa: string;
+	simetrica?: boolean;
+	pregunta?: string;
+	pregunta_inversa?: string;
+}
+
 export interface Entidad {
 	id: string;
 	kind: TipoNodo;
@@ -30,10 +37,17 @@ export interface Entidad {
 	relaciones: RelacionResuelta[];
 }
 
+export interface Arista {
+	origenId: string;
+	relacion: RelacionCruda;
+}
+
 export interface Grafo {
 	materiaId: string;
 	slug: string;
 	entidades: Map<string, Entidad>;
+	registro: Record<string, RegistroRelacion>;
+	aristas: Arista[];
 }
 
 function claveArista(tipo: string, destino: string): string {
@@ -57,10 +71,7 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 	// de mutar nada.
 	const entidades = new Map<string, Entidad>();
 	const clavesPorEntidad = new Map<string, Set<string>>();
-	const aristasOriginales: Array<{
-		origenId: string;
-		relacion: RelacionCruda;
-	}> = [];
+	const aristasOriginales: Arista[] = [];
 
 	function indexar(
 		id: string,
@@ -142,7 +153,13 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 		clavesDestino?.add(clave);
 	}
 
-	return { materiaId, slug: materiaEntry.data.slug, entidades };
+	return {
+		materiaId,
+		slug: materiaEntry.data.slug,
+		entidades,
+		registro,
+		aristas: aristasOriginales,
+	};
 }
 
 export function obtenerEntidad(grafo: Grafo, id: string): Entidad | undefined {
