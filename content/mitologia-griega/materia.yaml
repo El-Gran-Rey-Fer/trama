@@ -26,11 +26,15 @@ mitologia-griega:
       inversa: escenario_de
     escenario_de:
       inversa: ocurre_en # documentado por completitud; grafo.ts la sintetiza desde el campo `lugar` del relato, nadie la autoría a mano
+    participa_en:
+      inversa: tiene_participante
+    tiene_participante:
+      inversa: participa_en # documentado por completitud; grafo.ts la sintetiza desde `participantes`, nadie la autoría a mano
 
   fuentes:
-    hesiodo: { nombre: "Hesíodo, Teogonía" }
-    homero: { nombre: "Homero, Ilíada" }
-    apolodoro: { nombre: "Apolodoro, Biblioteca" }
+    hesiodo: { autor: "Hesíodo", obra: "Teogonía" }
+    homero: { autor: "Homero", obra: "Ilíada" }
+    apolodoro: { autor: "Apolodoro", obra: "Biblioteca" }
 
   # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (eso es Bloque A).
   # "estirpe" es para colectivos (titanes, ciclopes, hecatonquiros): la convención de ids en

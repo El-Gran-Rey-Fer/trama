@@ -96,11 +96,18 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 		);
 	}
 	for (const entrada of entradasRelatos) {
-		// El campo `lugar` de un relato se convierte aquí en una arista `ocurre_en`
-		// más, para no duplicar el concepto con una segunda forma de declararlo.
-		const relacionesDerivadas: RelacionCruda[] = entrada.data.lugar
-			? [{ tipo: "ocurre_en", destino: entrada.data.lugar }]
-			: [];
+		// `lugar` y `participantes` son azúcar sintáctico sobre el mismo mecanismo
+		// de relaciones: se convierten aquí en aristas `ocurre_en`/`participa_en`
+		// más, para no tener dos formas distintas de declarar lo mismo.
+		const relacionesDerivadas: RelacionCruda[] = [
+			...(entrada.data.lugar
+				? [{ tipo: "ocurre_en", destino: entrada.data.lugar }]
+				: []),
+			...(entrada.data.participantes ?? []).map((destino) => ({
+				tipo: "participa_en",
+				destino,
+			})),
+		];
 		indexar(
 			entrada.id,
 			"relato",

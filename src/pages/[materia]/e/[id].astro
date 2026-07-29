@@ -27,18 +27,8 @@ const nodos = new Map(
 		{ nombre: e.nombre, kind: e.kind },
 	]),
 );
-
-const relatos = await getCollection("relatos");
-const relatosParticipante = relatos
-	.filter((r) => r.data.participantes?.includes(id))
-	.map((r) => ({ id: r.id, nombre: r.data.nombre }));
 ---
 
 <Base titulo={entidad.nombre}>
-  <FichaEntidad
-    entidad={entidad}
-    materiaSlug={grafo.slug}
-    nodos={nodos}
-    relatosParticipante={relatosParticipante}
-  />
+  <FichaEntidad entidad={entidad} materiaSlug={grafo.slug} nodos={nodos} />
 </Base>

@@ -3,11 +3,20 @@ import { getEntry } from "astro:content";
 
 interface Props {
 	id: string;
+	obra?: boolean;
 }
-const { id } = Astro.props;
+const { id, obra = false } = Astro.props;
 
 const materiaEntry = await getEntry("materias", "mitologia-griega");
 const fuente = materiaEntry?.data.fuentes?.[id];
 ---
 
-<cite>{fuente?.nombre}</cite>
+{
+	obra ? (
+		<cite>
+			{fuente?.autor}, {fuente?.obra}
+		</cite>
+	) : (
+		<cite title={fuente?.obra}>{fuente?.autor}</cite>
+	)
+}

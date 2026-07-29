@@ -6,15 +6,21 @@ interface Props {
 	entidad: Entidad;
 	materiaSlug: string;
 	nodos: Map<string, { nombre: string; kind: TipoNodo }>;
-	relatosParticipante: Array<{ id: string; nombre: string }>;
 }
-const { entidad, materiaSlug, nodos, relatosParticipante } = Astro.props;
+const { entidad, materiaSlug, nodos } = Astro.props;
 
 function rutaNodo(id: string): string {
 	return nodos.get(id)?.kind === "relato"
 		? rutaRelato(materiaSlug, id)
 		: rutaEntidad(materiaSlug, id);
 }
+
+const relatos = entidad.relaciones.filter(
+	(r) => r.tipo === "tiene_participante",
+);
+const relaciones = entidad.relaciones.filter(
+	(r) => r.tipo !== "tiene_participante",
+);
 ---
 
 <article>
@@ -46,11 +52,11 @@ function rutaNodo(id: string): string {
   }
 
   {
-    entidad.relaciones.length > 0 && (
+    relaciones.length > 0 && (
       <section>
         <h2>Relaciones</h2>
         <ul>
-          {entidad.relaciones.map((r) => (
+          {relaciones.map((r) => (
             <li>
               {r.tipo.replaceAll('_', ' ')}:{' '}
               <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
@@ -62,13 +68,13 @@ function rutaNodo(id: string): string {
   }
 
   {
-    relatosParticipante.length > 0 && (
+    relatos.length > 0 && (
       <section>
         <h2>Relatos</h2>
         <ul>
-          {relatosParticipante.map((r) => (
+          {relatos.map((r) => (
             <li>
-              <a href={rutaRelato(materiaSlug, r.id)}>{r.nombre}</a>
+              <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
             </li>
           ))}
         </ul>

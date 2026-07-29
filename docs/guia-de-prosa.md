@@ -164,8 +164,8 @@ La lista es cerrada. Estos cuatro componentes y nada más:
 
 | Componente | Para qué |
 |---|---|
-| `<E id="crono" />` | Enlaza a una entidad. Muestra su nombre y lleva a su ficha |
-| `<Fuente id="ovidio" />` | Cita una fuente antigua con su nombre completo |
+| `<E id="crono" />` | Enlaza a una entidad. Autocerrado, muestra su nombre; con texto interno (`<E id="crono">su padre</E>`), muestra ese texto. Ambas formas llevan a su ficha |
+| `<Fuente id="ovidio" />` | Cita solo el autor de una fuente antigua (la obra queda en un `title`, visible al pasar el ratón). `<Fuente id="ovidio" obra />` cita autor y obra completos |
 | `<Coleccion filtro={{ … }} orden="…" />` | Listado generado desde el grafo |
 | `<TablaComparativa entidades={[…]} atributos={[…]} />` | Comparativa de entidades |
 
@@ -192,9 +192,16 @@ pasarse.
    no se enlaza a la Titanomaquia.
 5. **Enlaza el nombre, no el concepto difuso.** `<E id="olimpo" />` sobre la palabra "Olimpo",
    no sobre "la montaña donde vivían".
-6. `<E />` se escribe **autocerrado**: `<E id="crono" />`, y renderiza el nombre de la entidad.
-   Si necesitas enlazar con otras palabras ("su padre", "el Cronida"), **no lo hagas**: esa
-   variante todavía no existe. Reescribe la frase para que el nombre aparezca, o anótalo.
+6. **El nombre de una entidad nunca lleva artículo integrado** (`nombre: Rayo`, no
+   `nombre: El rayo`). Es lo que permite escribir "el `<E id="rayo" />`" en la prosa y que
+   salga "el Rayo" en vez de "el El rayo". Si al leerlo en voz alta el artículo se duplica o
+   falta, el problema está en el `nombre` de la entidad, no en cómo la enlazaste: anótalo en
+   la entrega en vez de retorcer la frase para esquivarlo.
+7. `<E />` tiene dos formas y las dos enlazan igual. Autocerrada (`<E id="crono" />`) renderiza
+   el nombre de la entidad. Con texto interno (`<E id="crono">su padre</E>`) renderiza ese
+   texto en su lugar. Usa la segunda forma para posesivos, epítetos o variantes ("su padre",
+   "el Cronida") que no calzan con el nombre canónico — no como excusa para enlazar frases
+   enteras o conceptos difusos (sigue valiendo la regla 5).
 
 Regla de oro: **el texto tiene que leerse bien en voz alta ignorando los enlaces.** Si al
 quitarlos mentalmente la prosa se vuelve rara o repetitiva, hay demasiados.
