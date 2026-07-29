@@ -1,0 +1,27 @@
+---
+import { getCollection, render } from "astro:content";
+import E from "../../../components/E.astro";
+import Fuente from "../../../components/Fuente.astro";
+import LayoutLectura from "../../../layouts/LayoutLectura.astro";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	const relatos = await getCollection("relatos");
+	return materias.flatMap((m) =>
+		relatos.map((r) => ({
+			params: { materia: m.data.slug, id: r.id },
+		})),
+	);
+}
+
+const { materia, id } = Astro.params;
+const relatos = await getCollection("relatos");
+const entrada = relatos.find((r) => r.id === id);
+if (!entrada) throw new Error(`Relato no encontrado: ${id}`);
+
+const { Content } = await render(entrada);
+---
+
+<LayoutLectura titulo={entrada.data.nombre} resumen={entrada.data.resumen} materiaSlug={materia}>
+  <Content components={{ E, Fuente }} />
+</LayoutLectura>

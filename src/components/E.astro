@@ -1,0 +1,21 @@
+---
+import { construirGrafo, obtenerEntidad } from "../lib/grafo";
+import { rutaEntidad, rutaRelato } from "../lib/rutas";
+
+interface Props {
+	id: string;
+}
+const { id } = Astro.props;
+
+const grafo = await construirGrafo("mitologia-griega");
+const nodo = obtenerEntidad(grafo, id);
+if (!nodo)
+	throw new Error(`<E id="${id}" /> no encuentra esa entidad en el grafo`);
+
+const href =
+	nodo.kind === "relato"
+		? rutaRelato(grafo.slug, id)
+		: rutaEntidad(grafo.slug, id);
+---
+
+<a href={href}><slot>{nodo.nombre}</slot></a>

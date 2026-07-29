@@ -21,11 +21,24 @@ const grafo = await construirGrafo(materiaId);
 const entidad = obtenerEntidad(grafo, id);
 if (!entidad) throw new Error(`Entidad no encontrada: ${materiaId}/${id}`);
 
-const nombres = new Map(
-	[...grafo.entidades.values()].map((e) => [e.id, e.nombre]),
+const nodos = new Map(
+	[...grafo.entidades.values()].map((e) => [
+		e.id,
+		{ nombre: e.nombre, kind: e.kind },
+	]),
 );
+
+const relatos = await getCollection("relatos");
+const relatosParticipante = relatos
+	.filter((r) => r.data.participantes?.includes(id))
+	.map((r) => ({ id: r.id, nombre: r.data.nombre }));
 ---
 
 <Base titulo={entidad.nombre}>
-  <FichaEntidad entidad={entidad} materiaSlug={grafo.slug} nombres={nombres} />
+  <FichaEntidad
+    entidad={entidad}
+    materiaSlug={grafo.slug}
+    nodos={nodos}
+    relatosParticipante={relatosParticipante}
+  />
 </Base>

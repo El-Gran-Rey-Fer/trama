@@ -22,12 +22,35 @@ mitologia-griega:
       inversa: porta
     porta:
       inversa: portado_por
+    ocurre_en:
+      inversa: escenario_de
+    escenario_de:
+      inversa: ocurre_en # documentado por completitud; grafo.ts la sintetiza desde el campo `lugar` del relato, nadie la autoría a mano
+
+  fuentes:
+    hesiodo: { nombre: "Hesíodo, Teogonía" }
+    homero: { nombre: "Homero, Ilíada" }
+    apolodoro: { nombre: "Apolodoro, Biblioteca" }
+
+  # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (eso es Bloque A).
+  # "estirpe" es para colectivos (titanes, ciclopes, hecatonquiros): la convención de ids en
+  # singular admite excepción para estas entidades colectivas, cuyo id natural es el plural.
+  tipos:
+    - dios
+    - dios primordial
+    - diosa primordial
+    - titán
+    - titánide
+    - dios olímpico
+    - diosa olímpica
+    - estirpe
+    - lugar
+    - objeto
+    - mito
 
   # --- huecos reservados para hitos futuros (schema-legales, sin uso funcional) ---
   # atributos:
   #   fuerza: { pregunta: "..." }
-  # fuentes:
-  #   hesiodo: { nombre: "Hesíodo, Teogonía", siglo: -8 }
   # idiomas:
   #   disponibles: [es]
   #   porDefecto: es

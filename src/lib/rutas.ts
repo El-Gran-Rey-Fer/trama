@@ -10,3 +10,7 @@ export function rutaMateria(materiaSlug: string): string {
 export function rutaEntidad(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/e/${id}/`;
 }
+
+export function rutaRelato(materiaSlug: string, id: string): string {
+	return `${base()}${materiaSlug}/m/${id}/`;
+}

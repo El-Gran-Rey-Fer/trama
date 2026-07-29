@@ -33,6 +33,28 @@ const entidades = defineCollection({
 	schema: entidadSchema,
 });
 
+const relatoSchema = z.object({
+	id: z.string(),
+	tipo: z.string(),
+	nombre: z.string(),
+	resumen: z.string(),
+	participantes: z.array(z.string()).optional(),
+	lugar: z.string().optional(),
+	orden: z.number().optional(),
+	fuente_principal: z.string().optional(),
+	etiquetas: z.array(z.string()).optional(),
+	relaciones: z.array(relacionSchema).optional(),
+});
+
+const relatos = defineCollection({
+	loader: glob({
+		pattern: "*.mdx",
+		base: "./content/mitologia-griega/relatos",
+		generateId: ({ data }) => (data as { id: string }).id,
+	}),
+	schema: relatoSchema,
+});
+
 const registroRelacionSchema = z.object({
 	inversa: z.string(),
 	simetrica: z.boolean().optional(),
@@ -40,11 +62,17 @@ const registroRelacionSchema = z.object({
 	pregunta_inversa: z.string().optional(),
 });
 
+const fuenteSchema = z.object({
+	nombre: z.string(),
+	siglo: z.number().optional(),
+});
+
 const materiaSchema = z.object({
 	slug: z.string(),
 	relaciones: z.record(z.string(), registroRelacionSchema),
 	atributos: z.record(z.string(), z.unknown()).optional(),
-	fuentes: z.record(z.string(), z.unknown()).optional(),
+	fuentes: z.record(z.string(), fuenteSchema).optional(),
+	tipos: z.array(z.string()).optional(),
 	// --- huecos reservados: legales en el esquema, sin uso funcional en Hito 1 ---
 	idiomas: z
 		.object({
@@ -72,4 +100,4 @@ const materias = defineCollection({
 	schema: materiaSchema,
 });
 
-export const collections = { entidades, materias };
+export const collections = { entidades, materias, relatos };

@@ -1,13 +1,20 @@
 ---
-import type { Entidad } from "../lib/grafo";
-import { rutaEntidad, rutaMateria } from "../lib/rutas";
+import type { Entidad, TipoNodo } from "../lib/grafo";
+import { rutaEntidad, rutaMateria, rutaRelato } from "../lib/rutas";
 
 interface Props {
 	entidad: Entidad;
 	materiaSlug: string;
-	nombres: Map<string, string>;
+	nodos: Map<string, { nombre: string; kind: TipoNodo }>;
+	relatosParticipante: Array<{ id: string; nombre: string }>;
 }
-const { entidad, materiaSlug, nombres } = Astro.props;
+const { entidad, materiaSlug, nodos, relatosParticipante } = Astro.props;
+
+function rutaNodo(id: string): string {
+	return nodos.get(id)?.kind === "relato"
+		? rutaRelato(materiaSlug, id)
+		: rutaEntidad(materiaSlug, id);
+}
 ---
 
 <article>
@@ -46,7 +53,22 @@ const { entidad, materiaSlug, nombres } = Astro.props;
           {entidad.relaciones.map((r) => (
             <li>
               {r.tipo.replaceAll('_', ' ')}:{' '}
-              <a href={rutaEntidad(materiaSlug, r.destino)}>{nombres.get(r.destino) ?? r.destino}</a>
+              <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    relatosParticipante.length > 0 && (
+      <section>
+        <h2>Relatos</h2>
+        <ul>
+          {relatosParticipante.map((r) => (
+            <li>
+              <a href={rutaRelato(materiaSlug, r.id)}>{r.nombre}</a>
             </li>
           ))}
         </ul>
