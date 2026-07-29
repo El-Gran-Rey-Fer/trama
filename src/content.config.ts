@@ -60,6 +60,14 @@ const registroRelacionSchema = z.object({
 	simetrica: z.boolean().optional(),
 	pregunta: z.string().optional(),
 	pregunta_inversa: z.string().optional(),
+	// La respuesta de una relación uno-a-muchos es un conjunto (todas las aristas
+	// origen+tipo agrupadas en una sola tarjeta), no una tarjeta por arista.
+	// `tarjeta: false` desactiva la generación en esa dirección sin quitar la
+	// plantilla (por si documenta la pregunta igualmente).
+	conjunto: z.boolean().optional(),
+	conjunto_inversa: z.boolean().optional(),
+	tarjeta: z.boolean().optional(),
+	tarjeta_inversa: z.boolean().optional(),
 });
 
 const fuenteSchema = z.object({

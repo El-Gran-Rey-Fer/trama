@@ -348,11 +348,18 @@ De la ficha de Zeus, sin escribir una sola pregunta:
 | Pregunta | Respuesta | Origen |
 |---|---|---|
 | ¿Quién es el padre de Zeus? | Crono | `hijo_de: crono` |
-| ¿De quién es padre Zeus? | Atenea | `padre_de: atenea` |
+| ¿De quién es padre Zeus? | Atenea, Apolo, Ares… | `padre_de: atenea`, `padre_de: apolo`, `padre_de: ares`… |
 | ¿Quién es hijo de Crono? | Zeus | la inversa, gratis |
 | ¿Cuál es el símbolo de Zeus? | Rayo, águila, roble | `atributos.simbolo` |
 | ¿Nombre romano de Zeus? | Júpiter | `alias` |
 | ¿Qué dios es "el Tonante"? | Zeus | `epitetos` |
+
+Zeus tiene un solo padre (relación **de respuesta única**: una tarjeta por arista) pero muchos
+hijos (relación **de respuesta en conjunto**: todas las aristas `padre_de` de Zeus se agrupan en
+una sola tarjeta, con todos los hijos como respuesta). Cada dirección de relación declara en
+`materia.yaml` cuál de las dos es. Generar una tarjeta por arista también en las relaciones
+uno-a-muchos sería el error de fondo: "¿De quién es padre Zeus?" repetida una vez por hijo, cada
+copia con una sola respuesta parcial en vez de la lista completa.
 
 Los distractores de opción múltiple salen de entidades del mismo `tipo` que **no** tengan
 esa relación.

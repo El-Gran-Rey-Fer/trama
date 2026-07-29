@@ -19,6 +19,10 @@ export interface RegistroRelacion {
 	simetrica?: boolean;
 	pregunta?: string;
 	pregunta_inversa?: string;
+	conjunto?: boolean;
+	conjunto_inversa?: boolean;
+	tarjeta?: boolean;
+	tarjeta_inversa?: boolean;
 }
 
 export interface Entidad {

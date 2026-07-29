@@ -3,18 +3,26 @@ mitologia-griega:
 
   # `pregunta`/`pregunta_inversa` solo se declaran en las relaciones que alguien autoría a
   # mano (o que grafo.ts sintetiza como si lo fueran): son las que tarjetas.ts recorre para
-  # generar la baraja de práctica, una carta por dirección y por arista original. Las inversas
-  # puras (hijo_de, habita, porta, escenario_de, tiene_participante) no llevan plantilla propia
-  # porque nunca son el lado "origen" de una arista original.
+  # generar la baraja de práctica. Las inversas puras (hijo_de, habita, porta, escenario_de,
+  # tiene_participante) no llevan plantilla propia porque nunca son el lado "origen" de una
+  # arista original.
+  #
+  # `conjunto`/`conjunto_inversa` marcan qué dirección es de respuesta única (una tarjeta por
+  # arista, ej. "¿quién es el padre de Zeus?" -> un solo nombre) y cuál es de respuesta en
+  # conjunto (todas las aristas origen+tipo agrupadas en una sola tarjeta con todos los destinos,
+  # ej. "¿de quién es padre Crono?" -> los cuatro hijos en una tarjeta, no cuatro tarjetas).
+  # Por defecto, sin la marca, es de respuesta única.
   relaciones:
     padre_de:
       inversa: hijo_de
       pregunta: "¿De quién es padre {origen}?"
       pregunta_inversa: "¿Quién es el padre de {destino}?"
+      conjunto: true # un padre puede tener varios hijos
     madre_de:
       inversa: hijo_de
       pregunta: "¿De quién es madre {origen}?"
       pregunta_inversa: "¿Quién es la madre de {destino}?"
+      conjunto: true # una madre puede tener varios hijos
     hijo_de:
       inversa: padre_de # documentado por completitud; ninguna de las 10 entidades lo autoría directamente en Hito 1
     hermano_de:
@@ -22,33 +30,42 @@ mitologia-griega:
       simetrica: true
       pregunta: "¿Quién es hermano de {origen}?"
       pregunta_inversa: "¿Quién es hermano de {destino}?"
+      conjunto: true # se puede tener varios hermanos
+      conjunto_inversa: true
     consorte_de:
       inversa: consorte_de
       simetrica: true
       pregunta: "¿Quién es consorte de {origen}?"
       pregunta_inversa: "¿Quién es consorte de {destino}?"
+      conjunto: true # la mitología no es monógama
+      conjunto_inversa: true
     habitado_por:
       inversa: habita
       pregunta: "¿Quién habita en {origen}?"
       pregunta_inversa: "¿Dónde habita {destino}?"
+      conjunto: true # un lugar puede tener varios habitantes (el Monte Olimpo ya tiene dos)
     habita:
       inversa: habitado_por
     portado_por:
       inversa: porta
       pregunta: "¿Quién porta {origen}?"
       pregunta_inversa: "¿Qué porta {destino}?"
+      conjunto_inversa: true # alguien puede portar varios objetos
     porta:
       inversa: portado_por
     ocurre_en:
       inversa: escenario_de
       pregunta: "¿Dónde ocurre {origen}?"
       pregunta_inversa: "¿Qué relato ocurre en {destino}?"
+      conjunto_inversa: true # un lugar puede ser escenario de varios relatos
     escenario_de:
       inversa: ocurre_en # documentado por completitud; grafo.ts la sintetiza desde el campo `lugar` del relato, nadie la autoría a mano
     participa_en:
       inversa: tiene_participante
       pregunta: "¿En qué relato participa {origen}?"
       pregunta_inversa: "¿Quién participa en {destino}?"
+      conjunto: true # alguien puede participar en varios relatos
+      conjunto_inversa: true # un relato tiene muchos participantes (ver Titanomaquia: 14)
     tiene_participante:
       inversa: participa_en # documentado por completitud; grafo.ts la sintetiza desde `participantes`, nadie la autoría a mano
 
