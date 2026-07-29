@@ -16,6 +16,13 @@ Lee `docs/esqueleto-proyecto.md` (qué se construye) y `docs/calendario-construc
 Astro 7, TypeScript strict, pnpm, Biome. Despliegue a GitHub Pages.
 site: https://el-gran-rey-fer.github.io  ·  base: /trama
 
+## Ids de tarjeta
+
+Los ids de tarjeta (`src/lib/tarjetas.ts`) son permanentes a partir del bloque C. Mientras no
+haya `localStorage`, cambiar el esquema de ids no cuesta nada. Después, cada cambio borra el
+historial del usuario. Cualquier retoque al formato de id se hace antes del bloque C o no se
+hace.
+
 ## Development
 
 When starting the dev server, use background mode:
