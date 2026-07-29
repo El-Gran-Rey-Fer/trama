@@ -15,12 +15,8 @@ function rutaNodo(id: string): string {
 		: rutaEntidad(materiaSlug, id);
 }
 
-const relatos = entidad.relaciones.filter(
-	(r) => r.tipo === "tiene_participante",
-);
-const relaciones = entidad.relaciones.filter(
-	(r) => r.tipo !== "tiene_participante",
-);
+const relatos = entidad.relaciones.filter((r) => r.tipo === "participa_en");
+const relaciones = entidad.relaciones.filter((r) => r.tipo !== "participa_en");
 ---
 
 <article>

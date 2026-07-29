@@ -60,7 +60,7 @@ Ruta: `content/mitologia-griega/relatos/<id>.mdx`, donde `<id>` es el mismo valo
 ---
 id: rapto-de-europa
 tipo: mito
-nombre: El rapto de Europa
+nombre: Rapto de Europa
 resumen: Zeus, transformado en toro blanco, secuestra a Europa y la lleva a Creta.
 participantes: [zeus, europa, cadmo]
 lugar: tiro
@@ -83,8 +83,10 @@ cambies nunca una vez publicado: es la URL y es lo que apuntan las tarjetas.
 `materia.yaml`; si necesitas uno nuevo (`leyenda`, `batalla`), no lo inventes en silencio:
 anótalo en la entrega.
 
-**`nombre`** — obligatorio. Como aparece en títulos y enlaces. Con artículo si suena natural
-("El rapto de Europa"), sin él si no.
+**`nombre`** — obligatorio. Como aparece en títulos y enlaces. Nunca lleva artículo integrado,
+igual que el nombre de una entidad (§6.6): "Rapto de Europa", no "El rapto de Europa". Un
+relato es una entidad de pleno derecho (§1) y sigue la misma regla, precisamente para poder
+enlazarlo con `<E id="rapto-de-europa" />` sin que el artículo se duplique o falte.
 
 **`resumen`** — obligatorio, y es el campo que más se subestima. Aparece en listados, en los
 índices y en la mini-ficha que sale al pasar el ratón. **Una sola frase, 15-30 palabras, que
@@ -192,11 +194,12 @@ pasarse.
    no se enlaza a la Titanomaquia.
 5. **Enlaza el nombre, no el concepto difuso.** `<E id="olimpo" />` sobre la palabra "Olimpo",
    no sobre "la montaña donde vivían".
-6. **El nombre de una entidad nunca lleva artículo integrado** (`nombre: Rayo`, no
-   `nombre: El rayo`). Es lo que permite escribir "el `<E id="rayo" />`" en la prosa y que
-   salga "el Rayo" en vez de "el El rayo". Si al leerlo en voz alta el artículo se duplica o
-   falta, el problema está en el `nombre` de la entidad, no en cómo la enlazaste: anótalo en
-   la entrega en vez de retorcer la frase para esquivarlo.
+6. **El `nombre` nunca lleva artículo integrado, sea de una entidad o de un relato**
+   (`nombre: Rayo`, no `nombre: El rayo`; `nombre: Titanomaquia`, no `nombre: La
+   Titanomaquia`). Es lo que permite escribir "el `<E id="rayo" />`" en la prosa y que salga
+   "el Rayo" en vez de "el El rayo". Si al leerlo en voz alta el artículo se duplica o falta,
+   el problema está en el `nombre`, no en cómo enlazaste: anótalo en la entrega en vez de
+   retorcer la frase para esquivarlo.
 7. `<E />` tiene dos formas y las dos enlazan igual. Autocerrada (`<E id="crono" />`) renderiza
    el nombre de la entidad. Con texto interno (`<E id="crono">su padre</E>`) renderiza ese
    texto en su lugar. Usa la segunda forma para posesivos, epítetos o variantes ("su padre",

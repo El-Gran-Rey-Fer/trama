@@ -107,18 +107,14 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 		);
 	}
 	for (const entrada of entradasRelatos) {
-		// `lugar` y `participantes` son azúcar sintáctico sobre el mismo mecanismo
-		// de relaciones: se convierten aquí en aristas `ocurre_en`/`participa_en`
-		// más, para no tener dos formas distintas de declarar lo mismo.
-		const relacionesDerivadas: RelacionCruda[] = [
-			...(entrada.data.lugar
-				? [{ tipo: "ocurre_en", destino: entrada.data.lugar }]
-				: []),
-			...(entrada.data.participantes ?? []).map((destino) => ({
-				tipo: "participa_en",
-				destino,
-			})),
-		];
+		// `lugar` es azúcar sintáctico sobre el mismo mecanismo de relaciones: se
+		// convierte aquí en una arista `ocurre_en` más (el relato es el origen:
+		// "la Titanomaquia ocurre_en el Monte Olimpo"), para no tener dos formas
+		// distintas de declarar lo mismo. `participantes` se trata aparte, más
+		// abajo, porque su arista va en sentido contrario (ver ese bloque).
+		const relacionesDerivadas: RelacionCruda[] = entrada.data.lugar
+			? [{ tipo: "ocurre_en", destino: entrada.data.lugar }]
+			: [];
 		indexar(
 			entrada.id,
 			"relato",
@@ -126,6 +122,27 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 			entrada.data.relaciones ?? [],
 			relacionesDerivadas,
 		);
+	}
+
+	// `participantes` vive en el frontmatter del relato, pero la arista se autoría
+	// desde la entidad hacia el relato ("Zeus participa_en la Titanomaquia"), no
+	// al revés: es la entidad la que hace algo, el relato es donde lo hace. Por
+	// eso se añade sobre el nodo del participante, no sobre el del relato, y solo
+	// puede hacerse aquí, después de que todos los nodos ya existan en el mapa.
+	for (const entrada of entradasRelatos) {
+		for (const participanteId of entrada.data.participantes ?? []) {
+			const participante = entidades.get(participanteId);
+			if (!participante) continue; // id inexistente: se ignora, validar esto es Bloque A
+			const relacion: RelacionCruda = {
+				tipo: "participa_en",
+				destino: entrada.id,
+			};
+			participante.relaciones.push({ ...relacion, inferida: false });
+			clavesPorEntidad
+				.get(participanteId)
+				?.add(claveArista(relacion.tipo, relacion.destino));
+			aristasOriginales.push({ origenId: participanteId, relacion });
+		}
 	}
 
 	// Pasada 2: sintetizar inversas SOLO a partir de aristasOriginales
