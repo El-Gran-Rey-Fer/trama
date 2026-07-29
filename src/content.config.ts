@@ -33,6 +33,16 @@ const entidades = defineCollection({
 	schema: entidadSchema,
 });
 
+const entidadesProsa = defineCollection({
+	loader: glob({
+		pattern: "*.mdx",
+		base: "./content/mitologia-griega/entidades",
+	}),
+	// Sin frontmatter: el id sale del nombre del fichero (comportamiento por
+	// defecto del loader), así que no puede desincronizarse del YAML hermano.
+	schema: z.object({}),
+});
+
 const relatoSchema = z.object({
 	id: z.string(),
 	tipo: z.string(),
@@ -109,4 +119,4 @@ const materias = defineCollection({
 	schema: materiaSchema,
 });
 
-export const collections = { entidades, materias, relatos };
+export const collections = { entidades, entidadesProsa, materias, relatos };

@@ -1,4 +1,6 @@
-import { getCollection, getEntry } from "astro:content";
+import { getCollection, getEntry, render } from "astro:content";
+
+type ContenidoRenderizado = Awaited<ReturnType<typeof render>>["Content"];
 
 export interface RelacionCruda {
 	tipo: string;
@@ -39,6 +41,7 @@ export interface Entidad {
 	generacion?: number;
 	imagen?: string;
 	relaciones: RelacionResuelta[];
+	prosa?: ContenidoRenderizado;
 }
 
 export interface Arista {
@@ -59,8 +62,14 @@ function claveArista(tipo: string, destino: string): string {
 }
 
 export async function construirGrafo(materiaId: string): Promise<Grafo> {
-	const [entradasEntidades, entradasRelatos, materiaEntry] = await Promise.all([
+	const [
+		entradasEntidades,
+		entradasProsaEntidad,
+		entradasRelatos,
+		materiaEntry,
+	] = await Promise.all([
 		getCollection("entidades"),
+		getCollection("entidadesProsa"),
 		getCollection("relatos"),
 		getEntry("materias", materiaId),
 	]);
@@ -110,6 +119,21 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 			[],
 		);
 	}
+
+	// La prosa de entidad es un fichero hermano opcional (mismo id que el YAML,
+	// por nombre de fichero). Un .mdx sin su .yaml correspondiente es un error
+	// de contenido, no un caso silencioso: rompe el build con un mensaje claro.
+	for (const entradaProsa of entradasProsaEntidad) {
+		const entidad = entidades.get(entradaProsa.id);
+		if (!entidad) {
+			throw new Error(
+				`content/${materiaId}/entidades/${entradaProsa.id}.mdx no tiene su ${entradaProsa.id}.yaml correspondiente`,
+			);
+		}
+		const { Content } = await render(entradaProsa);
+		entidad.prosa = Content;
+	}
+
 	for (const entrada of entradasRelatos) {
 		// `lugar` es azúcar sintáctico sobre el mismo mecanismo de relaciones: se
 		// convierte aquí en una arista `ocurre_en` más (el relato es el origen:

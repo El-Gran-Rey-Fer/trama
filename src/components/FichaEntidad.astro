@@ -1,6 +1,8 @@
 ---
 import type { Entidad, TipoNodo } from "../lib/grafo";
 import { rutaEntidad, rutaMateria, rutaRelato } from "../lib/rutas";
+import E from "./E.astro";
+import Fuente from "./Fuente.astro";
 
 interface Props {
 	entidad: Entidad;
@@ -17,12 +19,15 @@ function rutaNodo(id: string): string {
 
 const relatos = entidad.relaciones.filter((r) => r.tipo === "participa_en");
 const relaciones = entidad.relaciones.filter((r) => r.tipo !== "participa_en");
+const Prosa = entidad.prosa;
 ---
 
 <article>
   <h1>{entidad.nombre}</h1>
   <p class="tipo">{entidad.tipo}</p>
   <p>{entidad.resumen}</p>
+
+  {Prosa && <Prosa components={{ E, Fuente }} />}
 
   {
     entidad.etiquetas?.length ? (
