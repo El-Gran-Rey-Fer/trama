@@ -1,0 +1,41 @@
+mitologia-griega:
+  slug: gr
+
+  relaciones:
+    padre_de:
+      inversa: hijo_de
+    madre_de:
+      inversa: hijo_de
+    hijo_de:
+      inversa: padre_de # documentado por completitud; ninguna de las 10 entidades lo autoría directamente en Hito 1
+    hermano_de:
+      inversa: hermano_de
+      simetrica: true
+    consorte_de:
+      inversa: consorte_de
+      simetrica: true
+    habitado_por:
+      inversa: habita
+    habita:
+      inversa: habitado_por
+    portado_por:
+      inversa: porta
+    porta:
+      inversa: portado_por
+
+  # --- huecos reservados para hitos futuros (schema-legales, sin uso funcional) ---
+  # atributos:
+  #   fuerza: { pregunta: "..." }
+  # fuentes:
+  #   hesiodo: { nombre: "Hesíodo, Teogonía", siglo: -8 }
+  # idiomas:
+  #   disponibles: [es]
+  #   porDefecto: es
+  # enlaces:
+  #   - tipo: wikipedia
+  #     url: "https://..."
+  # eras: [edad-de-los-titanes, edad-de-los-olimpicos]
+  # timeline: relativo
+  # mapa:
+  #   mapeable: true
+  # rutas: {}

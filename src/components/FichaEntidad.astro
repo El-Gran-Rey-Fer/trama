@@ -1,0 +1,58 @@
+---
+import type { Entidad } from "../lib/grafo";
+import { rutaEntidad, rutaMateria } from "../lib/rutas";
+
+interface Props {
+	entidad: Entidad;
+	materiaSlug: string;
+	nombres: Map<string, string>;
+}
+const { entidad, materiaSlug, nombres } = Astro.props;
+---
+
+<article>
+  <h1>{entidad.nombre}</h1>
+  <p class="tipo">{entidad.tipo}</p>
+  <p>{entidad.resumen}</p>
+
+  {
+    entidad.etiquetas?.length ? (
+      <ul class="etiquetas">
+        {entidad.etiquetas.map((et) => (
+          <li>{et}</li>
+        ))}
+      </ul>
+    ) : null
+  }
+
+  {
+    entidad.atributos ? (
+      <dl>
+        {Object.entries(entidad.atributos).map(([clave, valor]) => (
+          <div>
+            <dt>{clave}</dt>
+            <dd>{String(valor)}</dd>
+          </div>
+        ))}
+      </dl>
+    ) : null
+  }
+
+  {
+    entidad.relaciones.length > 0 && (
+      <section>
+        <h2>Relaciones</h2>
+        <ul>
+          {entidad.relaciones.map((r) => (
+            <li>
+              {r.tipo.replaceAll('_', ' ')}:{' '}
+              <a href={rutaEntidad(materiaSlug, r.destino)}>{nombres.get(r.destino) ?? r.destino}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  <p><a href={rutaMateria(materiaSlug)}>&larr; volver</a></p>
+</article>

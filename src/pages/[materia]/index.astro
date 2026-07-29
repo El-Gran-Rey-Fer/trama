@@ -1,0 +1,26 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { rutaEntidad } from "../../lib/rutas";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	return materias.map((m) => ({ params: { materia: m.data.slug } }));
+}
+
+const { materia } = Astro.params;
+const entidades = await getCollection("entidades");
+---
+
+<Base titulo={`Entidades — ${materia}`}>
+  <h1>{materia}</h1>
+  <ul>
+    {
+      entidades.map((e) => (
+        <li>
+          <a href={rutaEntidad(materia, e.id)}>{e.data.nombre}</a>
+        </li>
+      ))
+    }
+  </ul>
+</Base>

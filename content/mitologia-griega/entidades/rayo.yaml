@@ -1,0 +1,11 @@
+id: rayo
+tipo: objeto
+nombre: El rayo
+resumen: >
+  Arma forjada por los Cíclopes, símbolo del poder de Zeus.
+etiquetas: [arma, atributo]
+atributos:
+  elemento: tormenta
+relaciones:
+  - tipo: portado_por
+    destino: zeus

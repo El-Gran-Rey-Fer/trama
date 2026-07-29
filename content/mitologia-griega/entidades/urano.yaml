@@ -1,0 +1,12 @@
+id: urano
+tipo: dios primordial
+nombre: Urano
+resumen: >
+  Personificación del cielo, primer gobernante del cosmos y padre de los Titanes.
+generacion: 1
+atributos:
+  dominio: cielo
+relaciones:
+  - tipo: padre_de
+    destino: crono
+    fuente: "Hesíodo, Teogonía"

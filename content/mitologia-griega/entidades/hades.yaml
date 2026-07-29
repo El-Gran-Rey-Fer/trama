@@ -1,0 +1,8 @@
+id: hades
+tipo: dios olímpico
+nombre: Hades
+resumen: >
+  Dios del inframundo, hermano de Zeus y Poseidón.
+generacion: 3
+etiquetas: [olimpico]
+# hermano_de con poseidón llega por inversa

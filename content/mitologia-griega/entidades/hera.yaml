@@ -1,0 +1,12 @@
+id: hera
+tipo: diosa olímpica
+nombre: Hera
+resumen: >
+  Diosa del matrimonio y la familia, esposa y hermana de Zeus.
+generacion: 3
+etiquetas: [olimpico]
+relaciones:
+  - tipo: consorte_de
+    destino: zeus
+  - tipo: hermano_de
+    destino: zeus

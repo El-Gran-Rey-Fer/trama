@@ -1,0 +1,17 @@
+id: rea
+tipo: titánide
+nombre: Rea
+resumen: >
+  Titánide, esposa de Crono y madre de los primeros dioses olímpicos.
+generacion: 2
+relaciones:
+  - tipo: madre_de
+    destino: zeus
+  - tipo: madre_de
+    destino: hera
+  - tipo: madre_de
+    destino: poseidon
+  - tipo: madre_de
+    destino: hades
+  - tipo: consorte_de
+    destino: crono

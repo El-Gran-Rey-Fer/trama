@@ -1,0 +1,12 @@
+id: gea
+tipo: diosa primordial
+nombre: Gea
+resumen: >
+  Personificación de la Tierra, madre de los Titanes junto a Urano.
+generacion: 1
+relaciones:
+  - tipo: madre_de
+    destino: crono
+    fuente: "Hesíodo, Teogonía"
+  - tipo: consorte_de
+    destino: urano

@@ -1,0 +1,11 @@
+id: olimpo
+tipo: lugar
+nombre: El Olimpo
+resumen: >
+  Morada de los dioses olímpicos.
+etiquetas: [lugar]
+relaciones:
+  - tipo: habitado_por
+    destino: zeus
+  - tipo: habitado_por
+    destino: hera
