@@ -1,6 +1,7 @@
 id: atenea
-tipo: diosa olímpica
+tipo: dios
 nombre: Atenea
+etiquetas: [olimpico]
 resumen: >
   Diosa que nace ya adulta y armada, saliendo de la cabeza de Zeus después
   de que este devorase a su madre Metis embarazada.
