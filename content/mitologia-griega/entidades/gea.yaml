@@ -7,6 +7,6 @@ generacion: 1
 relaciones:
   - tipo: madre_de
     destino: crono
-    fuente: "Hesíodo, Teogonía"
+    fuente: teogonia
   - tipo: consorte_de
     destino: urano

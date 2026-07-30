@@ -94,6 +94,19 @@ mitologia-griega:
     - lugar
     - objeto
     - mito
+    - heroe # teseo-y-el-minotauro: teseo
+    - mortal # teseo-y-el-minotauro: minos, pasífae, dédalo, androgeo, egeo, ariadna
+    - monstruo # teseo-y-el-minotauro: toro de creta, minotauro
+
+  # etiquetas en uso. Registro descriptivo, sin validación de build todavía (igual que tipos).
+  etiquetas:
+    - cosmogonia # castracion-de-urano
+    - sucesion # nacimiento-de-atenea
+    - profecia # nacimiento-de-atenea, rapto-de-persefone
+    - rapto # rapto-de-persefone
+    - mito-etiologico # rapto-de-persefone
+    - castigo-divino # teseo-y-el-minotauro
+    - zeus-amores # nacimiento-de-atenea
 
   # el orden es la posición en la lista, no un campo propio: así es imposible declarar una
   # era fuera de secuencia. El criterio de corte es el reinado (cosmogonia llega hasta el

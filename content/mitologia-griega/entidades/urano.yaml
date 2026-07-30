@@ -9,4 +9,4 @@ atributos:
 relaciones:
   - tipo: padre_de
     destino: crono
-    fuente: "Hesíodo, Teogonía"
+    fuente: teogonia
