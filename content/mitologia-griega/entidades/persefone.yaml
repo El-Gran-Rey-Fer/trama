@@ -1,0 +1,12 @@
+id: persefone
+tipo: dios
+nombre: Perséfone
+resumen: >
+  Diosa raptada por Hades mientras recogía flores; reina del inframundo que
+  reparte el año entre este y la compañía de su madre Deméter.
+etiquetas: [olimpico]
+relaciones:
+  - tipo: habita
+    destino: inframundo
+  - tipo: habita
+    destino: monte-olimpo

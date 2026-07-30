@@ -1,0 +1,9 @@
+id: gigantes
+tipo: estirpe
+nombre: Gigantes
+resumen: >
+  Estirpe de guerreros armados con largas lanzas, nacidos de la sangre de
+  Urano derramada sobre la tierra al ser mutilado por Crono.
+relaciones:
+  - tipo: hijo_de
+    destino: urano

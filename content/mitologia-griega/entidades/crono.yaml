@@ -1,5 +1,5 @@
 id: crono
-tipo: titán
+tipo: titan
 nombre: Crono
 resumen: >
   Titán que depuso a su padre Urano y gobernó hasta ser derrocado por su hijo Zeus.
@@ -13,3 +13,21 @@ relaciones:
     destino: poseidon
   - tipo: padre_de
     destino: hades
+  - tipo: padre_de
+    destino: hestia
+  - tipo: padre_de
+    destino: demeter
+  - tipo: mutila_a
+    destino: urano
+  - tipo: porta
+    destino: hoz-de-adamante
+  - tipo: devora_a
+    destino: hestia
+  - tipo: devora_a
+    destino: demeter
+  - tipo: devora_a
+    destino: hera
+  - tipo: devora_a
+    destino: hades
+  - tipo: devora_a
+    destino: poseidon

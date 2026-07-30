@@ -1,5 +1,5 @@
 id: poseidon
-tipo: dios olímpico
+tipo: dios
 nombre: Poseidón
 resumen: >
   Dios del mar, hermano de Zeus y Hades.
@@ -8,3 +8,5 @@ etiquetas: [olimpico]
 relaciones:
   - tipo: hermano_de
     destino: hades
+  - tipo: castiga_a
+    destino: minos

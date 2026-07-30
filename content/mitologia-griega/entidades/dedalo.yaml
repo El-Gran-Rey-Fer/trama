@@ -1,0 +1,9 @@
+id: dedalo
+tipo: mortal
+nombre: Dédalo
+resumen: >
+  Artesano ateniense refugiado en la corte de Minos, que construye la vaca
+  de madera para Pasífae y el laberinto que encierra al Minotauro.
+relaciones:
+  - tipo: construye
+    destino: laberinto-de-creta

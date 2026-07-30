@@ -50,6 +50,8 @@ const relatoSchema = z.object({
 	resumen: z.string(),
 	participantes: z.array(z.string()).optional(),
 	lugar: z.string().optional(),
+	// id de una entrada en `eras` (materia.yaml); `orden` es local a esa era, no global.
+	era: z.string().optional(),
 	orden: z.number().optional(),
 	fuente_principal: z.string().optional(),
 	etiquetas: z.array(z.string()).optional(),
@@ -81,7 +83,7 @@ const registroRelacionSchema = z.object({
 });
 
 const fuenteSchema = z.object({
-	autor: z.string(),
+	autor: z.string().optional(),
 	obra: z.string(),
 	siglo: z.number().optional(),
 });
@@ -92,6 +94,7 @@ const materiaSchema = z.object({
 	atributos: z.record(z.string(), z.unknown()).optional(),
 	fuentes: z.record(z.string(), fuenteSchema).optional(),
 	tipos: z.array(z.string()).optional(),
+	eras: z.array(z.object({ id: z.string(), nombre: z.string() })).optional(),
 	// --- huecos reservados: legales en el esquema, sin uso funcional en Hito 1 ---
 	idiomas: z
 		.object({
@@ -104,7 +107,6 @@ const materiaSchema = z.object({
 			z.object({ tipo: z.string().optional(), url: z.string().optional() }),
 		)
 		.optional(),
-	eras: z.array(z.string()).optional(),
 	timeline: z.enum(["relativo", "absoluto"]).optional(),
 	mapa: z
 		.object({
