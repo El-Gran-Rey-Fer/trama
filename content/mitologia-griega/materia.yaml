@@ -140,6 +140,7 @@ mitologia-griega:
   # "estirpe" es para colectivos (titanes, ciclopes, hecatonquiros): la convención de ids en
   # singular admite excepción para estas entidades colectivas, cuyo id natural es el plural.
   tipos:
+    - primordial
     - dios
     - titan
     - estirpe
@@ -155,13 +156,13 @@ mitologia-griega:
   # puede tener un ciclo. ciclo-tebano/argivo/troyano se declaran vacíos a propósito, para fijar
   # la convención antes de que alguien invente una etiqueta suelta para un ciclo mítico futuro.
   etiquetas:
-    - cosmogonia # castracion-de-urano
     - sucesion-divina # castracion-de-urano, titanomaquia
     - profecia # nacimiento-de-atenea
     - rapto # rapto-de-persefone
     - mito-etiologico # rapto-de-persefone
     - castigo-divino # teseo-y-el-minotauro
     - zeus-amores # nacimiento-de-atenea
+    - guerra # titanomaquia; eje real con miembros futuros (gigantomaquia, guerra de troya)
     - ciclo-cretense # teseo-y-el-minotauro
     - ciclo-tebano # vacía a propósito
     - ciclo-argivo # vacía a propósito
