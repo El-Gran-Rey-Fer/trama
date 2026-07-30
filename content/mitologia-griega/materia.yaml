@@ -95,6 +95,22 @@ mitologia-griega:
     - objeto
     - mito
 
+  # el orden es la posición en la lista, no un campo propio: así es imposible declarar una
+  # era fuera de secuencia. El criterio de corte es el reinado (cosmogonia llega hasta el
+  # final del de Urano, edad-de-los-titanes es el de Crono, etc.); `orden` en un relato es
+  # local a su era, no global.
+  eras:
+    - id: cosmogonia
+      nombre: Cosmogonía
+    - id: edad-de-los-titanes
+      nombre: Edad de los Titanes
+    - id: edad-de-los-olimpicos
+      nombre: Edad de los Olímpicos
+    - id: edad-de-los-heroes
+      nombre: Edad de los héroes
+    - id: guerra-de-troya
+      nombre: La guerra de Troya y los regresos
+
   # --- huecos reservados para hitos futuros (schema-legales, sin uso funcional) ---
   # atributos:
   #   fuerza: { pregunta: "..." }
@@ -104,7 +120,6 @@ mitologia-griega:
   # enlaces:
   #   - tipo: wikipedia
   #     url: "https://..."
-  # eras: [edad-de-los-titanes, edad-de-los-olimpicos]
   # timeline: relativo
   # mapa:
   #   mapeable: true
