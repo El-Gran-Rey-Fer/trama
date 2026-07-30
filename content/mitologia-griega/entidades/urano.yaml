@@ -10,3 +10,9 @@ relaciones:
   - tipo: padre_de
     destino: crono
     fuente: teogonia
+  - tipo: encierra_a
+    destino: titanes
+  - tipo: encierra_a
+    destino: ciclopes
+  - tipo: encierra_a
+    destino: hecatonquiros

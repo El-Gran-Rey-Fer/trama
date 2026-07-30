@@ -4,3 +4,6 @@ nombre: Erinias
 resumen: >
   Diosas vengadoras nacidas de la sangre de Urano derramada sobre la tierra,
   que persiguen sin descanso a quien derrama la sangre de los suyos.
+relaciones:
+  - tipo: hijo_de
+    destino: urano

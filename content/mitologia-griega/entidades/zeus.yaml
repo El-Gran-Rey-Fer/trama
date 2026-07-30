@@ -5,5 +5,6 @@ resumen: >
   Rey de los dioses olímpicos, dios del cielo y del rayo.
 generacion: 3
 etiquetas: [olimpico]
-# sin relaciones propias: todo su lugar en el grafo llega por inversas
-# (hijo_de x2, consorte_de, hermano_de, habita, porta)
+relaciones:
+  - tipo: devora_a
+    destino: metis

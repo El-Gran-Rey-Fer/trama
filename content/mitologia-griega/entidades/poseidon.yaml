@@ -8,3 +8,5 @@ etiquetas: [olimpico]
 relaciones:
   - tipo: hermano_de
     destino: hades
+  - tipo: castiga_a
+    destino: minos

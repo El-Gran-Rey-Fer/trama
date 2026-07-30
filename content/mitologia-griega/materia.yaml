@@ -68,6 +68,60 @@ mitologia-griega:
       conjunto_inversa: true # un relato tiene muchos participantes (ver Titanomaquia: 14)
     tiene_participante:
       inversa: participa_en # documentado por completitud; grafo.ts la sintetiza desde `participantes`, nadie la autoría a mano
+    devora_a:
+      inversa: devorado_por
+      pregunta: "¿A quién devora {origen}?"
+      pregunta_inversa: "¿Quién devora a {destino}?"
+      conjunto: true # crono devora a cinco de sus hijos
+    devorado_por:
+      inversa: devora_a
+    encierra_a:
+      inversa: encerrado_por
+      pregunta: "¿A quién encierra {origen}?"
+      pregunta_inversa: "¿Quién encierra a {destino}?"
+      conjunto: true # urano encierra a titanes, ciclopes y hecatonquiros
+    encerrado_por:
+      inversa: encierra_a
+    rapta_a:
+      inversa: raptado_por
+      pregunta: "¿A quién rapta {origen}?"
+      pregunta_inversa: "¿Quién rapta a {destino}?"
+    raptado_por:
+      inversa: rapta_a
+    castiga_a:
+      inversa: castigado_por
+      pregunta: "¿A quién castiga {origen}?"
+      pregunta_inversa: "¿Quién castiga a {destino}?"
+      conjunto: true # un dios puede castigar a varios mortales
+    castigado_por:
+      inversa: castiga_a
+    mata_a:
+      inversa: matado_por
+      pregunta: "¿A quién mata {origen}?"
+      pregunta_inversa: "¿Quién mata a {destino}?"
+      conjunto: true # un mismo origen puede matar a varias víctimas a lo largo del corpus
+    matado_por:
+      inversa: mata_a
+    mutila_a:
+      inversa: mutilado_por
+      pregunta: "¿A quién mutila {origen}?"
+      pregunta_inversa: "¿Quién mutila a {destino}?"
+    mutilado_por:
+      inversa: mutila_a
+    forja:
+      inversa: forjado_por
+      pregunta: "¿Qué forja {origen}?"
+      pregunta_inversa: "¿Quién forja {destino}?"
+      conjunto: true # quien forja puede forjar varios objetos
+    forjado_por:
+      inversa: forja
+    construye:
+      inversa: construido_por
+      pregunta: "¿Qué construye {origen}?"
+      pregunta_inversa: "¿Quién construye {destino}?"
+      conjunto: true # quien construye puede construir varias cosas
+    construido_por:
+      inversa: construye
 
   fuentes:
     teogonia: { autor: "Hesíodo", obra: "Teogonía" }

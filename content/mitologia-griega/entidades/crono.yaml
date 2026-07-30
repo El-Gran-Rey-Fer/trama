@@ -13,3 +13,17 @@ relaciones:
     destino: poseidon
   - tipo: padre_de
     destino: hades
+  - tipo: mutila_a
+    destino: urano
+  - tipo: porta
+    destino: hoz-de-adamante
+  - tipo: devora_a
+    destino: hestia
+  - tipo: devora_a
+    destino: demeter
+  - tipo: devora_a
+    destino: hera
+  - tipo: devora_a
+    destino: hades
+  - tipo: devora_a
+    destino: poseidon

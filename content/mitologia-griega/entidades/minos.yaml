@@ -4,3 +4,6 @@ nombre: Minos
 resumen: >
   Rey de Creta que pide a Poseidón un toro como señal de su derecho al
   trono, y que después encierra al Minotauro en el laberinto.
+relaciones:
+  - tipo: encierra_a
+    destino: minotauro

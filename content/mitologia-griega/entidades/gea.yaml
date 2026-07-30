@@ -10,3 +10,5 @@ relaciones:
     fuente: teogonia
   - tipo: consorte_de
     destino: urano
+  - tipo: forja
+    destino: hoz-de-adamante

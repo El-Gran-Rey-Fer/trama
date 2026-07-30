@@ -4,3 +4,6 @@ nombre: Teseo
 resumen: >
   Hijo de Egeo que se ofrece como tributo para Creta, mata al Minotauro en
   el laberinto y escapa con ayuda de Ariadna.
+relaciones:
+  - tipo: mata_a
+    destino: minotauro
