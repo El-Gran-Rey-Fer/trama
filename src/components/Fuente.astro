@@ -13,10 +13,8 @@ const fuente = materiaEntry?.data.fuentes?.[id];
 
 {
 	obra ? (
-		<cite>
-			{fuente?.autor}, {fuente?.obra}
-		</cite>
+		<cite>{fuente?.autor ? `${fuente.autor}, ${fuente.obra}` : fuente?.obra}</cite>
 	) : (
-		<cite title={fuente?.obra}>{fuente?.autor}</cite>
+		<cite title={fuente?.obra}>{fuente?.autor ?? fuente?.obra}</cite>
 	)
 }

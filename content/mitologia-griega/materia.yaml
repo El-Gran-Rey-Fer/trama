@@ -70,9 +70,14 @@ mitologia-griega:
       inversa: participa_en # documentado por completitud; grafo.ts la sintetiza desde `participantes`, nadie la autoría a mano
 
   fuentes:
-    hesiodo: { autor: "Hesíodo", obra: "Teogonía" }
-    homero: { autor: "Homero", obra: "Ilíada" }
-    apolodoro: { autor: "Apolodoro", obra: "Biblioteca" }
+    teogonia: { autor: "Hesíodo", obra: "Teogonía" }
+    iliada: { autor: "Homero", obra: "Ilíada" }
+    biblioteca: { autor: "Apolodoro", obra: "Biblioteca" }
+    metamorfosis: { autor: "Ovidio", obra: "Metamorfosis" }
+    vida-de-teseo: { autor: "Plutarco", obra: "Vida de Teseo" }
+    olimpicas: { autor: "Píndaro", obra: "Olímpicas" }
+    himno-homerico-atenea: { obra: "Himno homérico a Atenea" }
+    himno-homerico-demeter: { obra: "Himno homérico a Deméter" }
 
   # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (eso es Bloque A).
   # "estirpe" es para colectivos (titanes, ciclopes, hecatonquiros): la convención de ids en

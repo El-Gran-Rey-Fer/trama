@@ -81,7 +81,7 @@ const registroRelacionSchema = z.object({
 });
 
 const fuenteSchema = z.object({
-	autor: z.string(),
+	autor: z.string().optional(),
 	obra: z.string(),
 	siglo: z.number().optional(),
 });
