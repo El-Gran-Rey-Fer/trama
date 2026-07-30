@@ -1,6 +1,7 @@
 id: dioniso
-tipo: dios olímpico
+tipo: dios
 nombre: Dioniso
 resumen: >
   Dios que reclama para sí a Ariadna cuando Teseo la deja abandonada en la
   isla de Naxos.
+etiquetas: [olimpico]

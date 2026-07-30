@@ -80,16 +80,14 @@ mitologia-griega:
     himno-homerico-demeter: { obra: "Himno homérico a Deméter" }
 
   # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (eso es Bloque A).
+  # sin género: los distractores de opción múltiple y <Coleccion filtro={{tipo:"titan"}} /> salen
+  # de entidades del mismo `tipo` exacto, y un tipo generizado parte el conjunto en dos. El género
+  # es un problema de presentación (etiquetas, ej. "olimpico"), no del campo `tipo`.
   # "estirpe" es para colectivos (titanes, ciclopes, hecatonquiros): la convención de ids en
   # singular admite excepción para estas entidades colectivas, cuyo id natural es el plural.
   tipos:
     - dios
-    - dios primordial
-    - diosa primordial
-    - titán
-    - titánide
-    - dios olímpico
-    - diosa olímpica
+    - titan
     - estirpe
     - lugar
     - objeto
@@ -99,14 +97,21 @@ mitologia-griega:
     - monstruo # teseo-y-el-minotauro: toro de creta, minotauro
 
   # etiquetas en uso. Registro descriptivo, sin validación de build todavía (igual que tipos).
+  # los `ciclo-*` son un eje geográfico/dinástico ortogonal a `eras`: un mito tiene una era y
+  # puede tener un ciclo. ciclo-tebano/argivo/troyano se declaran vacíos a propósito, para fijar
+  # la convención antes de que alguien invente una etiqueta suelta para un ciclo mítico futuro.
   etiquetas:
     - cosmogonia # castracion-de-urano
-    - sucesion # nacimiento-de-atenea
-    - profecia # nacimiento-de-atenea, rapto-de-persefone
+    - sucesion-divina # castracion-de-urano, titanomaquia
+    - profecia # nacimiento-de-atenea
     - rapto # rapto-de-persefone
     - mito-etiologico # rapto-de-persefone
     - castigo-divino # teseo-y-el-minotauro
     - zeus-amores # nacimiento-de-atenea
+    - ciclo-cretense # teseo-y-el-minotauro
+    - ciclo-tebano # vacía a propósito
+    - ciclo-argivo # vacía a propósito
+    - ciclo-troyano # vacía a propósito
 
   # el orden es la posición en la lista, no un campo propio: así es imposible declarar una
   # era fuera de secuencia. El criterio de corte es el reinado (cosmogonia llega hasta el
