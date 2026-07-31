@@ -361,7 +361,12 @@ pasarse.
    salga "el Rayo" en vez de "el El rayo". Si al leerlo en voz alta el artículo se duplica o
    falta, el problema está en el `nombre` de la entidad, no en cómo la enlazaste: anótalo en
    la entrega en vez de retorcer la frase para esquivarlo.
-7. `<E />` tiene dos formas y las dos enlazan igual. Autocerrada (`<E id="crono" />`) renderiza
+7. **`<Fuente />` tiene el mismo problema y no tiene arreglo posible en el dato**, porque lo
+   que renderiza es un autor (un nombre propio), no una entidad con `nombre` propio que se
+   pueda ajustar. "la `<Fuente id="teogonia" />`" sale como "la Hesíodo". No le pongas artículo
+   integrado delante: escribe la cita al principio de frase ("`<Fuente id="teogonia" />` dice
+   que…") o en una construcción que no lo necesite ("según `<Fuente id="teogonia" />`").
+8. `<E />` tiene dos formas y las dos enlazan igual. Autocerrada (`<E id="crono" />`) renderiza
    el nombre de la entidad. Con texto interno (`<E id="crono">su padre</E>`) renderiza ese
    texto en su lugar. Usa la segunda forma para posesivos, epítetos o variantes ("su padre",
    "el Cronida") que no calzan con el nombre canónico — no como excusa para enlazar frases

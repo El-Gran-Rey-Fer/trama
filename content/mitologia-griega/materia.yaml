@@ -125,6 +125,7 @@ mitologia-griega:
 
   fuentes:
     teogonia: { autor: "Hesíodo", obra: "Teogonía" }
+    trabajos-y-dias: { autor: "Hesíodo", obra: "Trabajos y días", siglo: -8 }
     iliada: { autor: "Homero", obra: "Ilíada" }
     biblioteca: { autor: "Apolodoro", obra: "Biblioteca" }
     metamorfosis: { autor: "Ovidio", obra: "Metamorfosis" }
