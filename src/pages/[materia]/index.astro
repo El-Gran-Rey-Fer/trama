@@ -24,4 +24,44 @@ const entidades = await getCollection("entidades");
       ))
     }
   </ul>
+
+  <section>
+    <h2>Copia de seguridad</h2>
+    <p>El progreso se guarda solo en este navegador. Exporta un fichero para no perderlo.</p>
+    <p>
+      <button id="exportar" type="button">Exportar</button>
+      <button id="importar" type="button">Importar</button>
+      <input id="fichero-importar" type="file" accept="application/json" hidden />
+    </p>
+    <p id="mensaje-importar" hidden></p>
+  </section>
+
+  <script>
+    import {
+      exportarEstado,
+      importarEstado,
+    } from "../../lib/estado";
+
+    const elExportar = document.getElementById("exportar");
+    const elImportar = document.getElementById("importar");
+    const elFichero = document.getElementById(
+      "fichero-importar",
+    ) as HTMLInputElement;
+    const elMensaje = document.getElementById("mensaje-importar");
+
+    elExportar?.addEventListener("click", () => exportarEstado());
+
+    elImportar?.addEventListener("click", () => elFichero.click());
+
+    elFichero.addEventListener("change", async () => {
+      const archivo = elFichero.files?.[0];
+      elFichero.value = "";
+      if (!archivo || !elMensaje) return;
+      const resultado = await importarEstado(archivo);
+      elMensaje.hidden = false;
+      elMensaje.textContent = resultado.ok
+        ? "Importado correctamente."
+        : `Error: ${resultado.error}`;
+    });
+  </script>
 </Base>
