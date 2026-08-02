@@ -5,6 +5,17 @@ resumen: >
   Rey de los dioses olímpicos, dios del cielo y del rayo.
 generacion: 3
 etiquetas: [olimpico]
+epitetos: [Padre de dioses y hombres, Olímpico, Tonante]
+atributos:
+  simbolo: el rayo
+  dominio: el cielo y el trueno
+  culto: Olimpia y Dodona
+  equivalente_romano: Júpiter
 relaciones:
   - tipo: devora_a
     destino: metis
+imagen:
+  archivo: /img/gr/zeus.jpg
+  credito: "Júpiter, Louvre-Lens. Foto: Jamain, CC BY-SA 4.0"
+  origen: https://commons.wikimedia.org/wiki/File:Jupiter_J1a.jpg
+  alt: Estatua de mármol de Júpiter portando un rayo, con un águila

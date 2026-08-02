@@ -5,6 +5,12 @@ resumen: >
   Dios del mar, hermano de Zeus y Hades.
 generacion: 3
 etiquetas: [olimpico]
+epitetos: [El que sacude la tierra, Señor de los caballos]
+atributos:
+  simbolo: el tridente
+  dominio: el mar y los terremotos
+  culto: los Juegos Ístmicos, cerca de Corinto
+  equivalente_romano: Neptuno
 relaciones:
   - tipo: hermano_de
     destino: hades

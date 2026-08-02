@@ -5,6 +5,12 @@ resumen: >
   Dios del inframundo, hermano de Zeus y Poseidón.
 generacion: 3
 etiquetas: [olimpico]
+epitetos: [El que acoge a muchos]
+atributos:
+  simbolo: el casco de invisibilidad
+  dominio: el inframundo y los muertos
+  culto: escaso; pocos templos dedicados
+  equivalente_romano: Plutón
 # hermano_de con poseidón llega por inversa
 relaciones:
   - tipo: rapta_a

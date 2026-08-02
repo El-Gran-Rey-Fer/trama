@@ -4,6 +4,11 @@ nombre: Gea
 resumen: >
   Personificación de la Tierra, madre de los Titanes junto a Urano.
 generacion: 1
+epitetos: [Madre tierra]
+atributos:
+  dominio: la tierra
+  culto: oráculos antiguos, entre ellos Delfos antes de Apolo
+  equivalente_romano: Tellus
 relaciones:
   - tipo: madre_de
     destino: crono

@@ -6,6 +6,7 @@ resumen: >
 generacion: 1
 atributos:
   dominio: cielo
+  equivalente_romano: Caelus
 relaciones:
   - tipo: padre_de
     destino: crono

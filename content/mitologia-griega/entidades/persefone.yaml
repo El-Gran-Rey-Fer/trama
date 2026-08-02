@@ -5,6 +5,13 @@ resumen: >
   Diosa raptada por Hades mientras recogía flores; reina del inframundo que
   reparte el año entre este y la compañía de su madre Deméter.
 etiquetas: [olimpico]
+alias: [Core]
+epitetos: [La doncella]
+atributos:
+  simbolo: la granada
+  dominio: reina del inframundo; el retorno de la primavera
+  culto: Eleusis, junto a Deméter
+  equivalente_romano: Proserpina
 relaciones:
   - tipo: habita
     destino: inframundo

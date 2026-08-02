@@ -5,6 +5,12 @@ resumen: >
   Diosa del matrimonio y la familia, esposa y hermana de Zeus.
 generacion: 3
 etiquetas: [olimpico]
+epitetos: [Reina de los dioses]
+atributos:
+  simbolo: el pavo real
+  dominio: el matrimonio y la familia
+  culto: Argos y Samos
+  equivalente_romano: Juno
 relaciones:
   - tipo: consorte_de
     destino: zeus

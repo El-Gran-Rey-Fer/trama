@@ -4,6 +4,11 @@ nombre: Rea
 resumen: >
   Titánide, esposa de Crono y madre de los primeros dioses olímpicos.
 generacion: 2
+epitetos: [Madre de los dioses]
+atributos:
+  dominio: la maternidad y la fertilidad
+  culto: asimilada a Cibeles en época posterior
+  equivalente_romano: Ops
 relaciones:
   - tipo: madre_de
     destino: zeus
