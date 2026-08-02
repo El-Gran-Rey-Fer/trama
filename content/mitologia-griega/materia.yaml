@@ -185,6 +185,50 @@ mitologia-griega:
     - id: guerra-de-troya
       nombre: La guerra de Troya y los regresos
 
+  # Paso 2 del modo aventura (docs/plan-modo-aventura.md). `nombre` es provisional en los
+  # cinco: la prioridad ahora es validar la estructura, no el rótulo — se revisan cuando entre
+  # el resto del temario (héroes, dioses, todo lo que falta). El conjunto de tarjetas de un
+  # capítulo es `participantes de sus relatos ∪ entidades_extra`; no se lista a mano lo que el
+  # grafo puede derivar. `orden` en múltiplos de 100 dentro de la era, igual que en relatos.
+  capitulos:
+    - id: el-primer-linaje
+      nombre: El primer linaje # provisional
+      era: cosmogonia
+      orden: 100
+      resumen: De dónde sale todo y por qué el primer rey del cosmos dura tan poco.
+      relatos: [castracion-de-urano]
+      examen: { aciertos: 8, de: 10 }
+    - id: la-guerra-por-el-cosmos
+      nombre: La guerra por el cosmos # provisional
+      era: edad-de-los-titanes
+      orden: 100
+      resumen: Diez años de guerra entre titanes y olímpicos deciden quién gobierna el mundo.
+      relatos: [titanomaquia]
+      entidades_extra: [tartaro, monte-otris] # centrales en la prosa, fuera de `participantes`
+      examen: { aciertos: 8, de: 10 }
+    - id: la-astucia-de-zeus
+      nombre: La astucia de Zeus # provisional
+      era: edad-de-los-olimpicos
+      orden: 100
+      resumen: Zeus se traga a su primera esposa para evitar una profecía, y de su cabeza nace una diosa armada.
+      relatos: [nacimiento-de-atenea]
+      examen: { aciertos: 8, de: 10 }
+    - id: las-estaciones
+      nombre: Las estaciones # provisional
+      era: edad-de-los-olimpicos
+      orden: 200
+      resumen: Un rapto en el inframundo explica por qué la tierra deja de dar fruto una parte del año.
+      relatos: [rapto-de-persefone]
+      examen: { aciertos: 8, de: 10 }
+    - id: el-laberinto
+      nombre: El laberinto # provisional
+      era: edad-de-los-heroes
+      orden: 100
+      resumen: Atenas paga un tributo de sangre a Creta hasta que un héroe se interna en el laberinto.
+      relatos: [teseo-y-el-minotauro]
+      examen: { aciertos: 8, de: 10 }
+    # guerra-de-troya: sin capítulos todavía, cero relatos escritos
+
   # --- huecos reservados para hitos futuros (schema-legales, sin uso funcional) ---
   # atributos:
   #   fuerza: { pregunta: "..." }
