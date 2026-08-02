@@ -16,6 +16,13 @@ export interface RelacionResuelta extends RelacionCruda {
 
 export type TipoNodo = "entidad" | "relato";
 
+export interface Imagen {
+	archivo: string;
+	credito?: string;
+	origen?: string;
+	alt?: string;
+}
+
 export interface RegistroRelacion {
 	inversa: string;
 	simetrica?: boolean;
@@ -39,7 +46,7 @@ export interface Entidad {
 	atributos?: Record<string, unknown>;
 	etiquetas?: string[];
 	generacion?: number;
-	imagen?: string;
+	imagen?: Imagen;
 	relaciones: RelacionResuelta[];
 	prosa?: ContenidoRenderizado;
 }

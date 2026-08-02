@@ -10,19 +10,43 @@ const relacionSchema = z.object({
 	nota: z.string().optional(),
 });
 
-const entidadSchema = z.object({
-	id: z.string(),
-	tipo: z.string(),
-	nombre: z.string(),
-	resumen: z.string(),
-	alias: z.array(z.string()).optional(),
-	epitetos: z.array(z.string()).optional(),
-	atributos: z.record(z.string(), z.unknown()).optional(),
-	relaciones: z.array(relacionSchema).optional(),
-	etiquetas: z.array(z.string()).optional(),
-	generacion: z.number().optional(),
-	imagen: z.string().optional(),
-});
+// Compatibilidad hacia atrás: `imagen` admite un string suelto (solo ruta) o
+// el objeto completo con procedencia. El string se normaliza aquí al cargar,
+// para que el resto del código nunca tenga que distinguir entre las dos formas.
+const imagenSchema = z
+	.union([
+		z.string(),
+		z.object({
+			archivo: z.string(),
+			credito: z.string().optional(),
+			origen: z.string().optional(),
+			alt: z.string().optional(),
+		}),
+	])
+	.transform((val) => (typeof val === "string" ? { archivo: val } : val));
+
+const entidadSchema = z
+	.object({
+		id: z.string(),
+		tipo: z.string(),
+		nombre: z.string(),
+		resumen: z.string(),
+		alias: z.array(z.string()).optional(),
+		epitetos: z.array(z.string()).optional(),
+		atributos: z.record(z.string(), z.unknown()).optional(),
+		relaciones: z.array(relacionSchema).optional(),
+		etiquetas: z.array(z.string()).optional(),
+		generacion: z.number().optional(),
+		imagen: imagenSchema.optional(),
+	})
+	.transform((data) => {
+		if (data.imagen && !data.imagen.credito) {
+			console.warn(
+				`[trama] falta crédito de imagen en "${data.id}" (${data.imagen.archivo})`,
+			);
+		}
+		return data;
+	});
 
 const entidades = defineCollection({
 	loader: glob({
@@ -95,6 +119,23 @@ const materiaSchema = z.object({
 	fuentes: z.record(z.string(), fuenteSchema).optional(),
 	tipos: z.array(z.string()).optional(),
 	eras: z.array(z.object({ id: z.string(), nombre: z.string() })).optional(),
+	// Modo aventura, paso 2 (docs/plan-modo-aventura.md): el conjunto de un capítulo
+	// —de donde salen sus tarjetas y su examen— es `participantes` de sus `relatos`
+	// más `entidades_extra`; no se lista a mano lo que el grafo puede derivar.
+	capitulos: z
+		.array(
+			z.object({
+				id: z.string(),
+				nombre: z.string(),
+				era: z.string(),
+				orden: z.number(),
+				resumen: z.string(),
+				relatos: z.array(z.string()),
+				entidades_extra: z.array(z.string()).optional(),
+				examen: z.object({ aciertos: z.number(), de: z.number() }),
+			}),
+		)
+		.optional(),
 	// --- huecos reservados: legales en el esquema, sin uso funcional en Hito 1 ---
 	idiomas: z
 		.object({

@@ -34,7 +34,20 @@ const esStub =
 
   {
     entidad.imagen && (
-      <img class="imagen" src={entidad.imagen} alt="" />
+      <figure class="imagen">
+        <img src={entidad.imagen.archivo} alt={entidad.imagen.alt ?? entidad.nombre} />
+        {
+          entidad.imagen.credito && (
+            <figcaption>
+              {entidad.imagen.origen ? (
+                <a href={entidad.imagen.origen}>{entidad.imagen.credito}</a>
+              ) : (
+                entidad.imagen.credito
+              )}
+            </figcaption>
+          )
+        }
+      </figure>
     )
   }
 
@@ -127,11 +140,24 @@ const esStub =
   }
 
   .imagen {
+    margin: 14px 0 0;
+  }
+
+  .imagen img {
     display: block;
     width: 100%;
     height: 220px;
     object-fit: cover;
-    margin-top: 14px;
+  }
+
+  .imagen figcaption {
+    padding: 4px 20px 0;
+    font-size: 11px;
+    color: var(--color-texto-muted);
+  }
+
+  .imagen figcaption a {
+    color: inherit;
   }
 
   .cuerpo {
