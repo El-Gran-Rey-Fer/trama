@@ -1,5 +1,5 @@
 ---
-import { getCollection } from "astro:content";
+import { getCollection, getEntry } from "astro:content";
 import Base from "../../../layouts/Base.astro";
 import { conjuntoDeRelato } from "../../../lib/desbloqueo";
 import { rutaMateria } from "../../../lib/rutas";
@@ -7,7 +7,7 @@ import { generarTarjetas } from "../../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
-	const juegos = ["emparejar"];
+	const juegos = ["emparejar", "ordenar"];
 	return materias.flatMap((m) =>
 		juegos.map((juego) => ({
 			params: { materia: m.data.slug, juego },
@@ -25,8 +25,34 @@ const relatoConjuntos = Object.fromEntries(
 	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
 );
 
+// Ordenar (paso 8): la era con más relatos, en su `orden` real. Los datos ya
+// existen (`era` + `orden`); no hace falta tocar el esquema.
+const materiaEntry = await getEntry("materias", materiaId);
+const eras = materiaEntry?.data.eras ?? [];
+const porEra = new Map<
+	string,
+	{ id: string; nombre: string; orden: number }[]
+>();
+for (const r of relatos) {
+	if (!r.data.era || r.data.orden === undefined) continue;
+	const lista = porEra.get(r.data.era) ?? [];
+	lista.push({ id: r.id, nombre: r.data.nombre, orden: r.data.orden });
+	porEra.set(r.data.era, lista);
+}
+let relatosEra: { id: string; nombre: string; orden: number }[] = [];
+let nombreEraOrdenar = "";
+for (const era of eras) {
+	const lista = porEra.get(era.id);
+	if (lista && lista.length > relatosEra.length) {
+		relatosEra = lista;
+		nombreEraOrdenar = era.nombre;
+	}
+}
+relatosEra.sort((a, b) => a.orden - b.orden);
+
 const TITULOS: Record<string, string> = {
 	emparejar: "Emparejar",
+	ordenar: "Ordenar",
 };
 const titulo = TITULOS[juego ?? ""] ?? juego;
 ---
@@ -34,7 +60,10 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
 <Base titulo={`${titulo} — ${materia}`}>
   <article class="juego">
     <header class="cabecera-juego">
-      <h1>{titulo}</h1>
+      <div>
+        <h1>{titulo}</h1>
+        {juego === "ordenar" && nombreEraOrdenar && <p class="subtitulo">{nombreEraOrdenar}</p>}
+      </div>
       <p id="progreso"></p>
     </header>
 
@@ -53,7 +82,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     is:inline
     type="application/json"
     id="datos-juego"
-    set:html={JSON.stringify({ tarjetas, relatoConjuntos })}
+    set:html={JSON.stringify({ tarjetas, relatoConjuntos, relatosEra })}
   />
 
   <script>
@@ -61,13 +90,24 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     import { leerEstado } from "../../../lib/estado";
     import type { Tarjeta } from "../../../lib/tarjetas";
 
+    interface RelatoEra {
+      id: string;
+      nombre: string;
+      orden: number;
+    }
+
     const datosEl = document.getElementById("datos-juego");
-    const { tarjetas, relatoConjuntos } = datosEl
+    const { tarjetas, relatoConjuntos, relatosEra } = datosEl
       ? (JSON.parse(datosEl.textContent ?? "{}") as {
           tarjetas: Tarjeta[];
           relatoConjuntos: Record<string, string[]>;
+          relatosEra: RelatoEra[];
         })
-      : { tarjetas: [] as Tarjeta[], relatoConjuntos: {} };
+      : {
+          tarjetas: [] as Tarjeta[],
+          relatoConjuntos: {},
+          relatosEra: [] as RelatoEra[],
+        };
 
     const tablero = document.getElementById("tablero");
     const elProgreso = document.getElementById("progreso");
@@ -165,8 +205,65 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       actualizarProgreso();
     }
 
+    // Ordenar: cinco relatos de una era, desordenados, a colocar. Los datos ya
+    // existen (`era` + `orden`); el juego solo consume el orden real.
+    function iniciarOrdenar() {
+      if (!tablero || relatosEra.length < 2) {
+        elSinTarjetas?.removeAttribute("hidden");
+        return;
+      }
+
+      const secuenciaCorrecta = [...relatosEra].sort((a, b) => a.orden - b.orden);
+      let siguiente = 0;
+
+      function actualizarProgreso() {
+        if (elProgreso) {
+          elProgreso.textContent = `${siguiente} / ${secuenciaCorrecta.length}`;
+        }
+      }
+
+      const lista = document.createElement("ol");
+      lista.className = "lista-ordenar";
+
+      const pool = document.createElement("div");
+      pool.className = "pool-ordenar";
+
+      for (const relato of barajar(relatosEra)) {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "pieza-ordenar";
+        boton.textContent = relato.nombre;
+        boton.dataset.id = relato.id;
+        boton.addEventListener("click", () => {
+          if (boton.disabled) return;
+          if (relato.id === secuenciaCorrecta[siguiente].id) {
+            boton.disabled = true;
+            boton.classList.add("acierto");
+            const item = document.createElement("li");
+            item.textContent = relato.nombre;
+            lista.appendChild(item);
+            siguiente += 1;
+            actualizarProgreso();
+            if (siguiente === secuenciaCorrecta.length && elMensaje) {
+              elMensaje.hidden = false;
+              elMensaje.textContent = "¡Completado!";
+            }
+          } else {
+            boton.classList.add("fallo");
+            setTimeout(() => boton.classList.remove("fallo"), 500);
+          }
+        });
+        pool.appendChild(boton);
+      }
+
+      tablero.appendChild(lista);
+      tablero.appendChild(pool);
+      actualizarProgreso();
+    }
+
     const juego = tablero?.dataset.juego;
     if (juego === "emparejar") iniciarEmparejar();
+    if (juego === "ordenar") iniciarOrdenar();
   </script>
 
   <style>
@@ -206,6 +303,44 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .pieza.fallo {
+      border-color: crimson;
+    }
+
+    .subtitulo {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--color-texto-muted);
+    }
+
+    .lista-ordenar {
+      margin: 0 20px 12px;
+      padding-left: 20px;
+    }
+
+    .pool-ordenar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 20px;
+    }
+
+    .pieza-ordenar {
+      padding: 14px;
+      border: 1px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      font-size: 15px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .pieza-ordenar.acierto {
+      display: none;
+    }
+
+    .pieza-ordenar.fallo {
       border-color: crimson;
     }
 
