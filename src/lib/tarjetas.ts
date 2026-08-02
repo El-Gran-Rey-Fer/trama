@@ -11,7 +11,12 @@ interface Grupo {
 	respuestas: string[];
 }
 
-export async function generarTarjetas(materiaId: string): Promise<Tarjeta[]> {
+export async function generarTarjetas(
+	materiaId: string,
+	// Restringe a las aristas cuyos dos extremos estén en el conjunto (capítulos,
+	// modo aventura, paso 3). Sin filtro, genera todas las tarjetas de la materia.
+	soloIds?: Set<string>,
+): Promise<Tarjeta[]> {
 	const grafo = await construirGrafo(materiaId);
 	const tarjetas: Tarjeta[] = [];
 	// Relaciones de conjunto (ej. tiene_participante) agrupan todas las aristas
@@ -20,6 +25,9 @@ export async function generarTarjetas(materiaId: string): Promise<Tarjeta[]> {
 	const grupos = new Map<string, Grupo>();
 
 	for (const { origenId, relacion } of grafo.aristas) {
+		if (soloIds && (!soloIds.has(origenId) || !soloIds.has(relacion.destino))) {
+			continue;
+		}
 		const definicion = grafo.registro[relacion.tipo];
 		if (!definicion) continue;
 		const origen = grafo.entidades.get(origenId);

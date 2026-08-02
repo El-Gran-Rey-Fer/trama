@@ -18,3 +18,7 @@ export function rutaRelato(materiaSlug: string, id: string): string {
 export function rutaPracticar(materiaSlug: string): string {
 	return `${base()}${materiaSlug}/practicar/`;
 }
+
+export function rutaCapitulo(materiaSlug: string, id: string): string {
+	return `${base()}${materiaSlug}/c/${id}/`;
+}

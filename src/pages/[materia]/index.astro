@@ -1,29 +1,69 @@
 ---
-import { getCollection } from "astro:content";
+import { getCollection, getEntry } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { rutaEntidad, rutaPracticar } from "../../lib/rutas";
+import { cargarCapitulos } from "../../lib/capitulos";
+import { rutaCapitulo, rutaEntidad, rutaPracticar } from "../../lib/rutas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
-	return materias.map((m) => ({ params: { materia: m.data.slug } }));
+	return materias.map((m) => ({
+		params: { materia: m.data.slug },
+		props: { materiaId: m.id },
+	}));
 }
 
 const { materia } = Astro.params;
+const { materiaId } = Astro.props;
 const entidades = await getCollection("entidades");
+const materiaEntry = await getEntry("materias", materiaId);
+const eras = materiaEntry?.data.eras ?? [];
+const capitulos = await cargarCapitulos(materiaId);
+const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
 ---
 
-<Base titulo={`Entidades — ${materia}`}>
+<Base titulo={`${materia} — modo aventura`}>
   <h1>{materia}</h1>
   <p><a href={rutaPracticar(materia)}>Practicar</a></p>
-  <ul>
+
+  <section>
+    <h2>Modo aventura</h2>
     {
-      entidades.map((e) => (
-        <li>
-          <a href={rutaEntidad(materia, e.id)}>{e.data.nombre}</a>
-        </li>
-      ))
+      eras.map((era) => {
+        const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
+        return (
+          <section>
+            <h3>{era.nombre}</h3>
+            {capitulosDeEra.length === 0 ? (
+              <p>Sin capítulos todavía.</p>
+            ) : (
+              <ol>
+                {capitulosDeEra.map((c) => (
+                  <li data-capitulo={c.id}>
+                    <a href={rutaCapitulo(materia, c.id)}>{c.nombre}</a>
+                    {" — "}
+                    <span class="estado">Cerrado</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        );
+      })
     }
-  </ul>
+  </section>
+
+  <section>
+    <h2>Todas las entidades</h2>
+    <ul>
+      {
+        entidades.map((e) => (
+          <li>
+            <a href={rutaEntidad(materia, e.id)}>{e.data.nombre}</a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
 
   <section>
     <h2>Copia de seguridad</h2>
@@ -36,11 +76,38 @@ const entidades = await getCollection("entidades");
     <p id="mensaje-importar" hidden></p>
   </section>
 
+  <script
+    is:inline
+    type="application/json"
+    id="datos-capitulos"
+    set:html={JSON.stringify(datosCapitulos)}
+  />
+
   <script>
     import {
+      calcularEstadosCapitulos,
       exportarEstado,
       importarEstado,
+      leerEstado,
+      type CapituloResumen,
     } from "../../lib/estado";
+
+    const ETIQUETA = {
+      abierto: "Abierto",
+      "en-curso": "En curso",
+      cerrado: "Cerrado",
+    } as const;
+
+    const datosEl = document.getElementById("datos-capitulos");
+    const capitulos: CapituloResumen[] = datosEl
+      ? JSON.parse(datosEl.textContent ?? "[]")
+      : [];
+    const estados = calcularEstadosCapitulos(capitulos, leerEstado());
+
+    for (const [id, estado] of Object.entries(estados)) {
+      const el = document.querySelector(`[data-capitulo="${id}"] .estado`);
+      if (el) el.textContent = ETIQUETA[estado];
+    }
 
     const elExportar = document.getElementById("exportar");
     const elImportar = document.getElementById("importar");

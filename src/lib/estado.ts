@@ -72,6 +72,40 @@ export function exportarEstado(): void {
 	URL.revokeObjectURL(url);
 }
 
+export interface CapituloResumen {
+	id: string;
+	relatos: string[];
+}
+
+export type EstadoVisualCapitulo = "abierto" | "en-curso" | "cerrado";
+
+// Los capítulos ya completados salen "cerrado". El primero sin completar es el
+// activo de la vía guiada ("abierto", o "en-curso" si ya se leyó algún relato
+// suyo); todos los que vienen después están "cerrado" porque aún no se llega.
+// Recibe la lista YA ordenada (era, luego orden dentro de la era).
+export function calcularEstadosCapitulos(
+	capitulosOrdenados: CapituloResumen[],
+	estado: EstadoV1,
+): Record<string, EstadoVisualCapitulo> {
+	const resultado: Record<string, EstadoVisualCapitulo> = {};
+	let activoAsignado = false;
+	for (const capitulo of capitulosOrdenados) {
+		const completado = estado.capitulos[capitulo.id]?.estado === "cerrado";
+		if (completado) {
+			resultado[capitulo.id] = "cerrado";
+			continue;
+		}
+		if (activoAsignado) {
+			resultado[capitulo.id] = "cerrado";
+			continue;
+		}
+		const algoLeido = capitulo.relatos.some((r) => estado.leidos.includes(r));
+		resultado[capitulo.id] = algoLeido ? "en-curso" : "abierto";
+		activoAsignado = true;
+	}
+	return resultado;
+}
+
 export async function importarEstado(
 	archivo: File,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
