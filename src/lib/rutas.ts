@@ -23,6 +23,14 @@ export function rutaCapitulo(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/c/${id}/`;
 }
 
+export function rutaExamen(materiaSlug: string, id: string): string {
+	return `${base()}${materiaSlug}/c/${id}/examen/`;
+}
+
+export function rutaJuego(materiaSlug: string, juego: string): string {
+	return `${base()}${materiaSlug}/jugar/${juego}/`;
+}
+
 // Los ficheros de `public/` (imágenes, etc.) se referencian en el contenido con
 // ruta absoluta desde la raíz del sitio (p. ej. `/img/gr/zeus.jpg`), pero el
 // despliegue vive bajo `base`: hay que anteponerla igual que en las rutas internas.

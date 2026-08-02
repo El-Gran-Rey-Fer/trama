@@ -2,7 +2,7 @@
 import { getCollection } from "astro:content";
 import Base from "../../../layouts/Base.astro";
 import { cargarCapitulos } from "../../../lib/capitulos";
-import { rutaMateria, rutaRelato } from "../../../lib/rutas";
+import { rutaExamen, rutaMateria, rutaRelato } from "../../../lib/rutas";
 import { generarTarjetas } from "../../../lib/tarjetas";
 
 export async function getStaticPaths() {
@@ -56,10 +56,8 @@ const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
     <p>{tarjetas.length} tarjetas en este capítulo.</p>
 
     <h2>Examen</h2>
-    <p>
-      Aprueba con {capitulo.examen.aciertos} de {capitulo.examen.de}. Todavía no
-      funciona.
-    </p>
+    <p>Aprueba con {capitulo.examen.aciertos} de {capitulo.examen.de}.</p>
+    <p><a href={rutaExamen(materia, capitulo.id)}>Empezar el examen</a></p>
 
     <p><a href={rutaMateria(materia)}>&larr; volver</a></p>
   </article>

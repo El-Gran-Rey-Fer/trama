@@ -1,0 +1,323 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../../../layouts/Base.astro";
+import { cargarCapitulos } from "../../../../lib/capitulos";
+import { rutaCapitulo } from "../../../../lib/rutas";
+import { generarTarjetas } from "../../../../lib/tarjetas";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	const porMateria = await Promise.all(
+		materias.map(async (m) => {
+			const capitulos = await cargarCapitulos(m.id);
+			return capitulos.map((c) => ({
+				params: { materia: m.data.slug, id: c.id },
+				props: { materiaId: m.id },
+			}));
+		}),
+	);
+	return porMateria.flat();
+}
+
+const { materia, id } = Astro.params;
+const { materiaId } = Astro.props;
+
+const capitulos = await cargarCapitulos(materiaId);
+const indice = capitulos.findIndex((c) => c.id === id);
+const capitulo = capitulos[indice];
+if (!capitulo) throw new Error(`Capítulo no encontrado: ${id}`);
+const siguienteCapitulo = capitulos[indice + 1] ?? null;
+
+const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
+// Solo entran preguntas evaluables de verdad (nada se autoevalúa, §3.5): de
+// respuesta única y con al menos un distractor real para poder ofrecer
+// opción múltiple. El resto del contenido del capítulo se practica en
+// /practicar, pero no examina.
+const preguntas = tarjetas.filter(
+	(t) => !t.conjunto && t.distractores.length > 0,
+);
+---
+
+<Base titulo={`Examen — ${capitulo.nombre}`}>
+  <article class="examen">
+    <header class="cabecera-juego">
+      <div>
+        <h1>Examen: {capitulo.nombre}</h1>
+      </div>
+      <p id="progreso"></p>
+    </header>
+
+    <div id="tablero"></div>
+
+    <p id="sin-preguntas" hidden>
+      Este capítulo todavía no tiene suficientes tarjetas evaluables para un
+      examen. Vuelve cuando tenga más contenido.
+    </p>
+
+    <p class="salir"><a href={rutaCapitulo(materia, capitulo.id)}>&larr; Volver al capítulo</a></p>
+  </article>
+
+  <script
+    is:inline
+    type="application/json"
+    id="datos-examen"
+    set:html={JSON.stringify({
+      preguntas,
+      umbral: capitulo.examen,
+      capituloId: capitulo.id,
+      idSiguiente: siguienteCapitulo?.id ?? null,
+      nombreSiguiente: siguienteCapitulo?.nombre ?? null,
+      materiaSlug: materia,
+    })}
+  />
+
+  <script>
+    import { guardarEstado, leerEstado } from "../../../../lib/estado";
+    import { rutaCapitulo, rutaMateria } from "../../../../lib/rutas";
+    import type { Tarjeta } from "../../../../lib/tarjetas";
+
+    interface Datos {
+      preguntas: Tarjeta[];
+      umbral: { aciertos: number; de: number };
+      capituloId: string;
+      idSiguiente: string | null;
+      nombreSiguiente: string | null;
+      materiaSlug: string;
+    }
+
+    const datosEl = document.getElementById("datos-examen");
+    const datos = datosEl
+      ? (JSON.parse(datosEl.textContent ?? "{}") as Datos)
+      : null;
+
+    const tablero = document.getElementById("tablero");
+    const elProgreso = document.getElementById("progreso");
+    const elSinPreguntas = document.getElementById("sin-preguntas");
+
+    function barajar<T>(arr: T[]): T[] {
+      const copia = [...arr];
+      for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copia[i], copia[j]] = [copia[j], copia[i]];
+      }
+      return copia;
+    }
+
+    function iniciarExamen(preguntas: Tarjeta[]) {
+      if (!datos || !tablero) return;
+      if (preguntas.length < 3) {
+        elSinPreguntas?.removeAttribute("hidden");
+        return;
+      }
+
+      const MAX_PREGUNTAS = 10;
+      const tanda = barajar(preguntas).slice(0, MAX_PREGUNTAS);
+      // El umbral se escala si hay menos preguntas evaluables que las `de`
+      // declaradas por el capítulo, para no exigir un 10/10 encubierto.
+      const necesarios = Math.max(
+        1,
+        Math.round((datos.umbral.aciertos / datos.umbral.de) * tanda.length),
+      );
+
+      let indice = 0;
+      let aciertos = 0;
+      const falladas: Tarjeta[] = [];
+
+      function actualizarProgreso() {
+        if (elProgreso) {
+          elProgreso.textContent = `${indice} / ${tanda.length}`;
+        }
+      }
+
+      function mostrarPregunta() {
+        if (!tablero) return;
+        tablero.innerHTML = "";
+        const pregunta = tanda[indice];
+        const opciones = barajar([pregunta.respuesta, ...pregunta.distractores]);
+
+        const p = document.createElement("p");
+        p.className = "texto-pregunta";
+        p.textContent = pregunta.pregunta;
+        tablero.appendChild(p);
+
+        const lista = document.createElement("div");
+        lista.className = "opciones";
+        for (const opcion of opciones) {
+          const boton = document.createElement("button");
+          boton.type = "button";
+          boton.className = "opcion";
+          boton.textContent = opcion;
+          boton.addEventListener("click", () => {
+            for (const otro of lista.querySelectorAll("button")) {
+              (otro as HTMLButtonElement).disabled = true;
+            }
+            const correcta = opcion === pregunta.respuesta;
+            boton.classList.add(correcta ? "acierto" : "fallo");
+            if (correcta) {
+              aciertos += 1;
+            } else {
+              falladas.push(pregunta);
+              for (const otro of lista.querySelectorAll("button")) {
+                if (otro.textContent === pregunta.respuesta) {
+                  otro.classList.add("acierto");
+                }
+              }
+            }
+            setTimeout(() => {
+              indice += 1;
+              actualizarProgreso();
+              if (indice < tanda.length) {
+                mostrarPregunta();
+              } else {
+                mostrarResultado();
+              }
+            }, 700);
+          });
+          lista.appendChild(boton);
+        }
+        tablero.appendChild(lista);
+      }
+
+      function mostrarResultado() {
+        if (!tablero || !datos) return;
+        tablero.innerHTML = "";
+        const superado = aciertos >= necesarios;
+
+        const resumen = document.createElement("p");
+        resumen.className = "resultado";
+        resumen.textContent = `${aciertos} / ${tanda.length} correctas.`;
+        tablero.appendChild(resumen);
+
+        const estado = leerEstado();
+        const previo = estado.capitulos[datos.capituloId];
+        estado.capitulos[datos.capituloId] = {
+          estado: superado ? "cerrado" : (previo?.estado ?? "en-curso"),
+          intentos: (previo?.intentos ?? 0) + 1,
+        };
+        guardarEstado(estado);
+
+        if (superado) {
+          const exito = document.createElement("p");
+          exito.className = "exito";
+          exito.textContent = "¡Capítulo superado!";
+          tablero.appendChild(exito);
+
+          const enlace = document.createElement("a");
+          enlace.className = "boton-siguiente";
+          if (datos.idSiguiente) {
+            enlace.href = rutaCapitulo(datos.materiaSlug, datos.idSiguiente);
+            enlace.textContent = `Siguiente: ${datos.nombreSiguiente}`;
+          } else {
+            enlace.href = rutaMateria(datos.materiaSlug);
+            enlace.textContent = "Volver al mapa";
+          }
+          tablero.appendChild(enlace);
+        } else {
+          const aviso = document.createElement("p");
+          aviso.textContent = `No llegaste al umbral (${necesarios}). Repasa esto antes de reintentar:`;
+          tablero.appendChild(aviso);
+
+          const listaFalladas = document.createElement("ul");
+          listaFalladas.className = "lista-falladas";
+          for (const f of falladas) {
+            const item = document.createElement("li");
+            item.textContent = `${f.pregunta} → ${f.respuesta}`;
+            listaFalladas.appendChild(item);
+          }
+          tablero.appendChild(listaFalladas);
+
+          const reintentar = document.createElement("button");
+          reintentar.type = "button";
+          reintentar.className = "boton-siguiente";
+          reintentar.textContent = "Reintentar";
+          reintentar.addEventListener("click", () => iniciarExamen(preguntas));
+          tablero.appendChild(reintentar);
+        }
+      }
+
+      actualizarProgreso();
+      mostrarPregunta();
+    }
+
+    if (datos) iniciarExamen(datos.preguntas);
+  </script>
+
+  <style>
+    .cabecera-juego {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 12px 20px;
+    }
+
+    .texto-pregunta {
+      padding: 0 20px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .opciones {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px 20px;
+    }
+
+    .opcion {
+      padding: 14px;
+      border: 1px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      font-size: 15px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .opcion.acierto {
+      border-color: seagreen;
+      background: color-mix(in srgb, seagreen 15%, var(--color-tarjeta-fondo));
+    }
+
+    .opcion.fallo {
+      border-color: crimson;
+    }
+
+    .resultado {
+      padding: 0 20px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .exito {
+      padding: 0 20px;
+      color: seagreen;
+      font-weight: 700;
+    }
+
+    .lista-falladas {
+      padding: 0 20px 0 40px;
+      color: var(--color-texto-muted);
+      font-size: 14px;
+    }
+
+    .boton-siguiente {
+      display: inline-block;
+      margin: 12px 20px;
+      padding: 14px 20px;
+      border: none;
+      border-radius: var(--radio);
+      background: var(--color-acento);
+      color: var(--color-acento-contraste);
+      font-family: var(--fuente);
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .salir {
+      padding: 20px;
+    }
+  </style>
+</Base>

@@ -2,7 +2,12 @@
 import { getCollection, getEntry } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import { cargarCapitulos } from "../../lib/capitulos";
-import { rutaCapitulo, rutaEntidad, rutaPracticar } from "../../lib/rutas";
+import {
+	rutaCapitulo,
+	rutaEntidad,
+	rutaJuego,
+	rutaPracticar,
+} from "../../lib/rutas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -23,7 +28,11 @@ const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
 
 <Base titulo={`${materia} — modo aventura`}>
   <h1>{materia}</h1>
-  <p><a href={rutaPracticar(materia)}>Practicar</a></p>
+  <p>
+    <a href={rutaPracticar(materia)}>Practicar</a>
+    · <a href={rutaJuego(materia, "emparejar")}>Emparejar</a>
+    · <a href={rutaJuego(materia, "ordenar")}>Ordenar</a>
+  </p>
 
   <section>
     <h2>Modo aventura</h2>
