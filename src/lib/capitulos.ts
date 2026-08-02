@@ -1,4 +1,5 @@
 import { getCollection, getEntry } from "astro:content";
+import { conjuntoDeRelato } from "./desbloqueo";
 
 export interface Capitulo {
 	id: string;
@@ -52,8 +53,7 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 		for (const relatoId of c.relatos) {
 			const data = relatosPorId.get(relatoId);
 			if (!data) continue;
-			for (const p of data.participantes ?? []) conjunto.add(p);
-			if (data.lugar) conjunto.add(data.lugar);
+			for (const p of conjuntoDeRelato(data)) conjunto.add(p);
 		}
 		return {
 			id: c.id,

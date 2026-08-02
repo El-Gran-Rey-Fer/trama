@@ -4,11 +4,26 @@ export interface Tarjeta {
 	id: string;
 	pregunta: string;
 	respuesta: string;
+	// Entidades de las que depende esta tarjeta. Una tarjeta está disponible
+	// cuando todas están en el conjunto de lo leído (modo aventura, paso 4);
+	// también es la base de la regla de distractores (paso 6: mismo `tipo`,
+	// excluyendo cualquier entidad que aparezca en `ids` de una tarjeta que
+	// las conecte).
+	ids: string[];
+	// Tipo de relación de origen ("padre_de", "atributo:simbolo"...). Lo usa
+	// la regla de distractores del paso 6 para saber qué `tipo` de entidad
+	// buscar y qué excluir.
+	tipoRelacion: string;
+	// Si la respuesta es un conjunto (varios nombres) en vez de un valor
+	// único. Solo las de valor único entran en el juego de emparejar (§3.7).
+	conjunto: boolean;
 }
 
 interface Grupo {
 	pregunta: string;
 	respuestas: string[];
+	ids: Set<string>;
+	tipoRelacion: string;
 }
 
 export async function generarTarjetas(
@@ -38,14 +53,23 @@ export async function generarTarjetas(
 			const pregunta = definicion.pregunta.replace("{origen}", origen.nombre);
 			if (definicion.conjunto) {
 				const id = `${origenId}:${relacion.tipo}`;
-				const grupo = grupos.get(id) ?? { pregunta, respuestas: [] };
+				const grupo = grupos.get(id) ?? {
+					pregunta,
+					respuestas: [],
+					ids: new Set([origenId]),
+					tipoRelacion: relacion.tipo,
+				};
 				grupo.respuestas.push(destino.nombre);
+				grupo.ids.add(relacion.destino);
 				grupos.set(id, grupo);
 			} else {
 				tarjetas.push({
 					id: `${origenId}:${relacion.tipo}:${relacion.destino}`,
 					pregunta,
 					respuesta: destino.nombre,
+					ids: [origenId, relacion.destino],
+					tipoRelacion: relacion.tipo,
+					conjunto: false,
 				});
 			}
 		}
@@ -57,14 +81,23 @@ export async function generarTarjetas(
 			);
 			if (definicion.conjunto_inversa) {
 				const id = `${relacion.destino}:${definicion.inversa}`;
-				const grupo = grupos.get(id) ?? { pregunta, respuestas: [] };
+				const grupo = grupos.get(id) ?? {
+					pregunta,
+					respuestas: [],
+					ids: new Set([relacion.destino]),
+					tipoRelacion: definicion.inversa,
+				};
 				grupo.respuestas.push(origen.nombre);
+				grupo.ids.add(origenId);
 				grupos.set(id, grupo);
 			} else {
 				tarjetas.push({
 					id: `${relacion.destino}:${definicion.inversa}:${origenId}`,
 					pregunta,
 					respuesta: origen.nombre,
+					ids: [relacion.destino, origenId],
+					tipoRelacion: definicion.inversa,
+					conjunto: false,
 				});
 			}
 		}
@@ -75,6 +108,9 @@ export async function generarTarjetas(
 			id,
 			pregunta: grupo.pregunta,
 			respuesta: grupo.respuestas.join(", "),
+			ids: [...grupo.ids],
+			tipoRelacion: grupo.tipoRelacion,
+			conjunto: true,
 		});
 	}
 

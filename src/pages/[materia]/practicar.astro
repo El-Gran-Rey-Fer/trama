@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
+import { conjuntoDeRelato } from "../../lib/desbloqueo";
 import { rutaMateria } from "../../lib/rutas";
 import { generarTarjetas } from "../../lib/tarjetas";
 
@@ -15,6 +16,10 @@ export async function getStaticPaths() {
 const { materia } = Astro.params;
 const { materiaId } = Astro.props;
 const tarjetas = await generarTarjetas(materiaId);
+const relatos = await getCollection("relatos");
+const relatoConjuntos = Object.fromEntries(
+	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
+);
 ---
 
 <Base titulo={`Practicar — ${materia}`}>
@@ -31,14 +36,42 @@ const tarjetas = await generarTarjetas(materiaId);
       <button id="siguiente" type="button">Siguiente</button>
     </p>
 
-    <p id="vacio" hidden>No hay tarjetas todavía.</p>
+    <p id="vacio" hidden>
+      No hay tarjetas disponibles todavía. Lee un relato para desbloquearlas, o
+      cambia a modo sandbox para verlas todas.
+    </p>
     <p id="fin" hidden>Has terminado la baraja.</p>
 
     <p><a href={rutaMateria(materia)}>&larr; volver</a></p>
   </article>
 
-  <script define:vars={{ tarjetas }}>
-    const mazo = [...tarjetas];
+  <script
+    is:inline
+    type="application/json"
+    id="datos-practicar"
+    set:html={JSON.stringify({ tarjetas, relatoConjuntos })}
+  />
+
+  <script>
+    import { tarjetasDisponibles } from "../../lib/disponibilidad";
+    import { leerEstado } from "../../lib/estado";
+    import type { Tarjeta } from "../../lib/tarjetas";
+
+    const datosEl = document.getElementById("datos-practicar");
+    const { tarjetas, relatoConjuntos } = datosEl
+      ? (JSON.parse(datosEl.textContent ?? "{}") as {
+          tarjetas: Tarjeta[];
+          relatoConjuntos: Record<string, string[]>;
+        })
+      : { tarjetas: [] as Tarjeta[], relatoConjuntos: {} };
+
+    const disponibles = tarjetasDisponibles(
+      tarjetas,
+      relatoConjuntos,
+      leerEstado(),
+    );
+
+    const mazo = [...disponibles];
     for (let i = mazo.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [mazo[i], mazo[j]] = [mazo[j], mazo[i]];
@@ -55,6 +88,9 @@ const tarjetas = await generarTarjetas(materiaId);
     const elFin = document.getElementById("fin");
 
     function mostrar() {
+      if (!elTarjeta || !elSiguiente || !elContador || !elVacio || !elFin) {
+        return;
+      }
       if (mazo.length === 0) {
         elTarjeta.hidden = true;
         elSiguiente.hidden = true;
@@ -70,16 +106,18 @@ const tarjetas = await generarTarjetas(materiaId);
         return;
       }
       elContador.textContent = `Quedan ${mazo.length - indice}`;
-      elPregunta.textContent = mazo[indice].pregunta;
-      elRespuesta.textContent = mazo[indice].respuesta;
-      elRespuesta.hidden = true;
+      if (elPregunta) elPregunta.textContent = mazo[indice].pregunta;
+      if (elRespuesta) {
+        elRespuesta.textContent = mazo[indice].respuesta;
+        elRespuesta.hidden = true;
+      }
     }
 
-    elTarjeta.addEventListener("click", () => {
-      elRespuesta.hidden = !elRespuesta.hidden;
+    elTarjeta?.addEventListener("click", () => {
+      if (elRespuesta) elRespuesta.hidden = !elRespuesta.hidden;
     });
 
-    elSiguiente.addEventListener("click", () => {
+    elSiguiente?.addEventListener("click", () => {
       indice += 1;
       mostrar();
     });

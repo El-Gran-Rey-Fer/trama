@@ -20,9 +20,63 @@ const { titulo } = Astro.props;
     />
   </head>
   <body>
+    <header class="cabecera-global">
+      <button type="button" id="interruptor-modo" class="interruptor-modo">
+        Modo: <span class="valor-modo">aventura</span>
+      </button>
+    </header>
     <slot />
   </body>
 </html>
+
+<style>
+  .cabecera-global {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 12px;
+  }
+
+  .interruptor-modo {
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: var(--color-tarjeta-fondo);
+    color: var(--color-texto);
+    font-family: var(--fuente);
+    font-size: 13px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+
+  .valor-modo {
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+</style>
+
+<script>
+  import { leerEstado, guardarEstado } from "../lib/estado";
+
+  const boton = document.getElementById("interruptor-modo");
+  const valor = boton?.querySelector<HTMLElement>(".valor-modo");
+
+  function pintar(modo: "aventura" | "sandbox") {
+    if (valor) valor.textContent = modo;
+    boton?.setAttribute("aria-pressed", String(modo === "sandbox"));
+  }
+
+  pintar(leerEstado().modo);
+
+  boton?.addEventListener("click", () => {
+    const estado = leerEstado();
+    estado.modo = estado.modo === "aventura" ? "sandbox" : "aventura";
+    guardarEstado(estado);
+    pintar(estado.modo);
+    // Recarga para que la página actual recalcule su vista con el modo
+    // nuevo (portada, práctica). Si se nota lento, se sustituye por un
+    // evento que cada página escuche en vez de recargar entera.
+    location.reload();
+  });
+</script>
 
 <style is:global>
   *,
