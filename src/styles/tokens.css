@@ -1,0 +1,27 @@
+/*
+ * Tokens de diseño — dirección "manual escolar" (docs/DESIGN.md §7).
+ * Única dirección visual: la "edición crítica" se descartó, no queda como
+ * alternativa intercambiable (DESIGN.md: "elige una... no mezcles").
+ * Cubre solo lo que necesita la ficha de entidad por ahora; se amplía según
+ * aterricen el resto de pantallas de DESIGN.md §5.
+ */
+
+:root {
+	--fuente: "IBM Plex Sans", sans-serif;
+
+	--color-fondo-pagina: oklch(93% 0.012 90);
+	--color-fondo-pantalla: #ffffff;
+	--color-texto: oklch(18% 0.01 90);
+	--color-texto-muted: oklch(46% 0.01 90);
+
+	--color-acento: oklch(52% 0.19 25);
+	--color-acento-contraste: #ffffff;
+
+	--color-tarjeta-fondo: oklch(97% 0.006 90);
+	--color-tarjeta-borde: oklch(87% 0.012 90);
+	--color-chip-fondo: oklch(92% 0.012 90);
+	--color-chip-texto: oklch(30% 0.01 90);
+
+	--radio: 3px;
+	--peso-titulo: 700;
+}

@@ -20,68 +20,235 @@ function rutaNodo(id: string): string {
 const relatos = entidad.relaciones.filter((r) => r.tipo === "participa_en");
 const relaciones = entidad.relaciones.filter((r) => r.tipo !== "participa_en");
 const Prosa = entidad.prosa;
+
+const esStub =
+	!entidad.imagen &&
+	!Prosa &&
+	!entidad.atributos &&
+	relaciones.length === 0 &&
+	relatos.length === 0;
 ---
 
-<article>
-  <h1>{entidad.nombre}</h1>
-  <p class="tipo">{entidad.tipo}</p>
-  <p>{entidad.resumen}</p>
-
-  {Prosa && <Prosa components={{ E, Fuente }} />}
+<article class="ficha">
+  <a class="volver" href={rutaMateria(materiaSlug)}>&lsaquo; volver</a>
 
   {
-    entidad.etiquetas?.length ? (
-      <ul class="etiquetas">
-        {entidad.etiquetas.map((et) => (
-          <li>{et}</li>
-        ))}
-      </ul>
-    ) : null
-  }
-
-  {
-    entidad.atributos ? (
-      <dl>
-        {Object.entries(entidad.atributos).map(([clave, valor]) => (
-          <div>
-            <dt>{clave}</dt>
-            <dd>{String(valor)}</dd>
-          </div>
-        ))}
-      </dl>
-    ) : null
-  }
-
-  {
-    relaciones.length > 0 && (
-      <section>
-        <h2>Relaciones</h2>
-        <ul>
-          {relaciones.map((r) => (
-            <li>
-              {r.tipo.replaceAll('_', ' ')}:{' '}
-              <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
-            </li>
-          ))}
-        </ul>
-      </section>
+    entidad.imagen && (
+      <img class="imagen" src={entidad.imagen} alt="" />
     )
   }
 
-  {
-    relatos.length > 0 && (
-      <section>
-        <h2>Relatos</h2>
-        <ul>
-          {relatos.map((r) => (
-            <li>
-              <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
-            </li>
+  <div class="cuerpo">
+    <p class="tipo">{entidad.tipo}</p>
+    <h1 class="nombre">{entidad.nombre}</h1>
+
+    {
+      entidad.epitetos?.length ? (
+        <ul class="chips">
+          {entidad.epitetos.map((ep) => (
+            <li>{ep}</li>
           ))}
         </ul>
-      </section>
-    )
-  }
+      ) : null
+    }
 
-  <p><a href={rutaMateria(materiaSlug)}>&larr; volver</a></p>
+    {
+      Prosa ? (
+        <div class="prosa">
+          <Prosa components={{ E, Fuente }} />
+        </div>
+      ) : (
+        <p class="resumen">{entidad.resumen}</p>
+      )
+    }
+
+    {esStub && <p class="nota-stub">Ficha mínima. Aún no hay más contenido para esta entidad.</p>}
+
+    {
+      entidad.atributos ? (
+        <dl class="campos">
+          {Object.entries(entidad.atributos).map(([clave, valor]) => (
+            <div class="campo">
+              <dt>{clave}</dt>
+              <dd>{String(valor)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null
+    }
+
+    {
+      relaciones.length > 0 && (
+        <section>
+          <h2 class="etiqueta-seccion">Relaciones</h2>
+          <ul class="relaciones">
+            {relaciones.map((r) => (
+              <li>
+                <span class="tipo-relacion">{r.tipo.replaceAll("_", " ")}</span>
+                <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    {
+      relatos.length > 0 && (
+        <section>
+          <h2 class="etiqueta-seccion">Aparece en</h2>
+          <ul class="chips">
+            {relatos.map((r) => (
+              <li>
+                <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+  </div>
 </article>
+
+<style>
+  .ficha {
+    background: var(--color-fondo-pantalla);
+    color: var(--color-texto);
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .volver {
+    display: inline-block;
+    padding: 14px 20px 0;
+    color: var(--color-acento);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .imagen {
+    display: block;
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    margin-top: 14px;
+  }
+
+  .cuerpo {
+    padding: 4px 20px 32px;
+  }
+
+  .tipo {
+    margin: 14px 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-texto-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .nombre {
+    margin: 4px 0 12px;
+    font-size: 28px;
+    font-weight: var(--peso-titulo);
+    line-height: 1.1;
+  }
+
+  .resumen,
+  .prosa :global(p) {
+    margin: 0 0 14px;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .nota-stub {
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--color-texto-muted);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chips li,
+  .chips a {
+    background: var(--color-chip-fondo);
+    color: var(--color-chip-texto);
+    border-radius: var(--radio);
+    padding: 5px 10px;
+    font-size: 13px;
+    text-decoration: none;
+  }
+
+  .campos {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0 0 18px;
+    background: var(--color-tarjeta-fondo);
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    padding: 12px 14px;
+  }
+
+  .campo {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+  }
+
+  .campo dt {
+    color: var(--color-texto-muted);
+    text-transform: capitalize;
+  }
+
+  .campo dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .etiqueta-seccion {
+    margin: 18px 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-texto-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .relaciones {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .relaciones li {
+    display: flex;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+    font-size: 14px;
+  }
+
+  .tipo-relacion {
+    color: var(--color-texto-muted);
+    min-width: 110px;
+  }
+
+  .relaciones a {
+    color: var(--color-texto);
+    font-weight: 600;
+  }
+</style>
