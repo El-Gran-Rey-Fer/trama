@@ -22,3 +22,10 @@ export function rutaPracticar(materiaSlug: string): string {
 export function rutaCapitulo(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/c/${id}/`;
 }
+
+// Los ficheros de `public/` (imágenes, etc.) se referencian en el contenido con
+// ruta absoluta desde la raíz del sitio (p. ej. `/img/gr/zeus.jpg`), pero el
+// despliegue vive bajo `base`: hay que anteponerla igual que en las rutas internas.
+export function rutaActivo(ruta: string): string {
+	return `${base()}${ruta.replace(/^\//, "")}`;
+}

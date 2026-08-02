@@ -1,6 +1,6 @@
 ---
 import type { Entidad, TipoNodo } from "../lib/grafo";
-import { rutaEntidad, rutaMateria, rutaRelato } from "../lib/rutas";
+import { rutaActivo, rutaEntidad, rutaMateria, rutaRelato } from "../lib/rutas";
 import E from "./E.astro";
 import Fuente from "./Fuente.astro";
 
@@ -35,7 +35,7 @@ const esStub =
   {
     entidad.imagen && (
       <figure class="imagen">
-        <img src={entidad.imagen.archivo} alt={entidad.imagen.alt ?? entidad.nombre} />
+        <img src={rutaActivo(entidad.imagen.archivo)} alt={entidad.imagen.alt ?? entidad.nombre} />
         {
           entidad.imagen.credito && (
             <figcaption>
