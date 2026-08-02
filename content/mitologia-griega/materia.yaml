@@ -185,6 +185,16 @@ mitologia-griega:
     - id: guerra-de-troya
       nombre: La guerra de Troya y los regresos
 
+  # Paso 6 del modo aventura: una plantilla por atributo, y una para epítetos
+  # (pregunta inversa: dado el epíteto, qué entidad es). {origen} es la entidad
+  # cuyo campo se pregunta; {epiteto} es el epíteto concreto de la tarjeta.
+  plantillas_tarjeta:
+    atributos:
+      simbolo: "¿Cuál es el símbolo de {origen}?"
+      dominio: "¿Sobre qué domina {origen}?"
+      equivalente_romano: "¿Cuál es el nombre romano de {origen}?"
+    epiteto: "¿Qué dios es «{epiteto}»?"
+
   # Paso 2 del modo aventura (docs/plan-modo-aventura.md). `nombre` es provisional en los
   # cinco: la prioridad ahora es validar la estructura, no el rótulo — se revisan cuando entre
   # el resto del temario (héroes, dioses, todo lo que falta). El conjunto de tarjetas de un

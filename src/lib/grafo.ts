@@ -56,12 +56,18 @@ export interface Arista {
 	relacion: RelacionCruda;
 }
 
+export interface PlantillasTarjeta {
+	atributos?: Record<string, string>;
+	epiteto?: string;
+}
+
 export interface Grafo {
 	materiaId: string;
 	slug: string;
 	entidades: Map<string, Entidad>;
 	registro: Record<string, RegistroRelacion>;
 	aristas: Arista[];
+	plantillasTarjeta: PlantillasTarjeta;
 }
 
 function claveArista(tipo: string, destino: string): string {
@@ -211,6 +217,7 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 		entidades,
 		registro,
 		aristas: aristasOriginales,
+		plantillasTarjeta: materiaEntry.data.plantillas_tarjeta ?? {},
 	};
 }
 

@@ -1,22 +1,22 @@
-import { construirGrafo } from "./grafo";
+import { construirGrafo, type Entidad, type Grafo } from "./grafo";
 
 export interface Tarjeta {
 	id: string;
 	pregunta: string;
 	respuesta: string;
 	// Entidades de las que depende esta tarjeta. Una tarjeta está disponible
-	// cuando todas están en el conjunto de lo leído (modo aventura, paso 4);
-	// también es la base de la regla de distractores (paso 6: mismo `tipo`,
-	// excluyendo cualquier entidad que aparezca en `ids` de una tarjeta que
-	// las conecte).
+	// cuando todas están en el conjunto de lo leído (modo aventura, paso 4).
 	ids: string[];
-	// Tipo de relación de origen ("padre_de", "atributo:simbolo"...). Lo usa
-	// la regla de distractores del paso 6 para saber qué `tipo` de entidad
-	// buscar y qué excluir.
+	// Tipo de relación de origen ("padre_de", "atributo:simbolo"...). Documenta
+	// de dónde sale la tarjeta; no lo consume nada todavía fuera de aquí.
 	tipoRelacion: string;
-	// Si la respuesta es un conjunto (varios nombres) en vez de un valor
-	// único. Solo las de valor único entran en el juego de emparejar (§3.7).
+	// Si la respuesta es un conjunto (varios nombres) en vez de un valor único.
+	// Regla de qué tarjeta entra en qué juego (§3.7): solo las de valor único
+	// entran en el juego de emparejar y tienen distractores (opción múltiple).
 	conjunto: boolean;
+	// Opciones falsas ya calculadas (regla de distractores, §3.6). Vacío en las
+	// de conjunto: no hay opción múltiple para una respuesta que es un listado.
+	distractores: string[];
 }
 
 interface Grupo {
@@ -26,10 +26,78 @@ interface Grupo {
 	tipoRelacion: string;
 }
 
+const MAX_DISTRACTORES = 3;
+
+function barajar<T>(arr: T[]): T[] {
+	const copia = [...arr];
+	for (let i = copia.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[copia[i], copia[j]] = [copia[j], copia[i]];
+	}
+	return copia;
+}
+
+// Distractores de una tarjeta de relación: entidades del mismo `tipo` que la
+// respuesta correcta, excluyendo cualquier entidad conectada al sujeto de la
+// pregunta por ESE tipo de relación (en cualquier dirección, bajo cualquier
+// fuente) — así una respuesta también-correcta por otra variante nunca
+// aparece como opción falsa (§3.6, caso Afrodita).
+function distractoresDeRelacion(
+	grafo: Grafo,
+	sujetoId: string,
+	respuestaId: string,
+	tipoRelacion: string,
+): string[] {
+	const respuesta = grafo.entidades.get(respuestaId);
+	const sujeto = grafo.entidades.get(sujetoId);
+	if (!respuesta || !sujeto) return [];
+
+	const otroLado = grafo.registro[tipoRelacion]?.inversa;
+	const tiposConexion = new Set([tipoRelacion, otroLado].filter(Boolean));
+	const excluidos = new Set([respuestaId]);
+	for (const r of sujeto.relaciones) {
+		if (tiposConexion.has(r.tipo)) excluidos.add(r.destino);
+	}
+
+	const candidatos = [...grafo.entidades.values()].filter(
+		(e) => e.tipo === respuesta.tipo && !excluidos.has(e.id),
+	);
+	return barajar(candidatos)
+		.slice(0, MAX_DISTRACTORES)
+		.map((e) => e.nombre);
+}
+
+// Distractores de una tarjeta de atributo: el mismo campo en otras entidades
+// del mismo tipo (p.ej. el símbolo de otros dioses, no de Zeus).
+function distractoresDeAtributo(
+	grafo: Grafo,
+	sujeto: Entidad,
+	clave: string,
+): string[] {
+	const candidatos = [...grafo.entidades.values()].filter(
+		(e) => e.id !== sujeto.id && e.tipo === sujeto.tipo && e.atributos?.[clave],
+	);
+	return barajar(candidatos)
+		.slice(0, MAX_DISTRACTORES)
+		.map((e) => String(e.atributos?.[clave]));
+}
+
+// Distractores de una tarjeta de epíteto (pregunta inversa: dado el epíteto,
+// qué entidad es): otras entidades del mismo tipo que la respuesta correcta.
+function distractoresDeEpiteto(grafo: Grafo, respuesta: Entidad): string[] {
+	const candidatos = [...grafo.entidades.values()].filter(
+		(e) => e.id !== respuesta.id && e.tipo === respuesta.tipo,
+	);
+	return barajar(candidatos)
+		.slice(0, MAX_DISTRACTORES)
+		.map((e) => e.nombre);
+}
+
 export async function generarTarjetas(
 	materiaId: string,
-	// Restringe a las aristas cuyos dos extremos estén en el conjunto (capítulos,
-	// modo aventura, paso 3). Sin filtro, genera todas las tarjetas de la materia.
+	// Restringe a las aristas/entidades cuyos ids estén en el conjunto
+	// (capítulos, modo aventura, paso 3). Sin filtro, genera todas las
+	// tarjetas de la materia.
 	soloIds?: Set<string>,
 ): Promise<Tarjeta[]> {
 	const grafo = await construirGrafo(materiaId);
@@ -70,6 +138,12 @@ export async function generarTarjetas(
 					ids: [origenId, relacion.destino],
 					tipoRelacion: relacion.tipo,
 					conjunto: false,
+					distractores: distractoresDeRelacion(
+						grafo,
+						origenId,
+						relacion.destino,
+						relacion.tipo,
+					),
 				});
 			}
 		}
@@ -98,6 +172,12 @@ export async function generarTarjetas(
 					ids: [relacion.destino, origenId],
 					tipoRelacion: definicion.inversa,
 					conjunto: false,
+					distractores: distractoresDeRelacion(
+						grafo,
+						relacion.destino,
+						origenId,
+						definicion.inversa,
+					),
 				});
 			}
 		}
@@ -111,7 +191,46 @@ export async function generarTarjetas(
 			ids: [...grupo.ids],
 			tipoRelacion: grupo.tipoRelacion,
 			conjunto: true,
+			distractores: [],
 		});
+	}
+
+	// Tarjetas de atributo y de epíteto (paso 6): no salen de una arista, salen
+	// de los campos propios de la entidad. Un único id (la propia entidad): se
+	// desbloquean con ella, igual que cualquier otra tarjeta que dependa solo
+	// de una entidad leída.
+	const plantillasAtributo = grafo.plantillasTarjeta.atributos ?? {};
+	const plantillaEpiteto = grafo.plantillasTarjeta.epiteto;
+	for (const entidad of grafo.entidades.values()) {
+		if (soloIds && !soloIds.has(entidad.id)) continue;
+
+		for (const [clave, plantilla] of Object.entries(plantillasAtributo)) {
+			const valor = entidad.atributos?.[clave];
+			if (!valor) continue;
+			tarjetas.push({
+				id: `${entidad.id}:atributo:${clave}`,
+				pregunta: plantilla.replace("{origen}", entidad.nombre),
+				respuesta: String(valor),
+				ids: [entidad.id],
+				tipoRelacion: `atributo:${clave}`,
+				conjunto: false,
+				distractores: distractoresDeAtributo(grafo, entidad, clave),
+			});
+		}
+
+		if (plantillaEpiteto) {
+			for (const epiteto of entidad.epitetos ?? []) {
+				tarjetas.push({
+					id: `${entidad.id}:epiteto:${epiteto}`,
+					pregunta: plantillaEpiteto.replace("{epiteto}", epiteto),
+					respuesta: entidad.nombre,
+					ids: [entidad.id],
+					tipoRelacion: "epiteto",
+					conjunto: false,
+					distractores: distractoresDeEpiteto(grafo, entidad),
+				});
+			}
+		}
 	}
 
 	return tarjetas;

@@ -119,6 +119,15 @@ const materiaSchema = z.object({
 	fuentes: z.record(z.string(), fuenteSchema).optional(),
 	tipos: z.array(z.string()).optional(),
 	eras: z.array(z.object({ id: z.string(), nombre: z.string() })).optional(),
+	// Modo aventura, paso 6: una plantilla de pregunta por atributo (clave dentro
+	// de `atributos` en la entidad) y una para epítetos. Se escriben una vez aquí
+	// y se aplican a todo el contenido; no existe fichero de preguntas.
+	plantillas_tarjeta: z
+		.object({
+			atributos: z.record(z.string(), z.string()).optional(),
+			epiteto: z.string().optional(),
+		})
+		.optional(),
 	// Modo aventura, paso 2 (docs/plan-modo-aventura.md): el conjunto de un capítulo
 	// —de donde salen sus tarjetas y su examen— es `participantes` de sus `relatos`
 	// más `entidades_extra`; no se lista a mano lo que el grafo puede derivar.
