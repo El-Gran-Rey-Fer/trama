@@ -3,24 +3,33 @@ import { rutaEntidad, rutaMateria } from "../lib/rutas";
 import Base from "./Base.astro";
 
 interface Props {
+	id: string;
 	titulo: string;
 	resumen: string;
 	materiaSlug: string;
+	era?: string | null;
 	participantes: Array<{ id: string; nombre: string }>;
 	lugar: { id: string; nombre: string } | null;
 }
-const { titulo, resumen, materiaSlug, participantes, lugar } = Astro.props;
+const { id, titulo, resumen, materiaSlug, era, participantes, lugar } =
+	Astro.props;
 ---
 
 <Base titulo={titulo}>
-  <article>
-    <h1>{titulo}</h1>
-    <p class="resumen">{resumen}</p>
-    <slot />
+  <article class="relato">
+    <header class="cabecera">
+      {era && <p class="era">{era}</p>}
+      <h1 class="titulo">{titulo}</h1>
+      <p class="resumen">{resumen}</p>
+    </header>
+
+    <div class="cuerpo">
+      <slot />
+    </div>
 
     {
       lugar && (
-        <p>
+        <p class="lugar">
           Lugar: <a href={rutaEntidad(materiaSlug, lugar.id)}>{lugar.nombre}</a>
         </p>
       )
@@ -28,8 +37,8 @@ const { titulo, resumen, materiaSlug, participantes, lugar } = Astro.props;
 
     {
       participantes.length > 0 && (
-        <section>
-          <h2>Participantes</h2>
+        <section class="participantes">
+          <h2 class="etiqueta-seccion">Participantes</h2>
           <ul>
             {participantes.map((p) => (
               <li>
@@ -41,6 +50,129 @@ const { titulo, resumen, materiaSlug, participantes, lugar } = Astro.props;
       )
     }
 
-    <p><a href={rutaMateria(materiaSlug)}>&larr; volver</a></p>
+    <div class="leido-wrap">
+      <button type="button" class="marcar-leido" data-relato-id={id}>
+        Marcar relato como leído
+      </button>
+    </div>
+
+    <p class="volver-wrap"><a class="volver" href={rutaMateria(materiaSlug)}>&lsaquo; volver</a></p>
   </article>
 </Base>
+
+<style>
+  .relato {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .cabecera {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+  }
+
+  .era {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-acento);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .titulo {
+    margin: 0 0 10px;
+    font-size: 30px;
+    font-weight: var(--peso-titulo);
+    line-height: 1.1;
+  }
+
+  .resumen {
+    margin: 0;
+    font-size: 15px;
+    color: var(--color-texto-muted);
+    line-height: 1.5;
+  }
+
+  .cuerpo {
+    padding: 20px;
+    color: var(--color-texto);
+  }
+
+  .cuerpo :global(p) {
+    margin: 0 0 20px;
+    font-size: 17px;
+    line-height: 1.65;
+  }
+
+  .lugar,
+  .participantes {
+    padding: 0 20px;
+  }
+
+  .etiqueta-seccion {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-texto-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .leido-wrap {
+    padding: 12px 20px 0;
+  }
+
+  .marcar-leido {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: var(--radio);
+    background: var(--color-acento);
+    color: var(--color-acento-contraste);
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--fuente);
+    cursor: pointer;
+  }
+
+  .marcar-leido.leido {
+    background: var(--color-tarjeta-fondo);
+    color: var(--color-texto-muted);
+  }
+
+  .volver-wrap {
+    padding: 20px;
+  }
+
+  .volver {
+    color: var(--color-acento);
+    font-weight: 700;
+    text-decoration: none;
+  }
+</style>
+
+<script>
+  import { leerEstado, guardarEstado } from "../lib/estado";
+
+  const boton = document.querySelector<HTMLButtonElement>(".marcar-leido");
+  if (boton) {
+    const relatoId = boton.dataset.relatoId ?? "";
+
+    const aplicar = (leido: boolean) => {
+      boton.textContent = leido ? "✓ Marcado como leído" : "Marcar relato como leído";
+      boton.classList.toggle("leido", leido);
+    };
+
+    aplicar(leerEstado().leidos.includes(relatoId));
+
+    boton.addEventListener("click", () => {
+      const estado = leerEstado();
+      if (!estado.leidos.includes(relatoId)) {
+        estado.leidos.push(relatoId);
+        guardarEstado(estado);
+      }
+      aplicar(true);
+    });
+  }
+</script>
