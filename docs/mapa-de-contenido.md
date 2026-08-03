@@ -45,11 +45,12 @@ Del vacío al primer regicidio. Es la era más corta del mapa y está bien que l
 
 | # | Capítulo | Relatos | Estado | Entidades nuevas |
 |---|---|---|---|---|
-| 1 | **Del Caos al primer rey** | `nacimiento-del-cosmos` | pendiente | ~8 |
+| 1 | **Del Caos al primer rey** | `nacimiento-del-cosmos` | **escrito** | ~7 |
 | | | `castracion-de-urano` | **escrito** | — |
 
 **`nacimiento-del-cosmos`** arrastra: `caos`, `nix`, `erebo`, `eter`, `hemera`, `ponto`,
-`eros`, `ourea`. Ya existen `gea`, `urano`, `tartaro`.
+`eros`. Ya existen `gea`, `urano`, `tartaro`. `ourea` queda fuera a propósito: no aparece
+en el relato y no se propone.
 
 **`castracion-de-urano`** ya arrastró: `crono`, `rea`, `hoz-de-adamante`, `erinias`,
 `gigantes`, `melias`, `afrodita`, los doce Titanes, `ciclopes`, `hecatonquiros`.

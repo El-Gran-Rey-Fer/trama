@@ -1,0 +1,9 @@
+id: ponto
+tipo: primordial
+nombre: Ponto
+resumen: >
+  El mar sin fondo, engendrado por Gea sin unirse a nadie, igual que Urano. Ocupó lo que la
+  tierra no ocupaba.
+relaciones:
+  - tipo: hijo_de
+    destino: gea

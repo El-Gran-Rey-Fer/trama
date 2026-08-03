@@ -1,0 +1,11 @@
+id: nix
+tipo: primordial
+nombre: Nix
+resumen: >
+  Personificación de la noche, nacida de Caos junto a Érebo. De su unión con él nacieron
+  Éter y Hémera.
+relaciones:
+  - tipo: hijo_de
+    destino: caos
+  - tipo: consorte_de
+    destino: erebo

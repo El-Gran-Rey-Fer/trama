@@ -1,0 +1,11 @@
+id: hemera
+tipo: primordial
+nombre: Hémera
+resumen: >
+  Personificación del día, nacida de la unión de Érebo y Nix junto a Éter. Con su nacimiento
+  el cosmos gana alternancia: algo que se va y vuelve.
+relaciones:
+  - tipo: hijo_de
+    destino: erebo
+  - tipo: hijo_de
+    destino: nix

@@ -1,0 +1,11 @@
+id: eter
+tipo: primordial
+nombre: Éter
+resumen: >
+  El aire luminoso de lo alto, nacido de la unión de Érebo y Nix junto a Hémera. Con su
+  nacimiento el cosmos gana su primer contrario: la luz frente a la oscuridad de sus padres.
+relaciones:
+  - tipo: hijo_de
+    destino: erebo
+  - tipo: hijo_de
+    destino: nix

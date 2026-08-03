@@ -1,0 +1,9 @@
+id: erebo
+tipo: primordial
+nombre: Érebo
+resumen: >
+  Personificación de la oscuridad densa de las profundidades, nacido de Caos junto a Nix.
+  De su unión con ella nacieron Éter y Hémera.
+relaciones:
+  - tipo: hijo_de
+    destino: caos
