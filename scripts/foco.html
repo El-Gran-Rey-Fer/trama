@@ -48,16 +48,21 @@
 <body>
   <header>
     <input id="fichero" type="file" accept="image/*" />
+    <span>o ruta:</span>
+    <input id="ruta" type="text" placeholder="/public/img/gr/obras/jupiter-louvre-lens.jpg" size="40" />
+    <button id="cargar-ruta" type="button">Cargar</button>
     <span id="valor">clica la imagen para marcar el foco</span>
     <button id="copiar" type="button" hidden>Copiar [x, y]</button>
   </header>
   <div id="lienzo-wrap">
-    <p id="vacio">Elige una imagen (p. ej. desde public/img/gr/obras/) para marcar su foco, como etiquetar una foto.</p>
+    <p id="vacio">Elige una imagen, o escribe su ruta si sirves el repo con un servidor local, para marcar su foco como etiquetar una foto.</p>
     <canvas id="lienzo" hidden></canvas>
   </div>
 
   <script>
     const elFichero = document.getElementById("fichero");
+    const elRuta = document.getElementById("ruta");
+    const elCargarRuta = document.getElementById("cargar-ruta");
     const elLienzo = document.getElementById("lienzo");
     const elValor = document.getElementById("valor");
     const elCopiar = document.getElementById("copiar");
@@ -66,19 +71,34 @@
 
     let ultimoValor = null;
 
+    function pintar(img) {
+      elLienzo.width = img.naturalWidth;
+      elLienzo.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+      elLienzo.hidden = false;
+      elVacio.hidden = true;
+    }
+
     elFichero.addEventListener("change", () => {
       const archivo = elFichero.files?.[0];
       if (!archivo) return;
       const img = new Image();
       img.onload = () => {
-        elLienzo.width = img.naturalWidth;
-        elLienzo.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0);
-        elLienzo.hidden = false;
-        elVacio.hidden = true;
+        pintar(img);
         URL.revokeObjectURL(img.src);
       };
       img.src = URL.createObjectURL(archivo);
+    });
+
+    elCargarRuta.addEventListener("click", () => {
+      const ruta = elRuta.value.trim();
+      if (!ruta) return;
+      const img = new Image();
+      img.onload = () => pintar(img);
+      img.onerror = () => {
+        elValor.textContent = `no se pudo cargar "${ruta}"`;
+      };
+      img.src = ruta;
     });
 
     elLienzo.addEventListener("click", (evento) => {
