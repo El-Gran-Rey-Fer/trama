@@ -3,7 +3,6 @@ tipo: lugar
 nombre: Monte Olimpo
 resumen: >
   Morada de los dioses olímpicos.
-etiquetas: [lugar]
 relaciones:
   - tipo: habitado_por
     destino: zeus

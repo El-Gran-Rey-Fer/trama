@@ -145,7 +145,8 @@ mitologia-griega:
     himno-homerico-atenea: { obra: "Himno homérico a Atenea" }
     himno-homerico-demeter: { obra: "Himno homérico a Deméter" }
 
-  # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (eso es Bloque A).
+  # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (fuera del
+  # alcance de A5: no está en su lista de comprobaciones).
   # sin género: los distractores de opción múltiple y <Coleccion filtro={{tipo:"titan"}} /> salen
   # de entidades del mismo `tipo` exacto, y un tipo generizado parte el conjunto en dos. El género
   # es un problema de presentación (etiquetas, ej. "olimpico"), no del campo `tipo`.
@@ -164,11 +165,17 @@ mitologia-griega:
     - monstruo # teseo-y-el-minotauro: toro de creta, minotauro
     - obra # plan de imágenes y álbum §3.1: cuadro, vasija, estatua o ilustración
 
-  # etiquetas en uso. Registro descriptivo, sin validación de build todavía (igual que tipos).
+  # etiquetas en uso. A partir de A5 (plan de imágenes y álbum) es de validación de build: una
+  # etiqueta fuera de esta lista rompe el build (scripts/validar-contenido.mjs).
   # los `ciclo-*` son un eje geográfico/dinástico ortogonal a `eras`: un mito tiene una era y
   # puede tener un ciclo. ciclo-tebano/argivo/troyano se declaran vacíos a propósito, para fijar
   # la convención antes de que alguien invente una etiqueta suelta para un ciclo mítico futuro.
+  # `olimpico`, `atributo` y `arma` son ejes ortogonales a `tipo` (no todo `tipo: dios` es
+  # olímpico, no todo `tipo: objeto` es un atributo icónico o un arma).
   etiquetas:
+    - olimpico # zeus, hera, poseidon, hades, atenea, afrodita, hermes, hefesto, dioniso, persefone
+    - atributo # rayo, aguila
+    - arma # rayo
     - sucesion-divina # castracion-de-urano, titanomaquia
     - profecia # nacimiento-de-atenea
     - rapto # rapto-de-persefone

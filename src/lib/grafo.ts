@@ -175,7 +175,7 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 	for (const entrada of entradasRelatos) {
 		for (const participanteId of entrada.data.participantes ?? []) {
 			const participante = entidades.get(participanteId);
-			if (!participante) continue; // id inexistente: se ignora, validar esto es Bloque A
+			if (!participante) continue; // id inexistente: lo detecta scripts/validar-contenido.mjs (plan de imágenes y álbum, paso A5), no aquí
 			const relacion: RelacionCruda = {
 				tipo: "participa_en",
 				destino: entrada.id,
@@ -194,9 +194,9 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 	// por los dos lados sea inocuo en vez de producir aristas repetidas.
 	for (const { origenId, relacion } of aristasOriginales) {
 		const definicion = registro[relacion.tipo];
-		if (!definicion) continue; // tipo no registrado: se conserva la arista tal cual, sin inversa (validar esto es Bloque A)
+		if (!definicion) continue; // tipo no registrado: se conserva la arista tal cual, sin inversa (fuera del alcance de A5)
 		const destino = entidades.get(relacion.destino);
-		if (!destino) continue; // destino inexistente: se ignora (idem, validación es Bloque A)
+		if (!destino) continue; // destino inexistente: lo detecta scripts/validar-contenido.mjs (paso A5), no aquí
 
 		const clave = claveArista(definicion.inversa, origenId);
 		const clavesDestino = clavesPorEntidad.get(relacion.destino);

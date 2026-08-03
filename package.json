@@ -7,18 +7,20 @@
 	},
 	"scripts": {
 		"dev": "astro dev",
-		"build": "astro build",
+		"build": "node scripts/validar-contenido.mjs && astro build",
 		"preview": "astro preview",
 		"astro": "astro",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"nueva-obra": "node scripts/nueva-obra.mjs",
-		"curar-obra": "node scripts/curar-obra.mjs"
+		"curar-obra": "node scripts/curar-obra.mjs",
+		"validar-contenido": "node scripts/validar-contenido.mjs"
 	},
 	"dependencies": {
 		"@astrojs/mdx": "^7.0.4",
-		"astro": "^7.1.5"
+		"astro": "^7.1.5",
+		"yaml": "^2.9.0"
 	},
 	"devDependencies": {
 		"@astrojs/check": "^0.9.10",
