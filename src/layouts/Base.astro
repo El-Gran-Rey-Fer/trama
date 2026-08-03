@@ -26,6 +26,7 @@ const { titulo } = Astro.props;
       </button>
     </header>
     <slot />
+    <div id="minifichas"></div>
   </body>
 </html>
 
@@ -52,6 +53,13 @@ const { titulo } = Astro.props;
     text-transform: capitalize;
   }
 </style>
+
+<script>
+  import { montarMinifichas } from "../lib/minifichas";
+
+  const contenedorMinifichas = document.getElementById("minifichas");
+  if (contenedorMinifichas) montarMinifichas(contenedorMinifichas);
+</script>
 
 <script>
   import { leerEstado, guardarEstado } from "../lib/estado";
@@ -104,5 +112,110 @@ const { titulo } = Astro.props;
       transition: none !important;
       animation: none !important;
     }
+  }
+
+  /* Minificha de <E />: construida por lib/minifichas.ts fuera del flujo de
+     la prosa (ver E.astro), así que estos estilos no pueden ser un <style>
+     con scope de componente — la etiqueta que aplica scope no llega a un
+     elemento creado por JS en tiempo de ejecución. */
+  .mini-ficha {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    top: auto;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 640px;
+    margin: 0;
+    border: none;
+    border-top: 1px solid var(--color-tarjeta-borde);
+    border-radius: 16px 16px 0 0;
+    background: var(--color-fondo-pantalla);
+    color: var(--color-texto);
+    padding: 10px 20px 24px;
+    box-shadow: 0 -8px 24px oklch(0% 0 0 / 0.18);
+  }
+
+  .mini-ficha::backdrop {
+    background: oklch(0% 0 0 / 0.35);
+  }
+
+  .tirador {
+    width: 36px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--color-tarjeta-borde);
+    margin: 0 auto 14px;
+  }
+
+  .mini-tipo {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-texto-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .mini-nombre {
+    margin: 4px 0 10px;
+    font-size: 22px;
+    font-weight: var(--peso-titulo);
+  }
+
+  .mini-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .mini-chips li {
+    background: var(--color-chip-fondo);
+    color: var(--color-chip-texto);
+    border-radius: var(--radio);
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+
+  .mini-resumen {
+    margin: 0 0 18px;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .mini-acciones {
+    display: flex;
+    gap: 10px;
+  }
+
+  .mini-cerrar {
+    flex: 0 0 auto;
+    padding: 12px 16px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: none;
+    color: var(--color-texto-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .mini-ver {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px;
+    border: none;
+    border-radius: var(--radio);
+    background: var(--color-acento);
+    color: var(--color-acento-contraste);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
   }
 </style>

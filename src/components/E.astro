@@ -22,33 +22,33 @@ const href =
 const popoverId = `mini-${crypto.randomUUID()}`;
 const etiquetaVerMas =
 	nodo.kind === "relato" ? "Leer relato →" : "Ver ficha completa →";
+
+// Modo aventura, paso A2 (plan de imágenes y álbum): el contenido del popover
+// ya NO se renderiza aquí. Un `<div popover>` es un elemento de bloque, y
+// vivir anidado en el párrafo MDX que envuelve a `<E />` hacía que el
+// navegador cerrara ese `<p>` en cuanto lo encontraba. Solo se emite el
+// trigger (inline, válido dentro de un párrafo) y sus datos; el layout
+// (`Base.astro`, vía `lib/minifichas.ts`) construye el popover una sola vez
+// por página y lo cuelga fuera del flujo de la prosa.
+const datosMiniFicha = {
+	tipo: nodo.tipo,
+	nombre: nodo.nombre,
+	epitetos: nodo.epitetos ?? [],
+	resumen: nodo.resumen,
+	href,
+	etiquetaVerMas,
+};
 ---
 
 <button type="button" class="e-link" popovertarget={popoverId}>
   <slot>{nodo.nombre}</slot>
 </button>
-
-<div id={popoverId} popover="auto" class="mini-ficha">
-  <div class="tirador"></div>
-  <p class="mini-tipo">{nodo.tipo}</p>
-  <p class="mini-nombre">{nodo.nombre}</p>
-  {
-    nodo.epitetos?.length ? (
-      <ul class="mini-chips">
-        {nodo.epitetos.map((ep) => (
-          <li>{ep}</li>
-        ))}
-      </ul>
-    ) : null
-  }
-  <p class="mini-resumen">{nodo.resumen}</p>
-  <div class="mini-acciones">
-    <button type="button" popovertarget={popoverId} popovertargetaction="hide" class="mini-cerrar">
-      Cerrar
-    </button>
-    <a href={href} class="mini-ver">{etiquetaVerMas}</a>
-  </div>
-</div>
+<script
+  is:inline
+  type="application/json"
+  data-mini-ficha={popoverId}
+  set:html={JSON.stringify(datosMiniFicha)}
+/>
 
 <style>
   .e-link {
@@ -63,106 +63,5 @@ const etiquetaVerMas =
     text-decoration: underline;
     text-decoration-color: var(--color-acento);
     text-underline-offset: 3px;
-  }
-
-  .mini-ficha {
-    position: fixed;
-    left: 50%;
-    bottom: 0;
-    top: auto;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 640px;
-    margin: 0;
-    border: none;
-    border-top: 1px solid var(--color-tarjeta-borde);
-    border-radius: 16px 16px 0 0;
-    background: var(--color-fondo-pantalla);
-    color: var(--color-texto);
-    padding: 10px 20px 24px;
-    box-shadow: 0 -8px 24px oklch(0% 0 0 / 0.18);
-  }
-
-  .mini-ficha::backdrop {
-    background: oklch(0% 0 0 / 0.35);
-  }
-
-  .tirador {
-    width: 36px;
-    height: 4px;
-    border-radius: 99px;
-    background: var(--color-tarjeta-borde);
-    margin: 0 auto 14px;
-  }
-
-  .mini-tipo {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--color-texto-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .mini-nombre {
-    margin: 4px 0 10px;
-    font-size: 22px;
-    font-weight: var(--peso-titulo);
-  }
-
-  .mini-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 0 0 12px;
-    padding: 0;
-    list-style: none;
-  }
-
-  .mini-chips li {
-    background: var(--color-chip-fondo);
-    color: var(--color-chip-texto);
-    border-radius: var(--radio);
-    padding: 5px 10px;
-    font-size: 13px;
-  }
-
-  .mini-resumen {
-    margin: 0 0 18px;
-    font-size: 15px;
-    line-height: 1.55;
-  }
-
-  .mini-acciones {
-    display: flex;
-    gap: 10px;
-  }
-
-  .mini-cerrar {
-    flex: 0 0 auto;
-    padding: 12px 16px;
-    border: 1px solid var(--color-tarjeta-borde);
-    border-radius: var(--radio);
-    background: none;
-    color: var(--color-texto-muted);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .mini-ver {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 16px;
-    border: none;
-    border-radius: var(--radio);
-    background: var(--color-acento);
-    color: var(--color-acento-contraste);
-    font-size: 14px;
-    font-weight: 700;
-    text-decoration: none;
-    text-align: center;
   }
 </style>
