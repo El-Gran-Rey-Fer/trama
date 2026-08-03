@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Curar obra — Trama</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #111;
+    color: #eee;
+  }
+  header {
+    padding: 12px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #1c1c1c;
+    border-bottom: 1px solid #333;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 15px;
+    margin: 0;
+    font-weight: 600;
+    color: #888;
+  }
+  button, .boton {
+    padding: 6px 12px;
+    cursor: pointer;
+    background: #2a2a2a;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  button:hover, .boton:hover { background: #333; }
+  button:disabled { opacity: .4; cursor: default; }
+  input, textarea {
+    background: #1a1a1a;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  #repo-panel {
+    padding: 12px 16px;
+    background: #181818;
+    border-bottom: 1px solid #333;
+  }
+  #repo-panel[hidden] { display: none; }
+  .rejilla {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .miniatura {
+    width: 90px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .miniatura img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 2px solid #333;
+    display: block;
+  }
+  .miniatura:hover img { border-color: #666; }
+  .miniatura.sin-yaml img { border-color: #a06a1c; }
+  .miniatura span {
+    display: block;
+    font-size: 10px;
+    color: #999;
+    margin-top: 3px;
+    word-break: break-all;
+  }
+  main {
+    display: flex;
+    gap: 20px;
+    padding: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  #lienzo-wrap {
+    flex: 1 1 480px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+  }
+  #lienzo {
+    max-width: 100%;
+    max-height: 80vh;
+    cursor: crosshair;
+    border: 1px solid #333;
+  }
+  #vacio {
+    padding: 40px;
+    text-align: center;
+    color: #888;
+  }
+  #ficha {
+    flex: 1 1 360px;
+    max-width: 460px;
+  }
+  #ficha[hidden] { display: none; }
+  #ficha h2 {
+    font-size: 15px;
+    margin: 0 0 10px;
+  }
+  #ficha h2 .id {
+    color: #888;
+    font-weight: 400;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+  }
+  .fila {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+  .fila label {
+    width: 90px;
+    flex: none;
+    font-size: 12px;
+    color: #aaa;
+  }
+  .fila input, .fila textarea { flex: 1; width: 100%; }
+  .fila textarea { min-height: 44px; resize: vertical; }
+  .rejilla-atributos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    margin-bottom: 10px;
+  }
+  .rejilla-atributos .campo label {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 2px;
+  }
+  .rejilla-atributos .campo input { width: 100%; }
+  fieldset {
+    border: 1px solid #333;
+    border-radius: 6px;
+    margin: 0 0 12px;
+    padding: 10px;
+  }
+  legend {
+    font-size: 12px;
+    color: #999;
+    padding: 0 4px;
+  }
+  #relaciones-lista {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+  }
+  #relaciones-lista li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 0;
+    border-bottom: 1px solid #262626;
+    font-size: 13px;
+  }
+  #relaciones-lista .num {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4a7dff;
+    color: #fff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+  #relaciones-lista .destino { flex: 1; }
+  #relaciones-lista .foco { color: #888; font-size: 11px; font-family: ui-monospace, monospace; }
+  #relaciones-lista .quitar {
+    border: none;
+    background: none;
+    color: #d66;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+  #buscador-wrap { position: relative; }
+  #buscador-resultados {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 10;
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+  }
+  #buscador-resultados[hidden] { display: none; }
+  #buscador-resultados li {
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #buscador-resultados li:hover { background: #2a2a2a; }
+  #buscador-resultados li .tipo { color: #888; font-size: 11px; }
+  #pendiente {
+    font-size: 12px;
+    color: #ffb84d;
+    margin: 6px 0;
+    min-height: 16px;
+  }
+  #estado {
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  #estado.error { color: #e77; }
+  #estado.ok { color: #7c7; }
+  #guardar { margin-top: 4px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Curar obra</h1>
+    <label class="boton">
+      Subir del ordenador
+      <input id="fichero" type="file" accept="image/*" hidden />
+    </label>
+    <button id="abrir-repo" type="button">Elegir del repo</button>
+  </header>
+
+  <div id="repo-panel" hidden>
+    <div id="repo-cargando">cargando public/img/gr…</div>
+    <div id="repo-sin-yaml"></div>
+    <div id="repo-con-yaml"></div>
+  </div>
+
+  <main>
+    <div id="lienzo-wrap">
+      <p id="vacio">Sube una imagen del ordenador, o elige una del repo, para empezar.</p>
+      <canvas id="lienzo" hidden></canvas>
+    </div>
+
+    <div id="ficha" hidden>
+      <h2 id="ficha-titulo">&nbsp;</h2>
+
+      <div id="campos-nueva">
+        <div class="fila"><label for="c-id">id</label><input id="c-id" /></div>
+        <div class="fila"><label for="c-nombre">nombre</label><input id="c-nombre" /></div>
+        <div class="fila"><label for="c-resumen">resumen</label><textarea id="c-resumen" placeholder="PENDIENTE: una frase, presente, qué se ve"></textarea></div>
+        <fieldset>
+          <legend>atributos</legend>
+          <div class="rejilla-atributos">
+            <div class="campo"><label for="c-autor">autor</label><input id="c-autor" placeholder="desconocido" /></div>
+            <div class="campo"><label for="c-fecha">fecha</label><input id="c-fecha" placeholder="PENDIENTE" /></div>
+            <div class="campo"><label for="c-periodo">periodo</label><input id="c-periodo" placeholder="PENDIENTE" /></div>
+            <div class="campo"><label for="c-soporte">soporte</label><input id="c-soporte" placeholder="PENDIENTE" /></div>
+            <div class="campo"><label for="c-museo">museo</label><input id="c-museo" placeholder="PENDIENTE" /></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>imagen</legend>
+          <div class="fila"><label for="c-credito">crédito</label><input id="c-credito" placeholder="PENDIENTE: revisar autor/licencia" /></div>
+          <div class="fila"><label for="c-origen">origen</label><input id="c-origen" placeholder="PENDIENTE" /></div>
+          <div class="fila"><label for="c-alt">alt</label><input id="c-alt" placeholder="PENDIENTE: describe la imagen" /></div>
+        </fieldset>
+      </div>
+
+      <fieldset>
+        <legend>entidades representadas</legend>
+        <ul id="relaciones-lista"></ul>
+        <div id="buscador-wrap">
+          <input id="buscador" type="text" placeholder="buscar entidad o relato por nombre…" autocomplete="off" />
+          <ul id="buscador-resultados" hidden></ul>
+        </div>
+        <p id="pendiente"></p>
+      </fieldset>
+
+      <button id="guardar" type="button">Guardar</button>
+      <p id="estado"></p>
+    </div>
+  </main>
+
+  <script>
+    const elFichero = document.getElementById("fichero");
+    const elAbrirRepo = document.getElementById("abrir-repo");
+    const elRepoPanel = document.getElementById("repo-panel");
+    const elRepoCargando = document.getElementById("repo-cargando");
+    const elRepoSinYaml = document.getElementById("repo-sin-yaml");
+    const elRepoConYaml = document.getElementById("repo-con-yaml");
+    const elLienzo = document.getElementById("lienzo");
+    const elVacio = document.getElementById("vacio");
+    const elFicha = document.getElementById("ficha");
+    const elFichaTitulo = document.getElementById("ficha-titulo");
+    const elCamposNueva = document.getElementById("campos-nueva");
+    const elBuscador = document.getElementById("buscador");
+    const elBuscadorResultados = document.getElementById("buscador-resultados");
+    const elPendiente = document.getElementById("pendiente");
+    const elRelacionesLista = document.getElementById("relaciones-lista");
+    const elGuardar = document.getElementById("guardar");
+    const elEstado = document.getElementById("estado");
+    const ctx = elLienzo.getContext("2d");
+
+    const campo = (id) => document.getElementById(id);
+
+    let entidades = [];
+    let modo = null; // 'nueva' | 'editar'
+    let idActual = "";
+    let origenImagen = null; // { modo: 'subida', archivo } | { modo: 'repo', ruta }
+    let relaciones = []; // { destino, nombre, foco?, nota? }
+    let entidadPendiente = null; // { destino, nombre } — esperando clic en el lienzo
+
+    fetch("/api/entidades").then((r) => r.json()).then((datos) => { entidades = datos; });
+
+    function normalizar(texto) {
+      return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    }
+
+    function slugify(nombreArchivo) {
+      const sinExtension = nombreArchivo.replace(/\.[a-zA-Z0-9]+$/, "");
+      return normalizar(sinExtension)
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+
+    function humanizar(nombreArchivo) {
+      return nombreArchivo
+        .replace(/\.[a-zA-Z0-9]+$/, "")
+        .replace(/[_-]+/g, " ")
+        .trim();
+    }
+
+    function pintar(img) {
+      elLienzo.width = img.naturalWidth;
+      elLienzo.height = img.naturalHeight;
+      elLienzo._img = img;
+      redibujar();
+      elLienzo.hidden = false;
+      elVacio.hidden = true;
+      elFicha.hidden = false;
+    }
+
+    function redibujar() {
+      const img = elLienzo._img;
+      if (!img) return;
+      ctx.clearRect(0, 0, elLienzo.width, elLienzo.height);
+      ctx.drawImage(img, 0, 0);
+      relaciones.forEach((r, i) => {
+        if (!r.foco) return;
+        const x = (r.foco[0] / 100) * elLienzo.width;
+        const y = (r.foco[1] / 100) * elLienzo.height;
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(6, elLienzo.width * 0.008), 0, Math.PI * 2);
+        ctx.fillStyle = "#4a7dff";
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.font = `${Math.max(12, elLienzo.width * 0.014)}px sans-serif`;
+        ctx.fillText(String(i + 1), x + 8, y - 8);
+      });
+    }
+
+    function reiniciarFicha({ modoNuevo, id, nombre, archivoNombre, relacionesIniciales }) {
+      modo = modoNuevo;
+      idActual = id;
+      relaciones = relacionesIniciales || [];
+      entidadPendiente = null;
+      elPendiente.textContent = "";
+      elEstado.textContent = "";
+      elEstado.className = "";
+
+      if (modo === "nueva") {
+        elFichaTitulo.innerHTML = `Nueva obra <span class="id">(${id})</span>`;
+        elCamposNueva.hidden = false;
+        campo("c-id").value = id;
+        campo("c-nombre").value = nombre || humanizar(archivoNombre || id);
+        campo("c-resumen").value = "";
+        campo("c-autor").value = "";
+        campo("c-fecha").value = "";
+        campo("c-periodo").value = "";
+        campo("c-soporte").value = "";
+        campo("c-museo").value = "";
+        campo("c-credito").value = "";
+        campo("c-origen").value = "";
+        campo("c-alt").value = "";
+        elGuardar.textContent = "Guardar obra nueva";
+      } else {
+        elFichaTitulo.innerHTML = `${nombre || id} <span class="id">(${id})</span>`;
+        elCamposNueva.hidden = true;
+        elGuardar.textContent = "Guardar relaciones";
+      }
+      renderRelaciones();
+    }
+
+    // --- carga desde el ordenador ---
+    elFichero.addEventListener("change", () => {
+      const archivo = elFichero.files?.[0];
+      if (!archivo) return;
+      const img = new Image();
+      img.onload = () => {
+        pintar(img);
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(archivo);
+      origenImagen = { modo: "subida", archivo };
+      let id = slugify(archivo.name);
+      while (entidades.some((e) => e.id === id)) id = `${id}-2`;
+      reiniciarFicha({ modoNuevo: "nueva", id, archivoNombre: archivo.name });
+    });
+
+    // --- carga desde el repo ---
+    elAbrirRepo.addEventListener("click", async () => {
+      const abrir = elRepoPanel.hidden;
+      elRepoPanel.hidden = !abrir;
+      if (!abrir || elRepoPanel._cargado) return;
+      elRepoPanel._cargado = true;
+      const imagenes = await fetch("/api/imagenes").then((r) => r.json());
+      elRepoCargando.hidden = true;
+      const sinYaml = imagenes.filter((i) => !i.tieneYaml);
+      const conYaml = imagenes.filter((i) => i.tieneYaml);
+      elRepoSinYaml.innerHTML = sinYaml.length
+        ? "<p>Sin dar de alta todavía:</p>" : "";
+      elRepoConYaml.innerHTML = conYaml.length
+        ? "<p>Ya son obras:</p>" : "";
+      const rejillaSin = document.createElement("div");
+      rejillaSin.className = "rejilla";
+      for (const item of sinYaml) rejillaSin.appendChild(miniatura(item, false));
+      elRepoSinYaml.appendChild(rejillaSin);
+      const rejillaCon = document.createElement("div");
+      rejillaCon.className = "rejilla";
+      for (const item of conYaml) rejillaCon.appendChild(miniatura(item, true));
+      elRepoConYaml.appendChild(rejillaCon);
+    });
+
+    function miniatura(item, tieneYaml) {
+      const div = document.createElement("div");
+      div.className = `miniatura${tieneYaml ? "" : " sin-yaml"}`;
+      const img = document.createElement("img");
+      img.src = `/img/gr/${item.ruta}`;
+      img.loading = "lazy";
+      const span = document.createElement("span");
+      span.textContent = item.id;
+      div.append(img, span);
+      div.addEventListener("click", () => cargarDesdeRepo(item, tieneYaml));
+      return div;
+    }
+
+    async function cargarDesdeRepo(item, tieneYaml) {
+      const img = new Image();
+      img.onload = () => pintar(img);
+      img.src = `/img/gr/${item.ruta}`;
+      origenImagen = { modo: "repo", ruta: item.ruta };
+
+      if (tieneYaml) {
+        const entidad = entidades.find((e) => e.id === item.id);
+        const datos = await fetch(`/api/obra?id=${encodeURIComponent(item.id)}`).then((r) => r.json());
+        const relacionesIniciales = (datos.relaciones || []).map((r) => ({
+          destino: r.destino,
+          nombre: entidades.find((e) => e.id === r.destino)?.nombre || r.destino,
+          foco: r.foco,
+          nota: r.nota,
+        }));
+        reiniciarFicha({ modoNuevo: "editar", id: item.id, nombre: entidad?.nombre, relacionesIniciales });
+      } else {
+        let id = item.id.match(/^[a-z0-9]+(-[a-z0-9]+)*$/) ? item.id : slugify(item.id);
+        while (entidades.some((e) => e.id === id)) id = `${id}-2`;
+        reiniciarFicha({ modoNuevo: "nueva", id, archivoNombre: item.ruta.split("/").pop() });
+      }
+      elRepoPanel.hidden = true;
+    }
+
+    // --- marcar foco en el lienzo ---
+    elLienzo.addEventListener("click", (evento) => {
+      if (!entidadPendiente) {
+        elPendiente.textContent = "Elige primero una entidad en el buscador de abajo.";
+        return;
+      }
+      const rect = elLienzo.getBoundingClientRect();
+      const xPorc = ((evento.clientX - rect.left) / rect.width) * 100;
+      const yPorc = ((evento.clientY - rect.top) / rect.height) * 100;
+      relaciones.push({ ...entidadPendiente, foco: [Math.round(xPorc), Math.round(yPorc)] });
+      entidadPendiente = null;
+      elPendiente.textContent = "";
+      elBuscador.value = "";
+      renderRelaciones();
+      redibujar();
+    });
+
+    // --- buscador de entidades ---
+    elBuscador.addEventListener("input", () => {
+      const consulta = normalizar(elBuscador.value.trim());
+      if (!consulta) {
+        elBuscadorResultados.hidden = true;
+        return;
+      }
+      const yaElegidos = new Set(relaciones.map((r) => r.destino));
+      const coincidencias = entidades
+        .filter((e) => e.id !== idActual && !yaElegidos.has(e.id))
+        .filter((e) => normalizar(e.nombre).includes(consulta) || normalizar(e.id).includes(consulta))
+        .slice(0, 8);
+      elBuscadorResultados.innerHTML = "";
+      coincidencias.forEach((e) => {
+        const li = document.createElement("li");
+        li.innerHTML = `${e.nombre} <span class="tipo">(${e.id} · ${e.tipo})</span>`;
+        li.addEventListener("mousedown", (ev) => {
+          ev.preventDefault();
+          entidadPendiente = { destino: e.id, nombre: e.nombre };
+          elPendiente.textContent = `Clica la imagen para fijar el foco de «${e.nombre}», o pulsa "sin foco".`;
+          elBuscadorResultados.hidden = true;
+          elBuscador.value = "";
+        });
+        elBuscadorResultados.appendChild(li);
+      });
+      elBuscadorResultados.hidden = coincidencias.length === 0;
+    });
+
+    document.addEventListener("keydown", (evento) => {
+      if (evento.key === "Escape" && entidadPendiente) {
+        entidadPendiente = null;
+        elPendiente.textContent = "";
+      }
+    });
+
+    // botón "sin foco": se inserta dinámicamente junto al mensaje de pendiente
+    elPendiente.addEventListener("click", (evento) => {
+      if (evento.target.dataset.accion === "sin-foco" && entidadPendiente) {
+        relaciones.push({ ...entidadPendiente });
+        entidadPendiente = null;
+        elPendiente.textContent = "";
+        renderRelaciones();
+      }
+    });
+
+    function renderRelaciones() {
+      // el botón "sin foco" vive dentro de elPendiente cuando hay algo pendiente
+      if (entidadPendiente) {
+        elPendiente.innerHTML = `Clica la imagen para fijar el foco de «${entidadPendiente.nombre}», o <button type="button" data-accion="sin-foco">márcala sin foco</button>.`;
+      }
+      elRelacionesLista.innerHTML = "";
+      relaciones.forEach((r, i) => {
+        const li = document.createElement("li");
+        const num = document.createElement("span");
+        num.className = "num";
+        num.textContent = r.foco ? String(i + 1) : "–";
+        if (!r.foco) num.style.background = "#555";
+        const destino = document.createElement("span");
+        destino.className = "destino";
+        destino.textContent = r.nombre || r.destino;
+        const foco = document.createElement("span");
+        foco.className = "foco";
+        foco.textContent = r.foco ? `[${r.foco[0]}, ${r.foco[1]}]` : "sin foco";
+        const quitar = document.createElement("button");
+        quitar.className = "quitar";
+        quitar.type = "button";
+        quitar.textContent = "✕";
+        quitar.addEventListener("click", () => {
+          relaciones.splice(i, 1);
+          renderRelaciones();
+          redibujar();
+        });
+        li.append(num, destino, foco, quitar);
+        elRelacionesLista.appendChild(li);
+      });
+    }
+
+    // --- guardar ---
+    function archivoALeerComoBase64(archivo) {
+      return new Promise((resolve, reject) => {
+        const lector = new FileReader();
+        lector.onload = () => resolve(lector.result);
+        lector.onerror = reject;
+        lector.readAsDataURL(archivo);
+      });
+    }
+
+    elGuardar.addEventListener("click", async () => {
+      elEstado.className = "";
+      elEstado.textContent = "guardando…";
+      elGuardar.disabled = true;
+      try {
+        if (modo === "nueva") {
+          const id = campo("c-id").value.trim();
+          if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) {
+            throw new Error("id inválido: minúsculas, números y guiones, sin empezar/acabar en guion");
+          }
+          const cuerpo = {
+            id,
+            nombre: campo("c-nombre").value.trim(),
+            resumen: campo("c-resumen").value.trim(),
+            atributos: {
+              autor: campo("c-autor").value.trim(),
+              fecha: campo("c-fecha").value.trim(),
+              periodo: campo("c-periodo").value.trim(),
+              soporte: campo("c-soporte").value.trim(),
+              museo: campo("c-museo").value.trim(),
+            },
+            imagen: {
+              credito: campo("c-credito").value.trim(),
+              origen: campo("c-origen").value.trim(),
+              alt: campo("c-alt").value.trim(),
+            },
+            relaciones: relaciones.map((r) => ({ destino: r.destino, foco: r.foco, nota: r.nota })),
+            origenImagen:
+              origenImagen.modo === "subida"
+                ? { modo: "subida", nombreArchivo: origenImagen.archivo.name, datosBase64: await archivoALeerComoBase64(origenImagen.archivo) }
+                : { modo: "repo", ruta: origenImagen.ruta },
+          };
+          const respuesta = await fetch("/api/nueva-obra", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(cuerpo),
+          });
+          const datos = await respuesta.json();
+          if (!respuesta.ok) throw new Error(datos.error || "fallo al guardar");
+          entidades.push({ id, nombre: cuerpo.nombre, tipo: "obra" });
+          elEstado.textContent = `Guardado: content/mitologia-griega/entidades/${id}.yaml`;
+          elEstado.className = "ok";
+        } else {
+          const respuesta = await fetch("/api/relaciones", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: idActual,
+              relaciones: relaciones.map((r) => ({ destino: r.destino, foco: r.foco, nota: r.nota })),
+            }),
+          });
+          const datos = await respuesta.json();
+          if (!respuesta.ok) throw new Error(datos.error || "fallo al guardar");
+          elEstado.textContent = "Relaciones guardadas.";
+          elEstado.className = "ok";
+        }
+      } catch (error) {
+        elEstado.textContent = error.message;
+        elEstado.className = "error";
+      } finally {
+        elGuardar.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

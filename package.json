@@ -13,7 +13,8 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
-		"nueva-obra": "node scripts/nueva-obra.mjs"
+		"nueva-obra": "node scripts/nueva-obra.mjs",
+		"curar-obra": "node scripts/curar-obra.mjs"
 	},
 	"dependencies": {
 		"@astrojs/mdx": "^7.0.4",
