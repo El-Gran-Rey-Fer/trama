@@ -36,7 +36,7 @@ const relatos = capitulo.relatos.map((rid) => ({
 const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
 ---
 
-<Base titulo={capitulo.nombre}>
+<Base titulo={capitulo.nombre} materiaSlug={materia}>
   <article>
     <h1>{capitulo.nombre}</h1>
     <p>{capitulo.resumen}</p>

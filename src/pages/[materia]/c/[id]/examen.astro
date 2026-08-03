@@ -38,7 +38,7 @@ const preguntas = tarjetas.filter(
 );
 ---
 
-<Base titulo={`Examen — ${capitulo.nombre}`}>
+<Base titulo={`Examen — ${capitulo.nombre}`} materiaSlug={materia}>
   <article class="examen">
     <header class="cabecera-juego">
       <div>
@@ -200,12 +200,12 @@ const preguntas = tarjetas.filter(
     }
 
     .opcion.acierto {
-      border-color: seagreen;
-      background: color-mix(in srgb, seagreen 15%, var(--color-tarjeta-fondo));
+      border-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 15%, var(--color-tarjeta-fondo));
     }
 
     .opcion.fallo {
-      border-color: crimson;
+      border-color: var(--color-fallo);
     }
 
     .resultado {
@@ -216,7 +216,7 @@ const preguntas = tarjetas.filter(
 
     .exito {
       padding: 0 20px;
-      color: seagreen;
+      color: var(--color-acierto);
       font-weight: 700;
     }
 

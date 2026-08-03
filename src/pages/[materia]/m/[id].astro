@@ -3,6 +3,7 @@ import { getCollection, getEntry, render } from "astro:content";
 import E from "../../../components/E.astro";
 import Fuente from "../../../components/Fuente.astro";
 import LayoutLectura from "../../../layouts/LayoutLectura.astro";
+import { cargarCapitulos } from "../../../lib/capitulos";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
 import { resolverRetrato } from "../../../lib/retrato";
 
@@ -49,6 +50,12 @@ const lugar = entrada.data.lugar
 				obtenerEntidad(grafo, entrada.data.lugar)?.nombre ?? entrada.data.lugar,
 		}
 	: null;
+
+// Un relato no conoce su capítulo (la relación vive al revés, en
+// materia.yaml: capitulos[].relatos) — se resuelve aquí para el back-link y
+// el CTA de examen.
+const capitulos = await cargarCapitulos(materiaId);
+const capituloPadre = capitulos.find((c) => c.relatos.includes(id));
 ---
 
 <LayoutLectura
@@ -59,6 +66,8 @@ const lugar = entrada.data.lugar
   era={era}
   participantes={participantes}
   lugar={lugar}
+  capituloId={capituloPadre?.id}
+  capituloNombre={capituloPadre?.nombre}
 >
   <Content components={{ E, Fuente }} />
 </LayoutLectura>

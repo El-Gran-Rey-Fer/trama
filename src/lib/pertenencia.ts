@@ -46,7 +46,10 @@ export async function generarPertenencia(
 		}
 		const definicion = grafo.registro[relacion.tipo];
 		if (!definicion) continue;
-		if (!grafo.entidades.has(origenId) || !grafo.entidades.has(relacion.destino)) {
+		if (
+			!grafo.entidades.has(origenId) ||
+			!grafo.entidades.has(relacion.destino)
+		) {
 			continue;
 		}
 

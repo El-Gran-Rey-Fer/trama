@@ -38,7 +38,7 @@ const esStub =
 ---
 
 <article class="ficha">
-  <a class="volver" href={rutaMateria(materiaSlug)}>&lsaquo; volver</a>
+  <a class="volver" id="volver-ficha" href={rutaMateria(materiaSlug)}>&lsaquo; volver</a>
 
   {
     imagen && (
@@ -290,3 +290,28 @@ const esStub =
     font-weight: 600;
   }
 </style>
+
+<script define:vars={{ materiaSlug }}>
+  // Origen-aware sin mecanismo nuevo por página estática: cada ficha es su
+  // propia URL, así que se resuelve con document.referrer en cliente en vez
+  // de un query param. Sin JS o sin referrer, se queda el "‹ volver" a la
+  // portada de la materia (SSR de arriba), que siempre es válido.
+  const el = document.getElementById("volver-ficha");
+  if (el instanceof HTMLAnchorElement && document.referrer) {
+    try {
+      const ref = new URL(document.referrer);
+      if (ref.origin === location.origin) {
+        if (ref.pathname.includes(`/${materiaSlug}/m/`)) {
+          el.textContent = "‹ Relato";
+          el.href = document.referrer;
+        } else if (ref.pathname.endsWith(`/${materiaSlug}/`)) {
+          el.textContent = "‹ Álbum";
+          el.href = document.referrer;
+        }
+      }
+    } catch {
+      // document.referrer no siempre es una URL válida (p. ej. vacío en
+      // navegación directa); el fallback SSR ya cubre ese caso.
+    }
+  }
+</script>

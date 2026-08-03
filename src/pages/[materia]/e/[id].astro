@@ -16,7 +16,7 @@ export async function getStaticPaths() {
 	);
 }
 
-const { id } = Astro.params;
+const { id, materia } = Astro.params;
 const { materiaId } = Astro.props;
 const grafo = await construirGrafo(materiaId);
 const entidad = obtenerEntidad(grafo, id);
@@ -31,6 +31,6 @@ const nodos = new Map(
 const retrato = resolverRetrato(grafo, entidad);
 ---
 
-<Base titulo={entidad.nombre}>
+<Base titulo={entidad.nombre} materiaSlug={materia}>
   <FichaEntidad entidad={entidad} materiaSlug={grafo.slug} nodos={nodos} retrato={retrato} />
 </Base>

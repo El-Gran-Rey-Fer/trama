@@ -2,12 +2,13 @@
  * Tokens de diseño — dirección "manual escolar" (docs/DESIGN.md §7).
  * Única dirección visual: la "edición crítica" se descartó, no queda como
  * alternativa intercambiable (DESIGN.md: "elige una... no mezcles").
- * Cubre solo lo que necesita la ficha de entidad por ahora; se amplía según
- * aterricen el resto de pantallas de DESIGN.md §5.
+ * Se amplía según aterrizan las pantallas de DESIGN.md §5 (handoff "Flujo
+ * completo", proyecto Trama de Claude Design).
  */
 
 :root {
 	--fuente: "IBM Plex Sans", sans-serif;
+	--fuente-titulo: "Oswald", sans-serif;
 
 	--color-fondo-pagina: oklch(93% 0.012 90);
 	--color-fondo-pantalla: #ffffff;
@@ -22,8 +23,27 @@
 	--color-chip-fondo: oklch(92% 0.012 90);
 	--color-chip-texto: oklch(30% 0.01 90);
 
+	/* Fondo de fila alterna / deshabilitada (listas de capítulos, menú de
+	   juegos): un paso más oscuro que --color-fondo-pantalla. */
+	--color-fondo-stub: oklch(96% 0.006 90);
+	/* Placeholder de imagen ausente: patrón rayado, nunca color plano. */
+	--imagen-fondo-vacio: repeating-linear-gradient(
+		135deg,
+		oklch(90% 0.01 90),
+		oklch(90% 0.01 90) 10px,
+		oklch(94% 0.008 90) 10px,
+		oklch(94% 0.008 90) 20px
+	);
+
+	/* Acierto/fallo (quiz, examen): semántico, deliberadamente fuera de la
+	   paleta de acento (que es un rojo-terracota) para no perder contraste
+	   entre "correcto" e "incorrecto". Decisión explícita del usuario. */
+	--color-acierto: seagreen;
+	--color-fallo: crimson;
+
 	--radio: 3px;
 	--peso-titulo: 700;
+	--peso-titulo-grande: 800;
 
 	/*
 	 * Color por tipo de entidad (modo aventura, plan de imágenes y álbum,

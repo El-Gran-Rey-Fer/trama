@@ -1,0 +1,136 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../../layouts/Base.astro";
+import { rutaJuego, rutaPracticar } from "../../../lib/rutas";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	return materias.map((m) => ({
+		params: { materia: m.data.slug },
+	}));
+}
+
+const { materia } = Astro.params;
+
+const juegos = [
+	{
+		id: "emparejar",
+		titulo: "Une y relaciona",
+		desc: "Empareja cada pregunta con su respuesta",
+		icono: "⚭",
+		href: rutaJuego(materia, "emparejar"),
+	},
+	{
+		id: "ordenar",
+		titulo: "Ordenar",
+		desc: "Coloca los relatos de una era en su orden",
+		icono: "↕",
+		href: rutaJuego(materia, "ordenar"),
+	},
+	{
+		id: "pertenencia",
+		titulo: "Pertenencia",
+		desc: "¿Sí o no? Sobre relaciones ya vistas",
+		icono: "✓",
+		href: rutaJuego(materia, "pertenencia"),
+	},
+	{
+		id: "tarjetas",
+		titulo: "Tarjetas sueltas",
+		desc: "Repasa preguntas y respuestas, a tu ritmo",
+		icono: "🔁",
+		href: rutaPracticar(materia),
+	},
+];
+---
+
+<Base titulo={`Practicar — ${materia}`} materiaSlug={materia}>
+  <div class="cabecera-lista">
+    <h1 class="titulo-lista">Practicar</h1>
+  </div>
+
+  <div class="lista-juegos">
+    {
+      juegos.map((jg, i) => (
+        <a class="fila-juego" data-primera={i === 0} href={jg.href}>
+          <span class="icono-juego" aria-hidden="true">
+            {jg.icono}
+          </span>
+          <span class="texto-juego">
+            <span class="titulo-juego">{jg.titulo}</span>
+            <span class="desc-juego">{jg.desc}</span>
+          </span>
+          <span class="chevron-juego" aria-hidden="true">
+            ›
+          </span>
+        </a>
+      ))
+    }
+  </div>
+</Base>
+
+<style>
+  .cabecera-lista {
+    padding: 20px 20px 4px;
+  }
+
+  .titulo-lista {
+    margin: 0;
+    font-size: 26px;
+    font-weight: var(--peso-titulo-grande);
+    font-family: var(--fuente-titulo);
+  }
+
+  .lista-juegos {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .fila-juego {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 20px;
+    border: none;
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+    background: var(--color-fondo-pantalla);
+    color: var(--color-texto);
+    text-decoration: none;
+    box-sizing: border-box;
+  }
+
+  .fila-juego[data-primera="false"] {
+    background: var(--color-fondo-stub);
+  }
+
+  .icono-juego {
+    flex: 0 0 auto;
+    width: 32px;
+    font-size: 22px;
+    text-align: center;
+  }
+
+  .texto-juego {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .titulo-juego {
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--fuente-titulo);
+  }
+
+  .desc-juego {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--color-texto-muted);
+  }
+
+  .chevron-juego {
+    font-size: 20px;
+    color: var(--color-texto-muted);
+  }
+</style>

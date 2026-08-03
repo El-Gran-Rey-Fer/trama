@@ -3,7 +3,7 @@ import { getCollection, getEntry } from "astro:content";
 import Base from "../../../layouts/Base.astro";
 import { conjuntoDeRelato } from "../../../lib/desbloqueo";
 import { generarPertenencia } from "../../../lib/pertenencia";
-import { rutaMateria } from "../../../lib/rutas";
+import { rutaJugarMenu } from "../../../lib/rutas";
 import { generarTarjetas } from "../../../lib/tarjetas";
 
 export async function getStaticPaths() {
@@ -60,25 +60,30 @@ const TITULOS: Record<string, string> = {
 const titulo = TITULOS[juego ?? ""] ?? juego;
 ---
 
-<Base titulo={`${titulo} — ${materia}`}>
+<Base titulo={`${titulo} — ${materia}`} materiaSlug={materia}>
   <article class="juego">
     <header class="cabecera-juego">
-      <div>
+      <a class="salir" href={rutaJugarMenu(materia)}>&lsaquo; Salir</a>
+      <div class="titulo-wrap">
         <h1>{titulo}</h1>
         {juego === "ordenar" && nombreEraOrdenar && <p class="subtitulo">{nombreEraOrdenar}</p>}
       </div>
-      <p id="progreso"></p>
+      <p id="progreso" class="progreso"></p>
     </header>
 
     <div id="tablero" data-juego={juego}></div>
 
-    <p id="mensaje" hidden></p>
+    <div id="panel-completado" class="panel-completado" hidden>
+      <p id="mensaje"></p>
+      <a id="volver-practicar" class="volver-practicar" href={rutaJugarMenu(materia)}>
+        Volver a Practicar
+      </a>
+    </div>
+
     <p id="sin-tarjetas" hidden>
       Todavía no hay tarjetas suficientes para jugar. Lee algún relato más, o
       cambia a modo sandbox.
     </p>
-
-    <p class="salir"><a href={rutaMateria(materia)}>&larr; Salir</a></p>
   </article>
 
   <script
@@ -118,7 +123,13 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     const tablero = document.getElementById("tablero");
     const elProgreso = document.getElementById("progreso");
     const elMensaje = document.getElementById("mensaje");
+    const elPanelCompletado = document.getElementById("panel-completado");
     const elSinTarjetas = document.getElementById("sin-tarjetas");
+
+    function completar(texto: string) {
+      if (elMensaje) elMensaje.textContent = texto;
+      elPanelCompletado?.removeAttribute("hidden");
+    }
 
     function barajar<T>(arr: T[]): T[] {
       const copia = [...arr];
@@ -187,10 +198,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
             seleccion = null;
             emparejadas += 1;
             actualizarProgreso();
-            if (emparejadas === numPares && elMensaje) {
-              elMensaje.hidden = false;
-              elMensaje.textContent = "¡Completado!";
-            }
+            if (emparejadas === numPares) completar("¡Completado!");
           } else {
             bloqueado = true;
             boton.classList.add("fallo");
@@ -250,10 +258,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
             lista.appendChild(item);
             siguiente += 1;
             actualizarProgreso();
-            if (siguiente === secuenciaCorrecta.length && elMensaje) {
-              elMensaje.hidden = false;
-              elMensaje.textContent = "¡Completado!";
-            }
+            if (siguiente === secuenciaCorrecta.length) completar("¡Completado!");
           } else {
             boton.classList.add("fallo");
             setTimeout(() => boton.classList.remove("fallo"), 500);
@@ -327,10 +332,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
                 mostrarPregunta();
               } else if (tablero) {
                 tablero.innerHTML = "";
-                if (elMensaje) {
-                  elMensaje.hidden = false;
-                  elMensaje.textContent = `¡Completado! ${aciertos} / ${tanda.length} aciertos.`;
-                }
+                completar(`¡Completado! ${aciertos} / ${tanda.length} aciertos.`);
               }
             }, 500);
           });
@@ -353,8 +355,62 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     .cabecera-juego {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
+      align-items: center;
+      gap: 12px;
       padding: 12px 20px;
+    }
+
+    .salir {
+      flex: 0 0 auto;
+      color: var(--color-acento);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .titulo-wrap {
+      flex: 1;
+    }
+
+    .titulo-wrap h1 {
+      margin: 0;
+      font-size: 18px;
+      font-family: var(--fuente-titulo);
+    }
+
+    .progreso {
+      flex: 0 0 auto;
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-texto-muted);
+      font-family: var(--fuente-titulo);
+    }
+
+    .panel-completado {
+      padding: 16px 20px;
+    }
+
+    .panel-completado p {
+      margin: 0 0 14px;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--color-acento);
+      font-family: var(--fuente-titulo);
+    }
+
+    .volver-practicar {
+      display: inline-block;
+      padding: 14px 22px;
+      border: none;
+      border-radius: var(--radio);
+      background: var(--color-acento);
+      color: var(--color-acento-contraste);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
     }
 
     .rejilla-emparejar {
@@ -386,7 +442,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .pieza.fallo {
-      border-color: crimson;
+      border-color: var(--color-fallo);
     }
 
     .subtitulo {
@@ -424,7 +480,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .pieza-ordenar.fallo {
-      border-color: crimson;
+      border-color: var(--color-fallo);
     }
 
     .texto-pregunta {
@@ -453,16 +509,12 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .opcion-pertenencia.acierto {
-      border-color: seagreen;
-      background: color-mix(in srgb, seagreen 15%, var(--color-tarjeta-fondo));
+      border-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 15%, var(--color-tarjeta-fondo));
     }
 
     .opcion-pertenencia.fallo {
-      border-color: crimson;
-    }
-
-    .salir {
-      padding: 20px;
+      border-color: var(--color-fallo);
     }
   </style>
 </Base>

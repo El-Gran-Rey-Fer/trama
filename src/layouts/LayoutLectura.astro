@@ -2,7 +2,12 @@
 import ParticipantesRelato, {
 	type Participante,
 } from "../components/ParticipantesRelato.astro";
-import { rutaEntidad, rutaMateria } from "../lib/rutas";
+import {
+	rutaCapitulo,
+	rutaEntidad,
+	rutaExamen,
+	rutaMateria,
+} from "../lib/rutas";
 import Base from "./Base.astro";
 
 interface Props {
@@ -13,13 +18,33 @@ interface Props {
 	era?: string | null;
 	participantes: Participante[];
 	lugar: { id: string; nombre: string } | null;
+	capituloId?: string;
+	capituloNombre?: string;
 }
-const { id, titulo, resumen, materiaSlug, era, participantes, lugar } =
-	Astro.props;
+const {
+	id,
+	titulo,
+	resumen,
+	materiaSlug,
+	era,
+	participantes,
+	lugar,
+	capituloId,
+	capituloNombre,
+} = Astro.props;
 ---
 
-<Base titulo={titulo}>
+<Base titulo={titulo} materiaSlug={materiaSlug}>
   <article class="relato">
+    {
+      capituloId && (
+        <p class="volver-capitulo-wrap">
+          <a class="volver-capitulo" href={rutaCapitulo(materiaSlug, capituloId)}>
+            &lsaquo; {capituloNombre}
+          </a>
+        </p>
+      )
+    }
     <header class="cabecera">
       {era && <p class="era">{era}</p>}
       <h1 class="titulo">{titulo}</h1>
@@ -42,6 +67,13 @@ const { id, titulo, resumen, materiaSlug, era, participantes, lugar } =
       <button type="button" class="marcar-leido" data-relato-id={id}>
         Marcar relato como leído
       </button>
+      {
+        capituloId && (
+          <a class="examen-cta" data-leido="false" href={rutaExamen(materiaSlug, capituloId)}>
+            Examen de este capítulo
+          </a>
+        )
+      }
     </div>
 
     {
@@ -61,6 +93,19 @@ const { id, titulo, resumen, materiaSlug, era, participantes, lugar } =
   .relato {
     max-width: 640px;
     margin: 0 auto;
+  }
+
+  .volver-capitulo-wrap {
+    margin: 0;
+    padding: 16px 20px 0;
+  }
+
+  .volver-capitulo {
+    color: var(--color-texto-muted);
+    font-family: var(--fuente-titulo);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
   }
 
   .cabecera {
@@ -138,6 +183,29 @@ const { id, titulo, resumen, materiaSlug, era, participantes, lugar } =
     color: var(--color-texto-muted);
   }
 
+  .examen-cta {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 16px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: none;
+    color: var(--color-texto-muted);
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--fuente-titulo);
+    text-align: center;
+    text-decoration: none;
+    opacity: 0.5;
+    box-sizing: border-box;
+  }
+
+  .examen-cta[data-leido="true"] {
+    color: var(--color-acento);
+    opacity: 1;
+  }
+
   .volver-wrap {
     padding: 20px;
   }
@@ -153,12 +221,14 @@ const { id, titulo, resumen, materiaSlug, era, participantes, lugar } =
   import { leerEstado, guardarEstado } from "../lib/estado";
 
   const boton = document.querySelector<HTMLButtonElement>(".marcar-leido");
+  const examenCta = document.querySelector<HTMLAnchorElement>(".examen-cta");
   if (boton) {
     const relatoId = boton.dataset.relatoId ?? "";
 
     const aplicar = (leido: boolean) => {
       boton.textContent = leido ? "✓ Marcado como leído" : "Marcar relato como leído";
       boton.classList.toggle("leido", leido);
+      examenCta?.setAttribute("data-leido", String(leido));
     };
 
     aplicar(leerEstado().leidos.includes(relatoId));

@@ -1,10 +1,53 @@
 ---
 import "../styles/tokens.css";
+import { rutaAjustes, rutaJugarMenu, rutaMateria } from "../lib/rutas";
 
 interface Props {
 	titulo: string;
+	// Sin materiaSlug (p. ej. portada de trama, selector de materias) no hay
+	// tab bar: no hay "Leer/Álbum/Practicar/Ajustes" de qué materia.
+	materiaSlug?: string;
 }
-const { titulo } = Astro.props;
+const { titulo, materiaSlug } = Astro.props;
+
+const pestanas = materiaSlug
+	? [
+			{
+				id: "leer",
+				etiqueta: "Leer",
+				icono: "📖",
+				href: `${rutaMateria(materiaSlug)}#capitulos`,
+			},
+			{
+				id: "album",
+				etiqueta: "Álbum",
+				icono: "🗂",
+				href: `${rutaMateria(materiaSlug)}#album`,
+			},
+			{
+				id: "practicar",
+				etiqueta: "Practicar",
+				icono: "✎",
+				href: rutaJugarMenu(materiaSlug),
+			},
+			{
+				id: "ajustes",
+				etiqueta: "Ajustes",
+				icono: "⚙",
+				href: rutaAjustes(materiaSlug),
+			},
+		]
+	: [];
+
+// Activa por prefijo de ruta — suficiente para practicar/ajustes, que tienen
+// URL propia. Leer y Álbum comparten página (dos anclas de la misma
+// portada de materia) y no se distinguen aquí; no marcar ninguna es mejor
+// que marcar la incorrecta.
+const rutaActual = Astro.url.pathname;
+function activa(id: string, href: string): boolean {
+	if (id === "leer" || id === "album") return false;
+	return rutaActual.startsWith(href.split("#")[0]);
+}
 ---
 
 <html lang="es">
@@ -15,11 +58,11 @@ const { titulo } = Astro.props;
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body>
+  <body class:list={{ "con-tabs": pestanas.length > 0 }}>
     <header class="cabecera-global">
       <button type="button" id="interruptor-modo" class="interruptor-modo">
         Modo: <span class="valor-modo">aventura</span>
@@ -27,6 +70,18 @@ const { titulo } = Astro.props;
     </header>
     <slot />
     <div id="minifichas"></div>
+    {
+      pestanas.length > 0 && (
+        <nav class="tabs" aria-label="Navegación principal">
+          {pestanas.map((p) => (
+            <a href={p.href} aria-current={activa(p.id, p.href) ? "page" : undefined}>
+              <span aria-hidden="true">{p.icono}</span>
+              <span>{p.etiqueta}</span>
+            </a>
+          ))}
+        </nav>
+      )
+    }
   </body>
 </html>
 
@@ -51,6 +106,47 @@ const { titulo } = Astro.props;
   .valor-modo {
     font-weight: 700;
     text-transform: capitalize;
+  }
+
+  .tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    border-top: 1px solid var(--color-tarjeta-borde);
+    background: var(--color-fondo-pantalla);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .tabs a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0 6px;
+    color: var(--color-texto-muted);
+    text-decoration: none;
+    font-family: var(--fuente-titulo);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .tabs a span[aria-hidden] {
+    font-size: 18px;
+    line-height: 1;
+    filter: grayscale(1) opacity(0.7);
+  }
+
+  .tabs a[aria-current="page"] {
+    color: var(--color-acento);
+    font-weight: 700;
+  }
+
+  .tabs a[aria-current="page"] span[aria-hidden] {
+    filter: none;
   }
 </style>
 
@@ -98,6 +194,11 @@ const { titulo } = Astro.props;
     background: var(--color-fondo-pagina);
     color: var(--color-texto);
     font-family: var(--fuente);
+  }
+
+  /* Deja sitio a la tab bar fija para que no tape el final del contenido. */
+  body.con-tabs {
+    padding-bottom: 56px;
   }
 
   :focus-visible {
@@ -236,6 +337,7 @@ const { titulo } = Astro.props;
      (cliente, dentro de la minificha de <E />) — un solo lenguaje visual
      para los dos casos. */
   .casilla {
+    position: relative;
     width: 100%;
     aspect-ratio: 1;
     border-radius: var(--radio);
@@ -264,5 +366,27 @@ const { titulo } = Astro.props;
   .casilla[data-estado="sin-encontrar"] {
     filter: grayscale(1);
     opacity: 0.45;
+  }
+
+  /* "Dominado" (examen de personaje superado, plan de imágenes y álbum,
+     carril C): borde de acento + marca en la esquina. Sin icono nuevo por
+     tipo — decisión explícita: la inicial-sobre-color no cambia. */
+  .casilla[data-estado="dominado"] {
+    outline: 2px solid var(--color-acento);
+    outline-offset: -2px;
+  }
+
+  .casilla[data-estado="dominado"]::after {
+    content: "✓";
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+    color: var(--color-acento-contraste);
+    background: var(--color-acento);
+    font-size: 0.6em;
+    font-weight: 700;
+    line-height: 1;
+    border-radius: 999px;
+    padding: 2px 3px;
   }
 </style>

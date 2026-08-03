@@ -6,7 +6,7 @@ import { cargarCapitulos } from "../../lib/capitulos";
 import { conjuntoDeRelato } from "../../lib/desbloqueo";
 import { construirGrafo } from "../../lib/grafo";
 import { resolverRetrato } from "../../lib/retrato";
-import { rutaCapitulo, rutaJuego, rutaPracticar } from "../../lib/rutas";
+import { rutaCapitulo } from "../../lib/rutas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -100,36 +100,40 @@ const totalCapitulos = capitulos.length;
 const totalEntidades = entidades.length;
 ---
 
-<Base titulo={`${materia} — modo aventura`}>
-  <h1>{materia}</h1>
-  <p>
-    <a href={rutaPracticar(materia)}>Practicar</a>
-    · <a href={rutaJuego(materia, "emparejar")}>Emparejar</a>
-    · <a href={rutaJuego(materia, "ordenar")}>Ordenar</a>
-  </p>
-
-  <section>
-    <h2>Modo aventura</h2>
+<Base titulo={`${materia} — modo aventura`} materiaSlug={materia}>
+  <section id="capitulos" class="seccion-leer">
+    <div class="cabecera-lista">
+      <h1 class="titulo-lista">{materia}</h1>
+    </div>
     {
       eras.map((era) => {
         const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
         return (
-          <section>
-            <h3>{era.nombre}</h3>
+          <div class="grupo-era">
+            <h2 class="etiqueta-era">{era.nombre}</h2>
             {capitulosDeEra.length === 0 ? (
-              <p>Sin capítulos todavía.</p>
+              <p class="sin-capitulos">Sin capítulos todavía.</p>
             ) : (
-              <ol>
-                {capitulosDeEra.map((c) => (
-                  <li data-capitulo={c.id}>
-                    <a href={rutaCapitulo(materia, c.id)}>{c.nombre}</a>
-                    {" — "}
-                    <span class="estado">Cerrado</span>
+              <ol class="lista-capitulos">
+                {capitulosDeEra.map((c, i) => (
+                  <li data-capitulo={c.id} class="fila-capitulo">
+                    <a href={rutaCapitulo(materia, c.id)} class="enlace-capitulo">
+                      <span class="num-capitulo" aria-hidden="true">
+                        {i + 1}
+                      </span>
+                      <span class="texto-capitulo">
+                        <span class="titulo-capitulo">{c.nombre}</span>
+                        <span class="estado">Cerrado</span>
+                      </span>
+                      <span class="chevron-capitulo" aria-hidden="true">
+                        ›
+                      </span>
+                    </a>
                   </li>
                 ))}
               </ol>
             )}
-          </section>
+          </div>
         );
       })
     }
@@ -147,28 +151,19 @@ const totalEntidades = entidades.length;
     }
   </section>
 
-  <section id="indice-aventura">
-    <h2>Álbum</h2>
-    <p id="nivel-cosmetico"></p>
+  <section id="album" class="seccion-album">
+    <div class="cabecera-lista">
+      <h2 class="titulo-lista">Álbum</h2>
+      <p id="nivel-cosmetico" class="subtitulo-lista"></p>
+    </div>
     {
       gruposAlbum.map((g) => (
-        <section>
-          <h3>{g.nombre}</h3>
+        <div class="grupo-album">
+          <h3 class="etiqueta-grupo-album">{g.nombre}</h3>
           <ParticipantesRelato participantes={g.entidades} materiaSlug={materia} />
-        </section>
+        </div>
       ))
     }
-  </section>
-
-  <section>
-    <h2>Copia de seguridad</h2>
-    <p>El progreso se guarda solo en este navegador. Exporta un fichero para no perderlo.</p>
-    <p>
-      <button id="exportar" type="button">Exportar</button>
-      <button id="importar" type="button">Importar</button>
-      <input id="fichero-importar" type="file" accept="application/json" hidden />
-    </p>
-    <p id="mensaje-importar" hidden></p>
   </section>
 
   <script
@@ -196,8 +191,6 @@ const totalEntidades = entidades.length;
       calcularEstadosCapitulos,
       calcularEstadosCasillas,
       calcularNivel,
-      exportarEstado,
-      importarEstado,
       leerEstado,
       type CapituloResumen,
       type NivelCosmetico,
@@ -216,8 +209,10 @@ const totalEntidades = entidades.length;
     const estadosCapitulos = calcularEstadosCapitulos(capitulos, leerEstado());
 
     for (const [id, estado] of Object.entries(estadosCapitulos)) {
-      const el = document.querySelector(`[data-capitulo="${id}"] .estado`);
+      const fila = document.querySelector(`[data-capitulo="${id}"]`);
+      const el = fila?.querySelector(".estado");
       if (el) el.textContent = ETIQUETA[estado];
+      if (fila instanceof HTMLElement) fila.dataset.estadoCapitulo = estado;
     }
 
     const datosAlbumEl = document.getElementById("datos-album");
@@ -233,13 +228,13 @@ const totalEntidades = entidades.length;
 
     const estadoActual = leerEstado();
     const elSandbox = document.getElementById("indice-sandbox");
-    const elAventura = document.getElementById("indice-aventura");
+    const elAlbum = document.getElementById("album");
     if (estadoActual.modo === "sandbox") {
       elSandbox?.removeAttribute("hidden");
-      elAventura?.setAttribute("hidden", "");
+      elAlbum?.setAttribute("hidden", "");
     } else {
       elSandbox?.setAttribute("hidden", "");
-      elAventura?.removeAttribute("hidden");
+      elAlbum?.removeAttribute("hidden");
     }
 
     if (datosAlbum) {
@@ -249,9 +244,7 @@ const totalEntidades = entidades.length;
         estadoActual,
       );
       for (const [id, estado] of Object.entries(estadosCasillas)) {
-        const li = document.querySelector(
-          `#indice-aventura [data-entidad-id="${id}"]`,
-        );
+        const li = document.querySelector(`#album [data-entidad-id="${id}"]`);
         const casilla = li?.querySelector<HTMLElement>(".casilla");
         if (casilla) casilla.dataset.estado = estado;
         if (estado === "sin-encontrar") {
@@ -269,27 +262,101 @@ const totalEntidades = entidades.length;
       const elNivel = document.getElementById("nivel-cosmetico");
       if (elNivel && nivel) elNivel.textContent = `Nivel: ${nivel.nombre}`;
     }
-
-    const elExportar = document.getElementById("exportar");
-    const elImportar = document.getElementById("importar");
-    const elFichero = document.getElementById(
-      "fichero-importar",
-    ) as HTMLInputElement;
-    const elMensaje = document.getElementById("mensaje-importar");
-
-    elExportar?.addEventListener("click", () => exportarEstado());
-
-    elImportar?.addEventListener("click", () => elFichero.click());
-
-    elFichero.addEventListener("change", async () => {
-      const archivo = elFichero.files?.[0];
-      elFichero.value = "";
-      if (!archivo || !elMensaje) return;
-      const resultado = await importarEstado(archivo);
-      elMensaje.hidden = false;
-      elMensaje.textContent = resultado.ok
-        ? "Importado correctamente."
-        : `Error: ${resultado.error}`;
-    });
   </script>
 </Base>
+
+<style>
+  .cabecera-lista {
+    padding: 20px 20px 4px;
+  }
+
+  .titulo-lista {
+    margin: 0;
+    font-size: 26px;
+    font-weight: var(--peso-titulo-grande);
+    font-family: var(--fuente-titulo);
+    text-transform: capitalize;
+  }
+
+  .subtitulo-lista {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--color-texto-muted);
+  }
+
+  .grupo-era,
+  .grupo-album {
+    margin-bottom: 4px;
+  }
+
+  .etiqueta-era,
+  .etiqueta-grupo-album {
+    margin: 18px 20px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-acento);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--fuente-titulo);
+  }
+
+  .sin-capitulos {
+    margin: 0 20px 12px;
+    font-size: 13px;
+    color: var(--color-texto-muted);
+  }
+
+  .lista-capitulos {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fila-capitulo[data-estado-capitulo="cerrado"] {
+    opacity: 0.6;
+  }
+
+  .enlace-capitulo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+    color: var(--color-texto);
+    text-decoration: none;
+    box-sizing: border-box;
+  }
+
+  .num-capitulo {
+    flex: 0 0 auto;
+    width: 28px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-acento);
+    font-family: var(--fuente-titulo);
+  }
+
+  .texto-capitulo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .titulo-capitulo {
+    font-size: 17px;
+    font-weight: 700;
+    font-family: var(--fuente-titulo);
+  }
+
+  .estado {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--color-texto-muted);
+  }
+
+  .chevron-capitulo {
+    font-size: 20px;
+    color: var(--color-texto-muted);
+  }
+</style>

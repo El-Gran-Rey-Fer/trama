@@ -1,0 +1,192 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { construirGrafo } from "../../lib/grafo";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	return materias.map((m) => ({
+		params: { materia: m.data.slug },
+		props: { materiaId: m.id },
+	}));
+}
+
+const { materia } = Astro.params;
+const { materiaId } = Astro.props;
+
+const grafo = await construirGrafo(materiaId);
+const totalEntidades = [...grafo.entidades.values()].filter(
+	(e) => e.kind === "entidad",
+).length;
+---
+
+<Base titulo={`Ajustes — ${materia}`} materiaSlug={materia}>
+  <div class="cabecera-lista">
+    <h1 class="titulo-lista">Ajustes</h1>
+  </div>
+
+  <ul class="filas-ajustes">
+    <li class="fila-ajuste">
+      <div class="texto-ajuste">
+        <span class="etiqueta-ajuste">Progreso del álbum</span>
+        <span class="valor-ajuste" id="progreso-album">— / {totalEntidades} dominadas</span>
+      </div>
+      <button type="button" class="boton-restablecer" id="restablecer">Restablecer</button>
+    </li>
+
+    <li class="fila-ajuste">
+      <div class="texto-ajuste">
+        <span class="etiqueta-ajuste">Copia de seguridad</span>
+        <span class="valor-ajuste">El progreso se guarda solo en este navegador.</span>
+      </div>
+    </li>
+  </ul>
+
+  <div class="acciones-copia">
+    <button type="button" class="boton-secundario" id="exportar">Exportar</button>
+    <button type="button" class="boton-secundario" id="importar">Importar</button>
+    <input id="fichero-importar" type="file" accept="application/json" hidden />
+  </div>
+  <p id="mensaje-importar" class="mensaje-importar" hidden></p>
+
+  <script
+    is:inline
+    type="application/json"
+    id="datos-ajustes"
+    set:html={JSON.stringify({ totalEntidades })}
+  />
+
+  <script>
+    import {
+      estadoPorDefecto,
+      exportarEstado,
+      guardarEstado,
+      importarEstado,
+      leerEstado,
+    } from "../../lib/estado";
+
+    const datosEl = document.getElementById("datos-ajustes");
+    const { totalEntidades } = datosEl
+      ? (JSON.parse(datosEl.textContent ?? "{}") as { totalEntidades: number })
+      : { totalEntidades: 0 };
+
+    const elProgreso = document.getElementById("progreso-album");
+    function pintarProgreso() {
+      if (!elProgreso) return;
+      const dominadas = leerEstado().dominados.length;
+      elProgreso.textContent = `${dominadas} / ${totalEntidades} dominadas`;
+    }
+    pintarProgreso();
+
+    document.getElementById("restablecer")?.addEventListener("click", () => {
+      if (!confirm("¿Restablecer todo el progreso guardado en este navegador? No se puede deshacer.")) {
+        return;
+      }
+      guardarEstado(estadoPorDefecto());
+      pintarProgreso();
+    });
+
+    document.getElementById("exportar")?.addEventListener("click", () => exportarEstado());
+
+    const elImportar = document.getElementById("importar");
+    const elFichero = document.getElementById("fichero-importar") as HTMLInputElement;
+    const elMensaje = document.getElementById("mensaje-importar");
+
+    elImportar?.addEventListener("click", () => elFichero.click());
+
+    elFichero.addEventListener("change", async () => {
+      const archivo = elFichero.files?.[0];
+      elFichero.value = "";
+      if (!archivo || !elMensaje) return;
+      const resultado = await importarEstado(archivo);
+      elMensaje.hidden = false;
+      elMensaje.textContent = resultado.ok
+        ? "Importado correctamente."
+        : `Error: ${resultado.error}`;
+      pintarProgreso();
+    });
+  </script>
+</Base>
+
+<style>
+  .cabecera-lista {
+    padding: 20px 20px 4px;
+  }
+
+  .titulo-lista {
+    margin: 0;
+    font-size: 26px;
+    font-weight: var(--peso-titulo-grande);
+    font-family: var(--fuente-titulo);
+  }
+
+  .filas-ajustes {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fila-ajuste {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+  }
+
+  .texto-ajuste {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .etiqueta-ajuste {
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--fuente-titulo);
+  }
+
+  .valor-ajuste {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--color-texto-muted);
+  }
+
+  .boton-restablecer {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: none;
+    color: var(--color-texto-muted);
+    font-family: var(--fuente);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .acciones-copia {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px;
+  }
+
+  .boton-secundario {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: var(--color-tarjeta-fondo);
+    color: var(--color-texto);
+    font-family: var(--fuente);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .mensaje-importar {
+    padding: 0 20px;
+    font-size: 13px;
+    color: var(--color-texto-muted);
+  }
+</style>
