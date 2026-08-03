@@ -1,48 +1,53 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../../../layouts/Base.astro";
-import { cargarCapitulos } from "../../../../lib/capitulos";
-import { rutaCapitulo } from "../../../../lib/rutas";
+import { construirGrafo, obtenerEntidad } from "../../../../lib/grafo";
+import { rutaEntidad } from "../../../../lib/rutas";
 import { generarTarjetas } from "../../../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
-	const porMateria = await Promise.all(
-		materias.map(async (m) => {
-			const capitulos = await cargarCapitulos(m.id);
-			return capitulos.map((c) => ({
-				params: { materia: m.data.slug, id: c.id },
-				props: { materiaId: m.id },
-			}));
-		}),
+	const entidades = await getCollection("entidades");
+	return materias.flatMap((m) =>
+		entidades.map((e) => ({
+			params: { materia: m.data.slug, id: e.id },
+			props: { materiaId: m.id },
+		})),
 	);
-	return porMateria.flat();
 }
 
 const { materia, id } = Astro.params;
 const { materiaId } = Astro.props;
 
-const capitulos = await cargarCapitulos(materiaId);
-const indice = capitulos.findIndex((c) => c.id === id);
-const capitulo = capitulos[indice];
-if (!capitulo) throw new Error(`Capítulo no encontrado: ${id}`);
-const siguienteCapitulo = capitulos[indice + 1] ?? null;
+const grafo = await construirGrafo(materiaId);
+const entidad = obtenerEntidad(grafo, id);
+if (!entidad) throw new Error(`Entidad no encontrada: ${materiaId}/${id}`);
 
-const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
-// Solo entran preguntas evaluables de verdad (nada se autoevalúa, §3.5): de
-// respuesta única y con al menos un distractor real para poder ofrecer
-// opción múltiple. El resto del contenido del capítulo se practica en
-// /practicar, pero no examina.
+// El examen de personaje incluye también las relaciones que conectan a la
+// entidad con otras (decisión del usuario, A4): el conjunto son sus vecinos
+// directos, no solo ella. `generarTarjetas` exige que AMBOS extremos de una
+// arista estén en `soloIds`, así que hace falta el ego-network a
+// profundidad 1, no solo el propio id.
+const soloIds = new Set<string>([
+	id,
+	...entidad.relaciones.map((r) => r.destino),
+]);
+const tarjetas = await generarTarjetas(materiaId, soloIds);
 const preguntas = tarjetas.filter(
 	(t) => !t.conjunto && t.distractores.length > 0,
 );
+
+// Umbral propio, no el de un capítulo (que crecería sin límite según se
+// añadan relaciones y atributos): una tanda fija de como mucho 15, con el
+// mismo criterio de 80% que ya usan los capítulos.
+const UMBRAL = { aciertos: 12, de: 15 };
 ---
 
-<Base titulo={`Examen — ${capitulo.nombre}`}>
+<Base titulo={`Examen — ${entidad.nombre}`}>
   <article class="examen">
     <header class="cabecera-juego">
       <div>
-        <h1>Examen: {capitulo.nombre}</h1>
+        <h1>Examen: {entidad.nombre}</h1>
       </div>
       <p id="progreso"></p>
     </header>
@@ -50,11 +55,11 @@ const preguntas = tarjetas.filter(
     <div id="tablero"></div>
 
     <p id="sin-preguntas" hidden>
-      Este capítulo todavía no tiene suficientes tarjetas evaluables para un
-      examen. Vuelve cuando tenga más contenido.
+      Todavía no hay suficientes tarjetas evaluables sobre {entidad.nombre}
+      para un examen. Vuelve cuando tenga más contenido.
     </p>
 
-    <p class="salir"><a href={rutaCapitulo(materia, capitulo.id)}>&larr; Volver al capítulo</a></p>
+    <p class="salir"><a href={rutaEntidad(materia, id)}>&larr; Volver a la ficha</a></p>
   </article>
 
   <script
@@ -63,10 +68,9 @@ const preguntas = tarjetas.filter(
     id="datos-examen"
     set:html={JSON.stringify({
       preguntas,
-      umbral: capitulo.examen,
-      capituloId: capitulo.id,
-      idSiguiente: siguienteCapitulo?.id ?? null,
-      nombreSiguiente: siguienteCapitulo?.nombre ?? null,
+      umbral: UMBRAL,
+      entidadId: id,
+      nombre: entidad.nombre,
       materiaSlug: materia,
     })}
   />
@@ -74,15 +78,14 @@ const preguntas = tarjetas.filter(
   <script>
     import { iniciarExamenOpcionMultiple } from "../../../../lib/examenCliente";
     import { guardarEstado, leerEstado } from "../../../../lib/estado";
-    import { rutaCapitulo, rutaMateria } from "../../../../lib/rutas";
+    import { rutaEntidad } from "../../../../lib/rutas";
     import type { Tarjeta } from "../../../../lib/tarjetas";
 
     interface Datos {
       preguntas: Tarjeta[];
       umbral: { aciertos: number; de: number };
-      capituloId: string;
-      idSiguiente: string | null;
-      nombreSiguiente: string | null;
+      entidadId: string;
+      nombre: string;
       materiaSlug: string;
     }
 
@@ -107,29 +110,22 @@ const preguntas = tarjetas.filter(
       resumen.textContent = `${resultado.aciertos} / ${resultado.total} correctas.`;
       tablero.appendChild(resumen);
 
-      const estado = leerEstado();
-      const previo = estado.capitulos[datos.capituloId];
-      estado.capitulos[datos.capituloId] = {
-        estado: resultado.superado ? "cerrado" : (previo?.estado ?? "en-curso"),
-        intentos: (previo?.intentos ?? 0) + 1,
-      };
-      guardarEstado(estado);
-
       if (resultado.superado) {
+        const estado = leerEstado();
+        if (!estado.dominados.includes(datos.entidadId)) {
+          estado.dominados.push(datos.entidadId);
+          guardarEstado(estado);
+        }
+
         const exito = document.createElement("p");
         exito.className = "exito";
-        exito.textContent = "¡Capítulo superado!";
+        exito.textContent = `¡${datos.nombre}, dominado!`;
         tablero.appendChild(exito);
 
         const enlace = document.createElement("a");
         enlace.className = "boton-siguiente";
-        if (datos.idSiguiente) {
-          enlace.href = rutaCapitulo(datos.materiaSlug, datos.idSiguiente);
-          enlace.textContent = `Siguiente: ${datos.nombreSiguiente}`;
-        } else {
-          enlace.href = rutaMateria(datos.materiaSlug);
-          enlace.textContent = "Volver al mapa";
-        }
+        enlace.href = rutaEntidad(datos.materiaSlug, datos.entidadId);
+        enlace.textContent = "Volver a la ficha";
         tablero.appendChild(enlace);
       } else {
         const aviso = document.createElement("p");
@@ -161,6 +157,7 @@ const preguntas = tarjetas.filter(
         elSinPreguntas,
         preguntas: datos.preguntas,
         umbral: datos.umbral,
+        maxPreguntas: 15,
         onResultado: mostrarResultado,
       });
     }

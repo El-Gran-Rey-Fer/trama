@@ -1,13 +1,12 @@
 ---
 import { getCollection, getEntry } from "astro:content";
+import ParticipantesRelato from "../../components/ParticipantesRelato.astro";
 import Base from "../../layouts/Base.astro";
 import { cargarCapitulos } from "../../lib/capitulos";
-import {
-	rutaCapitulo,
-	rutaEntidad,
-	rutaJuego,
-	rutaPracticar,
-} from "../../lib/rutas";
+import { conjuntoDeRelato } from "../../lib/desbloqueo";
+import { construirGrafo } from "../../lib/grafo";
+import { resolverRetrato } from "../../lib/retrato";
+import { rutaCapitulo, rutaJuego, rutaPracticar } from "../../lib/rutas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -19,11 +18,86 @@ export async function getStaticPaths() {
 
 const { materia } = Astro.params;
 const { materiaId } = Astro.props;
-const entidades = await getCollection("entidades");
 const materiaEntry = await getEntry("materias", materiaId);
 const eras = materiaEntry?.data.eras ?? [];
 const capitulos = await cargarCapitulos(materiaId);
 const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
+
+const relatos = await getCollection("relatos");
+const relatoConjuntos = Object.fromEntries(
+	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
+);
+
+const grafo = await construirGrafo(materiaId);
+const entidades = [...grafo.entidades.values()].filter(
+	(e) => e.kind === "entidad",
+);
+
+function datosParticipante(e: (typeof entidades)[number]) {
+	return {
+		id: e.id,
+		nombre: e.nombre,
+		tipo: e.tipo,
+		retrato: resolverRetrato(grafo, e),
+	};
+}
+
+// Sandbox: agrupado por `tipo` (orden del registro en materia.yaml, no
+// alfabético — es el orden en que ya se declaran ahí), alfabético dentro de
+// cada tipo. Sin `era`: las entidades no la llevan todavía (se añadirá
+// cuando el timeline lo pida, decisión ya cerrada); agrupar por era se deja
+// para cuando ese campo exista.
+const ordenTipos = materiaEntry?.data.tipos ?? [];
+const tiposPresentes = [...new Set(entidades.map((e) => e.tipo))];
+tiposPresentes.sort((a, b) => {
+	const ia = ordenTipos.indexOf(a);
+	const ib = ordenTipos.indexOf(b);
+	if (ia === -1 && ib === -1) return a.localeCompare(b, "es");
+	if (ia === -1) return 1;
+	if (ib === -1) return -1;
+	return ia - ib;
+});
+const gruposSandbox = tiposPresentes.map((tipo) => ({
+	tipo,
+	entidades: entidades
+		.filter((e) => e.tipo === tipo)
+		.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+		.map(datosParticipante),
+}));
+
+// Aventura: el álbum, agrupado por capítulo (mismo orden que ya calcula
+// cargarCapitulos: era, luego orden). Una entidad puede estar en el
+// `conjunto` de varios capítulos (participa en varios relatos) — el álbum le
+// da una sola casilla, en el primero al que pertenece, para que sea un
+// cromo por figura y no uno por aparición. Lo que no cae en ningún capítulo
+// va a un grupo aparte — no desaparece, porque toda entidad tiene ficha
+// desde el primer día.
+const idsAsignadas = new Set<string>();
+const gruposAlbum = capitulos
+	.map((c) => {
+		const miembros = entidades
+			.filter((e) => c.conjunto.has(e.id) && !idsAsignadas.has(e.id))
+			.map((e) => {
+				idsAsignadas.add(e.id);
+				return datosParticipante(e);
+			});
+		return { id: c.id, nombre: c.nombre, entidades: miembros };
+	})
+	.filter((g) => g.entidades.length > 0);
+const sinCapitulo = entidades
+	.filter((e) => !idsAsignadas.has(e.id))
+	.map(datosParticipante);
+if (sinCapitulo.length > 0) {
+	gruposAlbum.push({
+		id: "sin-capitulo",
+		nombre: "Sin capítulo todavía",
+		entidades: sinCapitulo,
+	});
+}
+
+const niveles = materiaEntry?.data.niveles ?? [];
+const totalCapitulos = capitulos.length;
+const totalEntidades = entidades.length;
 ---
 
 <Base titulo={`${materia} — modo aventura`}>
@@ -61,17 +135,29 @@ const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
     }
   </section>
 
-  <section>
-    <h2>Todas las entidades</h2>
-    <ul>
-      {
-        entidades.map((e) => (
-          <li>
-            <a href={rutaEntidad(materia, e.id)}>{e.data.nombre}</a>
-          </li>
-        ))
-      }
-    </ul>
+  <section id="indice-sandbox" hidden>
+    <h2>Índice</h2>
+    {
+      gruposSandbox.map((g) => (
+        <section>
+          <h3>{g.tipo}</h3>
+          <ParticipantesRelato participantes={g.entidades} materiaSlug={materia} />
+        </section>
+      ))
+    }
+  </section>
+
+  <section id="indice-aventura">
+    <h2>Álbum</h2>
+    <p id="nivel-cosmetico"></p>
+    {
+      gruposAlbum.map((g) => (
+        <section>
+          <h3>{g.nombre}</h3>
+          <ParticipantesRelato participantes={g.entidades} materiaSlug={materia} />
+        </section>
+      ))
+    }
   </section>
 
   <section>
@@ -92,13 +178,29 @@ const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
     set:html={JSON.stringify(datosCapitulos)}
   />
 
+  <script
+    is:inline
+    type="application/json"
+    id="datos-album"
+    set:html={JSON.stringify({
+      entidadIds: entidades.map((e) => e.id),
+      relatoConjuntos,
+      niveles,
+      totalCapitulos,
+      totalEntidades,
+    })}
+  />
+
   <script>
     import {
       calcularEstadosCapitulos,
+      calcularEstadosCasillas,
+      calcularNivel,
       exportarEstado,
       importarEstado,
       leerEstado,
       type CapituloResumen,
+      type NivelCosmetico,
     } from "../../lib/estado";
 
     const ETIQUETA = {
@@ -107,15 +209,65 @@ const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
       cerrado: "Cerrado",
     } as const;
 
-    const datosEl = document.getElementById("datos-capitulos");
-    const capitulos: CapituloResumen[] = datosEl
-      ? JSON.parse(datosEl.textContent ?? "[]")
+    const datosCapitulosEl = document.getElementById("datos-capitulos");
+    const capitulos: CapituloResumen[] = datosCapitulosEl
+      ? JSON.parse(datosCapitulosEl.textContent ?? "[]")
       : [];
-    const estados = calcularEstadosCapitulos(capitulos, leerEstado());
+    const estadosCapitulos = calcularEstadosCapitulos(capitulos, leerEstado());
 
-    for (const [id, estado] of Object.entries(estados)) {
+    for (const [id, estado] of Object.entries(estadosCapitulos)) {
       const el = document.querySelector(`[data-capitulo="${id}"] .estado`);
       if (el) el.textContent = ETIQUETA[estado];
+    }
+
+    const datosAlbumEl = document.getElementById("datos-album");
+    const datosAlbum = datosAlbumEl
+      ? (JSON.parse(datosAlbumEl.textContent ?? "{}") as {
+          entidadIds: string[];
+          relatoConjuntos: Record<string, string[]>;
+          niveles: NivelCosmetico[];
+          totalCapitulos: number;
+          totalEntidades: number;
+        })
+      : null;
+
+    const estadoActual = leerEstado();
+    const elSandbox = document.getElementById("indice-sandbox");
+    const elAventura = document.getElementById("indice-aventura");
+    if (estadoActual.modo === "sandbox") {
+      elSandbox?.removeAttribute("hidden");
+      elAventura?.setAttribute("hidden", "");
+    } else {
+      elSandbox?.setAttribute("hidden", "");
+      elAventura?.removeAttribute("hidden");
+    }
+
+    if (datosAlbum) {
+      const estadosCasillas = calcularEstadosCasillas(
+        datosAlbum.entidadIds,
+        datosAlbum.relatoConjuntos,
+        estadoActual,
+      );
+      for (const [id, estado] of Object.entries(estadosCasillas)) {
+        const li = document.querySelector(
+          `#indice-aventura [data-entidad-id="${id}"]`,
+        );
+        const casilla = li?.querySelector<HTMLElement>(".casilla");
+        if (casilla) casilla.dataset.estado = estado;
+        if (estado === "sin-encontrar") {
+          const nombre = li?.querySelector(".participante-nombre");
+          if (nombre) nombre.textContent = "";
+        }
+      }
+
+      const nivel = calcularNivel(
+        datosAlbum.niveles,
+        datosAlbum.totalEntidades,
+        datosAlbum.totalCapitulos,
+        estadoActual,
+      );
+      const elNivel = document.getElementById("nivel-cosmetico");
+      if (elNivel && nivel) elNivel.textContent = `Nivel: ${nivel.nombre}`;
     }
 
     const elExportar = document.getElementById("exportar");

@@ -20,7 +20,7 @@ const { participantes, materiaSlug } = Astro.props;
 <ul class="participantes-grid">
   {
     participantes.map((p) => (
-      <li>
+      <li data-entidad-id={p.id}>
         <a href={rutaEntidad(materiaSlug, p.id)} class="participante">
           <Casilla nombre={p.nombre} tipo={p.tipo} retrato={p.retrato} />
           <span class="participante-nombre">{p.nombre}</span>

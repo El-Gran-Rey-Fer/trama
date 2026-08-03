@@ -27,6 +27,12 @@ export function rutaExamen(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/c/${id}/examen/`;
 }
 
+// Examen de personaje (plan de imágenes y álbum, paso A4): superarlo es lo
+// que marca una entidad como "dominada" en el álbum.
+export function rutaExamenPersonaje(materiaSlug: string, id: string): string {
+	return `${base()}${materiaSlug}/e/${id}/examen/`;
+}
+
 export function rutaJuego(materiaSlug: string, juego: string): string {
 	return `${base()}${materiaSlug}/jugar/${juego}/`;
 }

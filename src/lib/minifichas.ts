@@ -2,7 +2,7 @@
 // página, fuera del flujo de la prosa. Modo aventura, paso A2 (plan de
 // imágenes y álbum) — ver el comentario en E.astro para el porqué.
 
-import { rutaActivo } from "./rutas";
+import { crearCasilla, type DatosRetrato } from "./casillaCliente";
 
 interface DatosMiniFicha {
 	tipo: string;
@@ -11,37 +11,7 @@ interface DatosMiniFicha {
 	resumen: string;
 	href: string;
 	etiquetaVerMas: string;
-	retrato: { archivo: string; alt?: string; foco?: [number, number] } | null;
-}
-
-// Misma marca que Casilla.astro (mismas clases, mismo CSS global en
-// Base.astro): esta es la única versión que se construye en cliente, porque
-// la minificha vive fuera del render de Astro.
-function crearCasilla(
-	nombre: string,
-	tipo: string,
-	datos: DatosMiniFicha["retrato"],
-): HTMLElement {
-	const casilla = document.createElement("div");
-	casilla.className = "casilla";
-
-	if (datos) {
-		const img = document.createElement("img");
-		img.className = "casilla-img";
-		img.src = rutaActivo(datos.archivo);
-		img.alt = datos.alt ?? nombre;
-		if (datos.foco)
-			img.style.objectPosition = `${datos.foco[0]}% ${datos.foco[1]}%`;
-		casilla.appendChild(img);
-	} else {
-		const inicial = document.createElement("div");
-		inicial.className = "casilla-inicial";
-		inicial.style.backgroundColor = `var(--color-tipo-${tipo}, var(--color-tarjeta-borde))`;
-		inicial.textContent = nombre.trim().charAt(0).toUpperCase();
-		casilla.appendChild(inicial);
-	}
-
-	return casilla;
+	retrato: DatosRetrato | null;
 }
 
 function crearMiniFicha(popoverId: string, datos: DatosMiniFicha): HTMLElement {

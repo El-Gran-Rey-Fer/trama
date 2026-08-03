@@ -147,6 +147,13 @@ const materiaSchema = z.object({
 			}),
 		)
 		.optional(),
+	// Plan de imágenes y álbum §3.5: nivel cosmético según cobertura (cromos
+	// dominados + capítulos cerrados), nunca constancia. Ordenado de menor a
+	// mayor `umbral` (fracción 0-1); `calcularNivel` en lib/estado.ts toma el
+	// más alto que ya se supera.
+	niveles: z
+		.array(z.object({ id: z.string(), nombre: z.string(), umbral: z.number() }))
+		.optional(),
 	// --- huecos reservados: legales en el esquema, sin uso funcional en Hito 1 ---
 	idiomas: z
 		.object({
