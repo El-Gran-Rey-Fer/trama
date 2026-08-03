@@ -16,6 +16,11 @@ const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CARPETA_IMG = path.join(RAIZ, "public/img/gr");
 const CARPETA_OBRAS = path.join(CARPETA_IMG, "obras");
 const CARPETA_ENTIDADES = path.join(RAIZ, "content/mitologia-griega/entidades");
+// Las obras viven en su propia subcarpeta dentro de entidades/ (no mezclarse
+// con el resto), igual que sus imágenes viven en public/img/gr/obras/. El id
+// sigue saliendo del YAML, no de la ruta (content.config.ts glob recursivo),
+// así que esto no cambia cómo se resuelven las relaciones.
+const CARPETA_ENTIDADES_OBRAS = path.join(CARPETA_ENTIDADES, "obras");
 const CARPETA_RELATOS = path.join(RAIZ, "content/mitologia-griega/relatos");
 const PUERTO = 4322;
 
@@ -164,22 +169,26 @@ function reemplazarRelacionesRepresenta(yamlTexto, nuevasRepresenta) {
 	const despues = lineas.slice(bloque.fin);
 
 	if (partes.length === 0)
-		return [...antes, ...despues].join("\n").replace(/\n+$/, "\n");
-	return [...antes, "relaciones:", partes.join("\n"), ...despues].join("\n");
+		return `${[...antes, ...despues].join("\n").replace(/\n*$/, "")}\n`;
+	return `${[...antes, "relaciones:", partes.join("\n"), ...despues].join("\n").replace(/\n*$/, "")}\n`;
 }
 
+// Sin atributos (autor/fecha/periodo/soporte/museo): nada los lee todavía —
+// son de una pantalla que no es de este hito — y pedirlos en cada obra hacía
+// la curación pesada para cero beneficio actual. Un solo campo de fuente en
+// vez de credito+origen separados: casi siempre es el mismo enlace de
+// Wikimedia Commons, y separar en dos no aportaba nada que ese enlace no diera
+// ya. Se escribe solo en `origen`: el render (FichaEntidad.astro) muestra la
+// etiqueta "Fuente" cuando no hay `credito` propio, así que no hace falta
+// duplicar el enlace. Tampoco se pide `alt`: si falta, el render cae solo al
+// nombre de la entidad (Casilla.astro, FichaEntidad.astro,
+// casillaCliente.ts) — escribir aquí un "PENDIENTE" sería peor que ese valor
+// por defecto.
 function construirYamlObraNueva({
 	id,
 	nombre,
 	resumen,
-	autor,
-	fecha,
-	periodo,
-	soporte,
-	museo,
-	credito,
-	origen,
-	alt,
+	fuente,
 	archivo,
 	relaciones,
 }) {
@@ -196,17 +205,9 @@ function construirYamlObraNueva({
 		`nombre: ${escaparEscalar(nombre)}`,
 		"resumen: >",
 		resumenLineas,
-		"atributos:",
-		`  autor: ${escaparEscalar(autor || "desconocido")}`,
-		`  fecha: ${escaparEscalar(fecha || "PENDIENTE")}`,
-		`  periodo: ${escaparEscalar(periodo || "PENDIENTE")}`,
-		`  soporte: ${escaparEscalar(soporte || "PENDIENTE")}`,
-		`  museo: ${escaparEscalar(museo || "PENDIENTE")}`,
 		"imagen:",
 		`  archivo: ${archivo}`,
-		`  credito: "${String(credito || "PENDIENTE: revisar autor/licencia").replace(/"/g, '\\"')}"`,
-		`  origen: ${escaparEscalar(origen || "PENDIENTE")}`,
-		`  alt: ${escaparEscalar(alt || "PENDIENTE: describe la imagen")}`,
+		`  origen: ${escaparEscalar(fuente)}`,
 	];
 	const bloqueRelaciones = construirBloqueRelaciones(
 		relaciones.map((r) => ({
@@ -224,7 +225,11 @@ function construirYamlObraNueva({
 
 async function listarEntidades() {
 	const resultado = [];
-	for (const carpeta of [CARPETA_ENTIDADES, CARPETA_RELATOS]) {
+	for (const carpeta of [
+		CARPETA_ENTIDADES,
+		CARPETA_ENTIDADES_OBRAS,
+		CARPETA_RELATOS,
+	]) {
 		const ficheros = await readdir(carpeta).catch(() => []);
 		for (const fichero of ficheros) {
 			if (!fichero.endsWith(".yaml") && !fichero.endsWith(".mdx")) continue;
@@ -267,7 +272,7 @@ async function listarImagenes() {
 	const resultado = [];
 	for (const img of imagenes) {
 		const tieneYaml = await readFile(
-			path.join(CARPETA_ENTIDADES, `${img.id}.yaml`),
+			path.join(CARPETA_ENTIDADES_OBRAS, `${img.id}.yaml`),
 			"utf8",
 		)
 			.then(() => true)
@@ -311,19 +316,26 @@ async function manejarNuevaObra(req, res) {
 		return responderJson(res, 400, {
 			error: "id inválido: minúsculas, números y guiones",
 		});
+	const fuente = String(cuerpo.fuente || "").trim();
+	if (!fuente)
+		return responderJson(res, 400, {
+			error:
+				"falta la fuente (enlace de Wikimedia Commons u origen equivalente)",
+		});
 
-	const rutaYaml = path.join(CARPETA_ENTIDADES, `${id}.yaml`);
+	const rutaYaml = path.join(CARPETA_ENTIDADES_OBRAS, `${id}.yaml`);
 	const yaExiste = await readFile(rutaYaml, "utf8")
 		.then(() => true)
 		.catch(() => false);
 	if (yaExiste)
 		return responderJson(res, 409, {
-			error: `ya existe content/mitologia-griega/entidades/${id}.yaml`,
+			error: `ya existe content/mitologia-griega/entidades/obras/${id}.yaml`,
 		});
 
 	const origenImagen = cuerpo.origenImagen || {};
 	let extension;
 	await mkdir(CARPETA_OBRAS, { recursive: true });
+	await mkdir(CARPETA_ENTIDADES_OBRAS, { recursive: true });
 	const rutaDestino = (ext) => path.join(CARPETA_OBRAS, `${id}.${ext}`);
 
 	if (origenImagen.modo === "subida") {
@@ -364,14 +376,7 @@ async function manejarNuevaObra(req, res) {
 		id,
 		nombre: cuerpo.nombre || id,
 		resumen: cuerpo.resumen,
-		autor: cuerpo.atributos?.autor,
-		fecha: cuerpo.atributos?.fecha,
-		periodo: cuerpo.atributos?.periodo,
-		soporte: cuerpo.atributos?.soporte,
-		museo: cuerpo.atributos?.museo,
-		credito: cuerpo.imagen?.credito,
-		origen: cuerpo.imagen?.origen,
-		alt: cuerpo.imagen?.alt,
+		fuente,
 		archivo: `/img/gr/obras/${id}.${extension}`,
 		relaciones: Array.isArray(cuerpo.relaciones) ? cuerpo.relaciones : [],
 	});
@@ -382,11 +387,11 @@ async function manejarNuevaObra(req, res) {
 async function manejarGuardarRelaciones(req, res) {
 	const cuerpo = await leerCuerpoJson(req);
 	const id = String(cuerpo.id || "").trim();
-	const rutaYaml = path.join(CARPETA_ENTIDADES, `${id}.yaml`);
+	const rutaYaml = path.join(CARPETA_ENTIDADES_OBRAS, `${id}.yaml`);
 	const yamlActual = await readFile(rutaYaml, "utf8").catch(() => null);
 	if (yamlActual === null)
 		return responderJson(res, 404, {
-			error: `no existe content/mitologia-griega/entidades/${id}.yaml`,
+			error: `no existe content/mitologia-griega/entidades/obras/${id}.yaml`,
 		});
 
 	const relaciones = Array.isArray(cuerpo.relaciones) ? cuerpo.relaciones : [];
@@ -397,7 +402,7 @@ async function manejarGuardarRelaciones(req, res) {
 
 async function manejarObra(_req, res, url) {
 	const id = url.searchParams.get("id") || "";
-	const rutaYaml = path.join(CARPETA_ENTIDADES, `${id}.yaml`);
+	const rutaYaml = path.join(CARPETA_ENTIDADES_OBRAS, `${id}.yaml`);
 	const yamlActual = await readFile(rutaYaml, "utf8").catch(() => null);
 	if (yamlActual === null)
 		return responderJson(res, 404, { error: "no existe" });

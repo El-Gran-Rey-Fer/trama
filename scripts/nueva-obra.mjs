@@ -20,7 +20,10 @@ import { fileURLToPath } from "node:url";
 
 const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CARPETA_OBRAS = path.join(RAIZ, "public/img/gr/obras");
-const CARPETA_ENTIDADES = path.join(RAIZ, "content/mitologia-griega/entidades");
+const CARPETA_ENTIDADES_OBRAS = path.join(
+	RAIZ,
+	"content/mitologia-griega/entidades/obras",
+);
 
 function quitarEtiquetasHtml(texto) {
 	return texto
@@ -136,6 +139,7 @@ async function main() {
 	const credito = partesCredito.length ? partesCredito.join(", ") : undefined;
 
 	await mkdir(CARPETA_OBRAS, { recursive: true });
+	await mkdir(CARPETA_ENTIDADES_OBRAS, { recursive: true });
 	const rutaImagen = path.join(CARPETA_OBRAS, `${id}.${extension}`);
 	await descargarImagen(info.url, rutaImagen);
 
@@ -149,7 +153,7 @@ async function main() {
 		autor: artista,
 	});
 
-	const rutaYaml = path.join(CARPETA_ENTIDADES, `${id}.yaml`);
+	const rutaYaml = path.join(CARPETA_ENTIDADES_OBRAS, `${id}.yaml`);
 	await writeFile(rutaYaml, yaml);
 
 	console.log(`Imagen descargada en ${path.relative(RAIZ, rutaImagen)}`);

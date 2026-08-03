@@ -131,21 +131,7 @@
     font-size: 12px;
     color: #aaa;
   }
-  .fila input, .fila textarea { flex: 1; width: 100%; }
-  .fila textarea { min-height: 44px; resize: vertical; }
-  .rejilla-atributos {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px 10px;
-    margin-bottom: 10px;
-  }
-  .rejilla-atributos .campo label {
-    display: block;
-    font-size: 11px;
-    color: #888;
-    margin-bottom: 2px;
-  }
-  .rejilla-atributos .campo input { width: 100%; }
+  .fila input { flex: 1; width: 100%; }
   fieldset {
     border: 1px solid #333;
     border-radius: 6px;
@@ -259,23 +245,7 @@
       <div id="campos-nueva">
         <div class="fila"><label for="c-id">id</label><input id="c-id" /></div>
         <div class="fila"><label for="c-nombre">nombre</label><input id="c-nombre" /></div>
-        <div class="fila"><label for="c-resumen">resumen</label><textarea id="c-resumen" placeholder="PENDIENTE: una frase, presente, qué se ve"></textarea></div>
-        <fieldset>
-          <legend>atributos</legend>
-          <div class="rejilla-atributos">
-            <div class="campo"><label for="c-autor">autor</label><input id="c-autor" placeholder="desconocido" /></div>
-            <div class="campo"><label for="c-fecha">fecha</label><input id="c-fecha" placeholder="PENDIENTE" /></div>
-            <div class="campo"><label for="c-periodo">periodo</label><input id="c-periodo" placeholder="PENDIENTE" /></div>
-            <div class="campo"><label for="c-soporte">soporte</label><input id="c-soporte" placeholder="PENDIENTE" /></div>
-            <div class="campo"><label for="c-museo">museo</label><input id="c-museo" placeholder="PENDIENTE" /></div>
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend>imagen</legend>
-          <div class="fila"><label for="c-credito">crédito</label><input id="c-credito" placeholder="PENDIENTE: revisar autor/licencia" /></div>
-          <div class="fila"><label for="c-origen">origen</label><input id="c-origen" placeholder="PENDIENTE" /></div>
-          <div class="fila"><label for="c-alt">alt</label><input id="c-alt" placeholder="PENDIENTE: describe la imagen" /></div>
-        </fieldset>
+        <div class="fila"><label for="c-fuente">fuente</label><input id="c-fuente" placeholder="enlace de Wikimedia Commons (u otro origen)" /></div>
       </div>
 
       <fieldset>
@@ -388,15 +358,7 @@
         elCamposNueva.hidden = false;
         campo("c-id").value = id;
         campo("c-nombre").value = nombre || humanizar(archivoNombre || id);
-        campo("c-resumen").value = "";
-        campo("c-autor").value = "";
-        campo("c-fecha").value = "";
-        campo("c-periodo").value = "";
-        campo("c-soporte").value = "";
-        campo("c-museo").value = "";
-        campo("c-credito").value = "";
-        campo("c-origen").value = "";
-        campo("c-alt").value = "";
+        campo("c-fuente").value = "";
         elGuardar.textContent = "Guardar obra nueva";
       } else {
         elFichaTitulo.innerHTML = `${nombre || id} <span class="id">(${id})</span>`;
@@ -423,11 +385,12 @@
     });
 
     // --- carga desde el repo ---
-    elAbrirRepo.addEventListener("click", async () => {
-      const abrir = elRepoPanel.hidden;
-      elRepoPanel.hidden = !abrir;
-      if (!abrir || elRepoPanel._cargado) return;
-      elRepoPanel._cargado = true;
+    // Se recarga cada vez que se abre: nunca se guarda una lista vieja, porque
+    // dar de alta una obra cambia justo lo que este panel enseña.
+    async function cargarPanelRepo() {
+      elRepoCargando.hidden = false;
+      elRepoSinYaml.innerHTML = "";
+      elRepoConYaml.innerHTML = "";
       const imagenes = await fetch("/api/imagenes").then((r) => r.json());
       elRepoCargando.hidden = true;
       const sinYaml = imagenes.filter((i) => !i.tieneYaml);
@@ -444,6 +407,12 @@
       rejillaCon.className = "rejilla";
       for (const item of conYaml) rejillaCon.appendChild(miniatura(item, true));
       elRepoConYaml.appendChild(rejillaCon);
+    }
+
+    elAbrirRepo.addEventListener("click", async () => {
+      const abrir = elRepoPanel.hidden;
+      elRepoPanel.hidden = !abrir;
+      if (abrir) await cargarPanelRepo();
     });
 
     function miniatura(item, tieneYaml) {
@@ -508,8 +477,11 @@
         return;
       }
       const yaElegidos = new Set(relaciones.map((r) => r.destino));
+      // Una obra no representa a otra obra: si no, el grafo de "representa"
+      // podría anidarse sin fin y dejaría de ser un buen dato para el juego
+      // de identificar.
       const coincidencias = entidades
-        .filter((e) => e.id !== idActual && !yaElegidos.has(e.id))
+        .filter((e) => e.tipo !== "obra" && e.id !== idActual && !yaElegidos.has(e.id))
         .filter((e) => normalizar(e.nombre).includes(consulta) || normalizar(e.id).includes(consulta))
         .slice(0, 8);
       elBuscadorResultados.innerHTML = "";
@@ -597,22 +569,12 @@
           if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) {
             throw new Error("id inválido: minúsculas, números y guiones, sin empezar/acabar en guion");
           }
+          const fuente = campo("c-fuente").value.trim();
+          if (!fuente) throw new Error("falta la fuente (enlace de Wikimedia Commons u origen equivalente)");
           const cuerpo = {
             id,
             nombre: campo("c-nombre").value.trim(),
-            resumen: campo("c-resumen").value.trim(),
-            atributos: {
-              autor: campo("c-autor").value.trim(),
-              fecha: campo("c-fecha").value.trim(),
-              periodo: campo("c-periodo").value.trim(),
-              soporte: campo("c-soporte").value.trim(),
-              museo: campo("c-museo").value.trim(),
-            },
-            imagen: {
-              credito: campo("c-credito").value.trim(),
-              origen: campo("c-origen").value.trim(),
-              alt: campo("c-alt").value.trim(),
-            },
+            fuente,
             relaciones: relaciones.map((r) => ({ destino: r.destino, foco: r.foco, nota: r.nota })),
             origenImagen:
               origenImagen.modo === "subida"

@@ -3,11 +3,6 @@ tipo: obra
 nombre: Júpiter
 resumen: >
   Estatua romana de Júpiter con el rayo en la mano y el águila a sus pies.
-atributos:
-  autor: desconocido
-  periodo: romano
-  soporte: escultura
-  museo: Louvre-Lens
 imagen:
   archivo: /img/gr/obras/jupiter-louvre-lens.jpg
   credito: "Júpiter, Louvre-Lens. Foto: Jamain, CC BY-SA 4.0"
@@ -19,6 +14,4 @@ relaciones:
     foco: [50, 15]
   - tipo: representa
     destino: aguila
-    foco: [20, 85]
-  - tipo: representa
-    destino: rayo
+    foco: [19, 68]

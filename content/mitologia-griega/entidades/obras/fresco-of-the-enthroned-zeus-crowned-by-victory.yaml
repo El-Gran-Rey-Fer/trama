@@ -1,0 +1,16 @@
+id: fresco-of-the-enthroned-zeus-crowned-by-victory
+tipo: obra
+nombre: Fresco of the enthroned Zeus, crowned by Victory
+resumen: >
+  Fresco de Zeus con el orbe y un águila. Coronado por Victoria.
+imagen:
+  archivo: /img/gr/obras/fresco-of-the-enthroned-zeus-crowned-by-victory.jpg
+  origen: https://commons.wikimedia.org/wiki/File:Fresco_of_the_enthroned_Zeus,_crowned_by_Victory.jpg
+  alt: Fresco de Zeus con el orbe y un águila. Coronado por Victoria.
+relaciones:
+  - tipo: representa
+    destino: zeus
+    foco: [42, 22]
+  - tipo: representa
+    destino: aguila
+    foco: [9, 79]

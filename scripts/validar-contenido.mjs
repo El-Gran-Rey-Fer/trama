@@ -153,10 +153,11 @@ function validarObra(doc, rutaAbsoluta) {
 	const { datos, linea } = doc;
 	if (datos.tipo !== "obra") return;
 
+	// `credito` es opcional a propósito (curar-obra ya no lo pide: cuando falta,
+	// FichaEntidad.astro muestra el enlace de `origen` con la etiqueta
+	// "Fuente"). Lo que no puede faltar es `origen` — sin él no hay ni enlace
+	// ni forma de verificar la procedencia.
 	const lineaImagen = datos.imagen ? linea(["imagen"]) : linea(["id"]);
-	if (!datos.imagen?.credito) {
-		error(rutaAbsoluta, lineaImagen, "obra sin imagen.credito");
-	}
 	if (!datos.imagen?.origen) {
 		error(rutaAbsoluta, lineaImagen, "obra sin imagen.origen");
 	}

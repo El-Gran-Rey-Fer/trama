@@ -52,7 +52,11 @@ const entidadSchema = z
 
 const entidades = defineCollection({
 	loader: glob({
-		pattern: "*.yaml",
+		// Recursivo: las obras viven en entidades/obras/ para no mezclarse con el
+		// resto (mismo criterio que public/img/gr/obras/), pero siguen siendo la
+		// misma colección — el id sale del YAML, no de la ruta, así que
+		// `destino: <id>` en cualquier relación las resuelve igual.
+		pattern: "**/*.yaml",
 		base: "./content/mitologia-griega/entidades",
 		generateId: ({ data }) => (data as { id: string }).id,
 	}),
@@ -106,6 +110,12 @@ const registroRelacionSchema = z.object({
 	conjunto_inversa: z.boolean().optional(),
 	tarjeta: z.boolean().optional(),
 	tarjeta_inversa: z.boolean().optional(),
+	// Juego de pertenencia (plan de imágenes y álbum, paso A6): plantilla sí/no
+	// para relaciones `conjunto`/`conjunto_inversa`, donde la opción múltiple no
+	// escala. Usa {origen}/{destino} igual que `pregunta`/`pregunta_inversa`,
+	// más {candidato} para la entidad sobre la que se pregunta.
+	pertenencia: z.string().optional(),
+	pertenencia_inversa: z.string().optional(),
 });
 
 const fuenteSchema = z.object({

@@ -49,10 +49,10 @@ const esStub =
           style={foco ? `object-position: ${foco[0]}% ${foco[1]}%` : undefined}
         />
         {
-          imagen.credito && (
+          (imagen.credito || imagen.origen) && (
             <figcaption>
               {imagen.origen ? (
-                <a href={imagen.origen}>{imagen.credito}</a>
+                <a href={imagen.origen}>{imagen.credito || "Fuente"}</a>
               ) : (
                 imagen.credito
               )}
