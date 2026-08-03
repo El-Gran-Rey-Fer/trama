@@ -1,5 +1,6 @@
 ---
 import type { Entidad, TipoNodo } from "../lib/grafo";
+import type { RetratoResuelto } from "../lib/retrato";
 import { rutaActivo, rutaEntidad, rutaMateria, rutaRelato } from "../lib/rutas";
 import E from "./E.astro";
 import Fuente from "./Fuente.astro";
@@ -8,8 +9,9 @@ interface Props {
 	entidad: Entidad;
 	materiaSlug: string;
 	nodos: Map<string, { nombre: string; kind: TipoNodo }>;
+	retrato?: RetratoResuelto;
 }
-const { entidad, materiaSlug, nodos } = Astro.props;
+const { entidad, materiaSlug, nodos, retrato } = Astro.props;
 
 function rutaNodo(id: string): string {
 	return nodos.get(id)?.kind === "relato"
@@ -21,8 +23,14 @@ const relatos = entidad.relaciones.filter((r) => r.tipo === "participa_en");
 const relaciones = entidad.relaciones.filter((r) => r.tipo !== "participa_en");
 const Prosa = entidad.prosa;
 
+// La propia obra muestra su imagen entera (sin foco: aquí no se recorta a
+// una figura, se ve la pieza completa). Cualquier otra entidad muestra su
+// retrato, recortado con el foco de la relación `representado_en`.
+const imagen = entidad.imagen ?? retrato?.imagen;
+const foco = entidad.imagen ? undefined : retrato?.foco;
+
 const esStub =
-	!entidad.imagen &&
+	!imagen &&
 	!Prosa &&
 	!entidad.atributos &&
 	relaciones.length === 0 &&
@@ -33,16 +41,20 @@ const esStub =
   <a class="volver" href={rutaMateria(materiaSlug)}>&lsaquo; volver</a>
 
   {
-    entidad.imagen && (
+    imagen && (
       <figure class="imagen">
-        <img src={rutaActivo(entidad.imagen.archivo)} alt={entidad.imagen.alt ?? entidad.nombre} />
+        <img
+          src={rutaActivo(imagen.archivo)}
+          alt={imagen.alt ?? entidad.nombre}
+          style={foco ? `object-position: ${foco[0]}% ${foco[1]}%` : undefined}
+        />
         {
-          entidad.imagen.credito && (
+          imagen.credito && (
             <figcaption>
-              {entidad.imagen.origen ? (
-                <a href={entidad.imagen.origen}>{entidad.imagen.credito}</a>
+              {imagen.origen ? (
+                <a href={imagen.origen}>{imagen.credito}</a>
               ) : (
-                entidad.imagen.credito
+                imagen.credito
               )}
             </figcaption>
           )

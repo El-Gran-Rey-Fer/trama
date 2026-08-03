@@ -1,0 +1,57 @@
+---
+import type { RetratoResuelto } from "../lib/retrato";
+import { rutaEntidad } from "../lib/rutas";
+import Casilla from "./Casilla.astro";
+
+export interface Participante {
+	id: string;
+	nombre: string;
+	tipo: string;
+	retrato?: RetratoResuelto;
+}
+
+interface Props {
+	participantes: Participante[];
+	materiaSlug: string;
+}
+const { participantes, materiaSlug } = Astro.props;
+---
+
+<ul class="participantes-grid">
+  {
+    participantes.map((p) => (
+      <li>
+        <a href={rutaEntidad(materiaSlug, p.id)} class="participante">
+          <Casilla nombre={p.nombre} tipo={p.tipo} retrato={p.retrato} />
+          <span class="participante-nombre">{p.nombre}</span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .participantes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .participante {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    color: var(--color-texto);
+  }
+
+  .participante-nombre {
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.2;
+  }
+</style>

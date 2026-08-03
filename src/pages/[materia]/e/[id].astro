@@ -3,6 +3,7 @@ import { getCollection } from "astro:content";
 import FichaEntidad from "../../../components/FichaEntidad.astro";
 import Base from "../../../layouts/Base.astro";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
+import { resolverRetrato } from "../../../lib/retrato";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -27,8 +28,9 @@ const nodos = new Map(
 		{ nombre: e.nombre, kind: e.kind },
 	]),
 );
+const retrato = resolverRetrato(grafo, entidad);
 ---
 
 <Base titulo={entidad.nombre}>
-  <FichaEntidad entidad={entidad} materiaSlug={grafo.slug} nodos={nodos} />
+  <FichaEntidad entidad={entidad} materiaSlug={grafo.slug} nodos={nodos} retrato={retrato} />
 </Base>

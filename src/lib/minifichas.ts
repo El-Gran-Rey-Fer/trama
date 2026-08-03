@@ -2,6 +2,8 @@
 // página, fuera del flujo de la prosa. Modo aventura, paso A2 (plan de
 // imágenes y álbum) — ver el comentario en E.astro para el porqué.
 
+import { rutaActivo } from "./rutas";
+
 interface DatosMiniFicha {
 	tipo: string;
 	nombre: string;
@@ -9,6 +11,37 @@ interface DatosMiniFicha {
 	resumen: string;
 	href: string;
 	etiquetaVerMas: string;
+	retrato: { archivo: string; alt?: string; foco?: [number, number] } | null;
+}
+
+// Misma marca que Casilla.astro (mismas clases, mismo CSS global en
+// Base.astro): esta es la única versión que se construye en cliente, porque
+// la minificha vive fuera del render de Astro.
+function crearCasilla(
+	nombre: string,
+	tipo: string,
+	datos: DatosMiniFicha["retrato"],
+): HTMLElement {
+	const casilla = document.createElement("div");
+	casilla.className = "casilla";
+
+	if (datos) {
+		const img = document.createElement("img");
+		img.className = "casilla-img";
+		img.src = rutaActivo(datos.archivo);
+		img.alt = datos.alt ?? nombre;
+		if (datos.foco)
+			img.style.objectPosition = `${datos.foco[0]}% ${datos.foco[1]}%`;
+		casilla.appendChild(img);
+	} else {
+		const inicial = document.createElement("div");
+		inicial.className = "casilla-inicial";
+		inicial.style.backgroundColor = `var(--color-tipo-${tipo}, var(--color-tarjeta-borde))`;
+		inicial.textContent = nombre.trim().charAt(0).toUpperCase();
+		casilla.appendChild(inicial);
+	}
+
+	return casilla;
 }
 
 function crearMiniFicha(popoverId: string, datos: DatosMiniFicha): HTMLElement {
@@ -21,15 +54,23 @@ function crearMiniFicha(popoverId: string, datos: DatosMiniFicha): HTMLElement {
 	tirador.className = "tirador";
 	div.appendChild(tirador);
 
+	const cabecera = document.createElement("div");
+	cabecera.className = "mini-cabecera";
+	cabecera.appendChild(crearCasilla(datos.nombre, datos.tipo, datos.retrato));
+
+	const textoCabecera = document.createElement("div");
 	const tipo = document.createElement("p");
 	tipo.className = "mini-tipo";
 	tipo.textContent = datos.tipo;
-	div.appendChild(tipo);
+	textoCabecera.appendChild(tipo);
 
 	const nombre = document.createElement("p");
 	nombre.className = "mini-nombre";
 	nombre.textContent = datos.nombre;
-	div.appendChild(nombre);
+	textoCabecera.appendChild(nombre);
+
+	cabecera.appendChild(textoCabecera);
+	div.appendChild(cabecera);
 
 	if (datos.epitetos.length > 0) {
 		const lista = document.createElement("ul");

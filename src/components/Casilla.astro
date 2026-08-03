@@ -1,0 +1,41 @@
+---
+import type { RetratoResuelto } from "../lib/retrato";
+import { rutaActivo } from "../lib/rutas";
+
+// Retrato si hay obra, o inicial sobre el color del tipo si no — el patrón
+// de Gmail (plan de imágenes y álbum §3.3). Un solo componente para la
+// cuadrícula de participantes, la minificha y (más adelante) el álbum: por
+// eso no lleva enlace ni nombre propios, los pone quien la usa.
+interface Props {
+	nombre: string;
+	tipo: string;
+	retrato?: RetratoResuelto;
+	estado?: "sin-encontrar" | "encontrado" | "dominado";
+}
+const { nombre, tipo, retrato, estado } = Astro.props;
+
+const inicial = nombre.trim().charAt(0).toUpperCase();
+const objectPosition = retrato?.foco
+	? `${retrato.foco[0]}% ${retrato.foco[1]}%`
+	: undefined;
+---
+
+<div class="casilla" data-estado={estado}>
+  {
+    retrato ? (
+      <img
+        class="casilla-img"
+        src={rutaActivo(retrato.imagen.archivo)}
+        alt={retrato.imagen.alt ?? nombre}
+        style={objectPosition ? `object-position: ${objectPosition}` : undefined}
+      />
+    ) : (
+      <div
+        class="casilla-inicial"
+        style={`background-color: var(--color-tipo-${tipo}, var(--color-tarjeta-borde))`}
+      >
+        {inicial}
+      </div>
+    )
+  }
+</div>

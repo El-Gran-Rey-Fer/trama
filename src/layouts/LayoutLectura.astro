@@ -1,4 +1,7 @@
 ---
+import ParticipantesRelato, {
+	type Participante,
+} from "../components/ParticipantesRelato.astro";
 import { rutaEntidad, rutaMateria } from "../lib/rutas";
 import Base from "./Base.astro";
 
@@ -8,7 +11,7 @@ interface Props {
 	resumen: string;
 	materiaSlug: string;
 	era?: string | null;
-	participantes: Array<{ id: string; nombre: string }>;
+	participantes: Participante[];
 	lugar: { id: string; nombre: string } | null;
 }
 const { id, titulo, resumen, materiaSlug, era, participantes, lugar } =
@@ -35,26 +38,20 @@ const { id, titulo, resumen, materiaSlug, era, participantes, lugar } =
       )
     }
 
-    {
-      participantes.length > 0 && (
-        <section class="participantes">
-          <h2 class="etiqueta-seccion">Participantes</h2>
-          <ul>
-            {participantes.map((p) => (
-              <li>
-                <a href={rutaEntidad(materiaSlug, p.id)}>{p.nombre}</a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )
-    }
-
     <div class="leido-wrap">
       <button type="button" class="marcar-leido" data-relato-id={id}>
         Marcar relato como leído
       </button>
     </div>
+
+    {
+      participantes.length > 0 && (
+        <section class="participantes">
+          <h2 class="etiqueta-seccion">Participantes</h2>
+          <ParticipantesRelato participantes={participantes} materiaSlug={materiaSlug} />
+        </section>
+      )
+    }
 
     <p class="volver-wrap"><a class="volver" href={rutaMateria(materiaSlug)}>&lsaquo; volver</a></p>
   </article>

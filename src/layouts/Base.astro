@@ -148,6 +148,17 @@ const { titulo } = Astro.props;
     margin: 0 auto 14px;
   }
 
+  .mini-cabecera {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .mini-cabecera .casilla {
+    width: 56px;
+    flex: 0 0 auto;
+  }
+
   .mini-tipo {
     margin: 0;
     font-size: 12px;
@@ -217,5 +228,41 @@ const { titulo } = Astro.props;
     font-weight: 700;
     text-decoration: none;
     text-align: center;
+  }
+
+  /* Casilla (plan de imágenes y álbum §3.3): retrato o inicial sobre el
+     color del tipo. Global, no con scope de componente, porque la misma
+     marca la construye Casilla.astro (servidor) y lib/minifichas.ts
+     (cliente, dentro de la minificha de <E />) — un solo lenguaje visual
+     para los dos casos. */
+  .casilla {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: var(--radio);
+    overflow: hidden;
+    background: var(--color-tarjeta-fondo);
+  }
+
+  .casilla-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .casilla-inicial {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.6em;
+  }
+
+  .casilla[data-estado="sin-encontrar"] {
+    filter: grayscale(1);
+    opacity: 0.45;
   }
 </style>

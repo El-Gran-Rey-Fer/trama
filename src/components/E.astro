@@ -1,5 +1,6 @@
 ---
 import { construirGrafo, obtenerEntidad } from "../lib/grafo";
+import { resolverRetrato } from "../lib/retrato";
 import { rutaEntidad, rutaRelato } from "../lib/rutas";
 
 interface Props {
@@ -30,6 +31,7 @@ const etiquetaVerMas =
 // trigger (inline, válido dentro de un párrafo) y sus datos; el layout
 // (`Base.astro`, vía `lib/minifichas.ts`) construye el popover una sola vez
 // por página y lo cuelga fuera del flujo de la prosa.
+const retrato = resolverRetrato(grafo, nodo);
 const datosMiniFicha = {
 	tipo: nodo.tipo,
 	nombre: nodo.nombre,
@@ -37,6 +39,13 @@ const datosMiniFicha = {
 	resumen: nodo.resumen,
 	href,
 	etiquetaVerMas,
+	retrato: retrato
+		? {
+				archivo: retrato.imagen.archivo,
+				alt: retrato.imagen.alt,
+				foco: retrato.foco,
+			}
+		: null,
 };
 ---
 
