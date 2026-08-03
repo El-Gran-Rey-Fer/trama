@@ -33,6 +33,8 @@ export interface RegistroRelacion {
 	conjunto_inversa?: boolean;
 	tarjeta?: boolean;
 	tarjeta_inversa?: boolean;
+	pertenencia?: string;
+	pertenencia_inversa?: string;
 }
 
 export interface Entidad {

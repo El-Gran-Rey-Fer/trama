@@ -3,28 +3,46 @@ mitologia-griega:
 
   # `pregunta`/`pregunta_inversa` solo se declaran en las relaciones que alguien autoría a
   # mano (o que grafo.ts sintetiza como si lo fueran): son las que tarjetas.ts recorre para
-  # generar la baraja de práctica. Las inversas puras (hijo_de, habita, porta, escenario_de,
+  # generar la baraja de práctica. Las inversas puras (habita, porta, escenario_de,
   # tiene_participante) no llevan plantilla propia porque nunca son el lado "origen" de una
-  # arista original.
+  # arista original. `hijo_de` es la excepción: melias, gigantes y erinias sí lo autorían
+  # directamente (nacen de la sangre de Urano, sin madre), así que lleva plantilla propia.
   #
   # `conjunto`/`conjunto_inversa` marcan qué dirección es de respuesta única (una tarjeta por
   # arista, ej. "¿quién es el padre de Zeus?" -> un solo nombre) y cuál es de respuesta en
   # conjunto (todas las aristas origen+tipo agrupadas en una sola tarjeta con todos los destinos,
   # ej. "¿de quién es padre Crono?" -> los cuatro hijos en una tarjeta, no cuatro tarjetas).
   # Por defecto, sin la marca, es de respuesta única.
+  #
+  # `pertenencia`/`pertenencia_inversa` (plan de imágenes y álbum, paso A6): plantilla sí/no
+  # para el lado `conjunto`/`conjunto_inversa` de la misma relación, donde la opción múltiple
+  # no escala (¿cuatro opciones para "de quién es padre Crono" si tiene seis hijos?). Mismos
+  # tokens {origen}/{destino} que pregunta/pregunta_inversa, más {candidato}: la entidad sobre
+  # la que se pregunta, sea miembro real del grupo (sí) o no (no). Frases sin género en
+  # {candidato} a propósito: el rol de género lo lleva el ancla ({origen}/{destino}), que ya
+  # tiene género fijo en los datos.
   relaciones:
     padre_de:
       inversa: hijo_de
       pregunta: "¿De quién es padre {origen}?"
       pregunta_inversa: "¿Quién es el padre de {destino}?"
       conjunto: true # un padre puede tener varios hijos
+      pertenencia: "¿Es {origen} el padre de {candidato}?"
     madre_de:
       inversa: hijo_de
       pregunta: "¿De quién es madre {origen}?"
       pregunta_inversa: "¿Quién es la madre de {destino}?"
       conjunto: true # una madre puede tener varios hijos
+      pertenencia: "¿Es {origen} la madre de {candidato}?"
     hijo_de:
-      inversa: padre_de # documentado por completitud; ninguna de las 10 entidades lo autoría directamente en Hito 1
+      inversa: padre_de # fijo a padre_de: si algún día se autoría hijo_de apuntando a una
+      # madre, se agruparía como si fuera el padre. No pasa con el contenido actual.
+      pregunta: "¿Quién es el padre de {origen}?"
+      pregunta_inversa: "¿De quién es padre {destino}?" # mismo texto que padre_de.pregunta:
+      # ambas plantillas alimentan el mismo grupo agrupado (urano:padre_de) y así da igual
+      # cuál de las dos "gana" la clave del grupo.
+      conjunto_inversa: true # un padre puede tener varios hijos que autorían hijo_de directamente
+      pertenencia_inversa: "¿Es {destino} el padre de {candidato}?"
     hermano_de:
       inversa: hermano_de
       simetrica: true
@@ -32,6 +50,8 @@ mitologia-griega:
       pregunta_inversa: "¿Quién es hermano de {destino}?"
       conjunto: true # se puede tener varios hermanos
       conjunto_inversa: true
+      pertenencia: "¿Son hermanos {origen} y {candidato}?"
+      pertenencia_inversa: "¿Son hermanos {destino} y {candidato}?"
     consorte_de:
       inversa: consorte_de
       simetrica: true
@@ -39,11 +59,14 @@ mitologia-griega:
       pregunta_inversa: "¿Quién es consorte de {destino}?"
       conjunto: true # la mitología no es monógama
       conjunto_inversa: true
+      pertenencia: "¿Son consortes {origen} y {candidato}?"
+      pertenencia_inversa: "¿Son consortes {destino} y {candidato}?"
     habitado_por:
       inversa: habita
       pregunta: "¿Quién habita en {origen}?"
       pregunta_inversa: "¿Dónde habita {destino}?"
       conjunto: true # un lugar puede tener varios habitantes (el Monte Olimpo ya tiene dos)
+      pertenencia: "¿Habita {candidato} en {origen}?"
     habita:
       inversa: habitado_por
     portado_por:
@@ -51,6 +74,7 @@ mitologia-griega:
       pregunta: "¿Quién porta {origen}?"
       pregunta_inversa: "¿Qué porta {destino}?"
       conjunto_inversa: true # alguien puede portar varios objetos
+      pertenencia_inversa: "¿Porta {destino} {candidato}?"
     porta:
       inversa: portado_por
     ocurre_en:
@@ -58,6 +82,7 @@ mitologia-griega:
       pregunta: "¿Dónde ocurre {origen}?"
       pregunta_inversa: "¿Qué relato ocurre en {destino}?"
       conjunto_inversa: true # un lugar puede ser escenario de varios relatos
+      pertenencia_inversa: "¿Ocurre {candidato} en {destino}?"
     escenario_de:
       inversa: ocurre_en # documentado por completitud; grafo.ts la sintetiza desde el campo `lugar` del relato, nadie la autoría a mano
     participa_en:
@@ -66,6 +91,8 @@ mitologia-griega:
       pregunta_inversa: "¿Quién participa en {destino}?"
       conjunto: true # alguien puede participar en varios relatos
       conjunto_inversa: true # un relato tiene muchos participantes (ver Titanomaquia: 14)
+      pertenencia: "¿Participa {origen} en {candidato}?"
+      pertenencia_inversa: "¿Participa {candidato} en {destino}?"
     tiene_participante:
       inversa: participa_en # documentado por completitud; grafo.ts la sintetiza desde `participantes`, nadie la autoría a mano
     devora_a:
@@ -73,6 +100,7 @@ mitologia-griega:
       pregunta: "¿A quién devora {origen}?"
       pregunta_inversa: "¿Quién devora a {destino}?"
       conjunto: true # crono devora a cinco de sus hijos
+      pertenencia: "¿Devora {origen} a {candidato}?"
     devorado_por:
       inversa: devora_a
     encierra_a:
@@ -80,6 +108,7 @@ mitologia-griega:
       pregunta: "¿A quién encierra {origen}?"
       pregunta_inversa: "¿Quién encierra a {destino}?"
       conjunto: true # urano encierra a titanes, ciclopes y hecatonquiros
+      pertenencia: "¿Encierra {origen} a {candidato}?"
     encerrado_por:
       inversa: encierra_a
     rapta_a:
@@ -93,6 +122,7 @@ mitologia-griega:
       pregunta: "¿A quién castiga {origen}?"
       pregunta_inversa: "¿Quién castiga a {destino}?"
       conjunto: true # un dios puede castigar a varios mortales
+      pertenencia: "¿Castiga {origen} a {candidato}?"
     castigado_por:
       inversa: castiga_a
     mata_a:
@@ -100,6 +130,7 @@ mitologia-griega:
       pregunta: "¿A quién mata {origen}?"
       pregunta_inversa: "¿Quién mata a {destino}?"
       conjunto: true # un mismo origen puede matar a varias víctimas a lo largo del corpus
+      pertenencia: "¿Mata {origen} a {candidato}?"
     matado_por:
       inversa: mata_a
     mutila_a:
@@ -113,6 +144,7 @@ mitologia-griega:
       pregunta: "¿Qué forja {origen}?"
       pregunta_inversa: "¿Quién forja {destino}?"
       conjunto: true # quien forja puede forjar varios objetos
+      pertenencia: "¿Forja {origen} {candidato}?"
     forjado_por:
       inversa: forja
     construye:
@@ -120,6 +152,7 @@ mitologia-griega:
       pregunta: "¿Qué construye {origen}?"
       pregunta_inversa: "¿Quién construye {destino}?"
       conjunto: true # quien construye puede construir varias cosas
+      pertenencia: "¿Construye {origen} {candidato}?"
     construido_por:
       inversa: construye
     # Plan de imágenes y álbum §3.1/§3.2/A1. Sin `pregunta`/`pregunta_inversa` a
@@ -246,7 +279,7 @@ mitologia-griega:
       era: cosmogonia
       orden: 100
       resumen: De dónde sale todo y por qué el primer rey del cosmos dura tan poco.
-      relatos: [castracion-de-urano]
+      relatos: [nacimiento-del-cosmos, castracion-de-urano]
       examen: { aciertos: 8, de: 10 }
     - id: la-guerra-por-el-cosmos
       nombre: La guerra por el cosmos # provisional

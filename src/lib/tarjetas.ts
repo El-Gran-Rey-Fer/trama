@@ -37,6 +37,34 @@ function barajar<T>(arr: T[]): T[] {
 	return copia;
 }
 
+// Candidatos no conectados a `sujetoId` por `tipoRelacion` (en cualquier
+// dirección, bajo cualquier fuente), del mismo `tipo` que `tipoEntidad`, y
+// fuera de `excluidosExtra` — así una respuesta también-correcta por otra
+// variante nunca aparece como opción falsa (§3.6, caso Afrodita). Compartido
+// por los distractores de opción múltiple (una respuesta excluida) y por los
+// negativos de pertenencia (todo un grupo de respuestas excluido a la vez).
+export function candidatosNoConectados(
+	grafo: Grafo,
+	sujetoId: string,
+	tipoRelacion: string,
+	tipoEntidad: string,
+	excluidosExtra: Set<string>,
+): Entidad[] {
+	const sujeto = grafo.entidades.get(sujetoId);
+	if (!sujeto) return [];
+
+	const otroLado = grafo.registro[tipoRelacion]?.inversa;
+	const tiposConexion = new Set([tipoRelacion, otroLado].filter(Boolean));
+	const excluidos = new Set(excluidosExtra);
+	for (const r of sujeto.relaciones) {
+		if (tiposConexion.has(r.tipo)) excluidos.add(r.destino);
+	}
+
+	return [...grafo.entidades.values()].filter(
+		(e) => e.tipo === tipoEntidad && !excluidos.has(e.id),
+	);
+}
+
 // Distractores de una tarjeta de relación: entidades del mismo `tipo` que la
 // respuesta correcta, excluyendo cualquier entidad conectada al sujeto de la
 // pregunta por ESE tipo de relación (en cualquier dirección, bajo cualquier
@@ -49,18 +77,13 @@ function distractoresDeRelacion(
 	tipoRelacion: string,
 ): string[] {
 	const respuesta = grafo.entidades.get(respuestaId);
-	const sujeto = grafo.entidades.get(sujetoId);
-	if (!respuesta || !sujeto) return [];
-
-	const otroLado = grafo.registro[tipoRelacion]?.inversa;
-	const tiposConexion = new Set([tipoRelacion, otroLado].filter(Boolean));
-	const excluidos = new Set([respuestaId]);
-	for (const r of sujeto.relaciones) {
-		if (tiposConexion.has(r.tipo)) excluidos.add(r.destino);
-	}
-
-	const candidatos = [...grafo.entidades.values()].filter(
-		(e) => e.tipo === respuesta.tipo && !excluidos.has(e.id),
+	if (!respuesta) return [];
+	const candidatos = candidatosNoConectados(
+		grafo,
+		sujetoId,
+		tipoRelacion,
+		respuesta.tipo,
+		new Set([respuestaId]),
 	);
 	return barajar(candidatos)
 		.slice(0, MAX_DISTRACTORES)

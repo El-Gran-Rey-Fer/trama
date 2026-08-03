@@ -2,12 +2,13 @@
 import { getCollection, getEntry } from "astro:content";
 import Base from "../../../layouts/Base.astro";
 import { conjuntoDeRelato } from "../../../lib/desbloqueo";
+import { generarPertenencia } from "../../../lib/pertenencia";
 import { rutaMateria } from "../../../lib/rutas";
 import { generarTarjetas } from "../../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
-	const juegos = ["emparejar", "ordenar"];
+	const juegos = ["emparejar", "ordenar", "pertenencia"];
 	return materias.flatMap((m) =>
 		juegos.map((juego) => ({
 			params: { materia: m.data.slug, juego },
@@ -20,6 +21,7 @@ const { materia, juego } = Astro.params;
 const { materiaId } = Astro.props;
 
 const tarjetas = await generarTarjetas(materiaId);
+const pertenencia = await generarPertenencia(materiaId);
 const relatos = await getCollection("relatos");
 const relatoConjuntos = Object.fromEntries(
 	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
@@ -53,6 +55,7 @@ relatosEra.sort((a, b) => a.orden - b.orden);
 const TITULOS: Record<string, string> = {
 	emparejar: "Emparejar",
 	ordenar: "Ordenar",
+	pertenencia: "Pertenencia",
 };
 const titulo = TITULOS[juego ?? ""] ?? juego;
 ---
@@ -82,12 +85,13 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     is:inline
     type="application/json"
     id="datos-juego"
-    set:html={JSON.stringify({ tarjetas, relatoConjuntos, relatosEra })}
+    set:html={JSON.stringify({ tarjetas, pertenencia, relatoConjuntos, relatosEra })}
   />
 
   <script>
     import { tarjetasDisponibles } from "../../../lib/disponibilidad";
     import { leerEstado } from "../../../lib/estado";
+    import type { TarjetaPertenencia } from "../../../lib/pertenencia";
     import type { Tarjeta } from "../../../lib/tarjetas";
 
     interface RelatoEra {
@@ -97,14 +101,16 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     const datosEl = document.getElementById("datos-juego");
-    const { tarjetas, relatoConjuntos, relatosEra } = datosEl
+    const { tarjetas, pertenencia, relatoConjuntos, relatosEra } = datosEl
       ? (JSON.parse(datosEl.textContent ?? "{}") as {
           tarjetas: Tarjeta[];
+          pertenencia: TarjetaPertenencia[];
           relatoConjuntos: Record<string, string[]>;
           relatosEra: RelatoEra[];
         })
       : {
           tarjetas: [] as Tarjeta[],
+          pertenencia: [] as TarjetaPertenencia[],
           relatoConjuntos: {},
           relatosEra: [] as RelatoEra[],
         };
@@ -261,9 +267,86 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       actualizarProgreso();
     }
 
+    // Pertenencia (paso A6): sí/no sobre relaciones de conjunto (padre_de,
+    // hermano_de...), donde la opción múltiple no escala con N respuestas
+    // correctas. Sin umbral de aprobado, igual de informal que emparejar y
+    // ordenar — no entra todavía al examen de capítulo (§3.8 queda pendiente
+    // hasta que haya capítulos con varios relatos).
+    function iniciarPertenencia() {
+      const disponibles = tarjetasDisponibles(
+        pertenencia,
+        relatoConjuntos,
+        leerEstado(),
+      );
+
+      const total = Math.min(10, disponibles.length);
+      if (!tablero || total < 4) {
+        elSinTarjetas?.removeAttribute("hidden");
+        return;
+      }
+
+      const tanda = barajar(disponibles).slice(0, total);
+      let indice = 0;
+      let aciertos = 0;
+
+      function actualizarProgreso() {
+        if (elProgreso) elProgreso.textContent = `${indice} / ${tanda.length}`;
+      }
+
+      function mostrarPregunta() {
+        if (!tablero) return;
+        tablero.innerHTML = "";
+        const pregunta = tanda[indice];
+
+        const p = document.createElement("p");
+        p.className = "texto-pregunta";
+        p.textContent = pregunta.pregunta;
+        tablero.appendChild(p);
+
+        const opciones = document.createElement("div");
+        opciones.className = "opciones-pertenencia";
+        for (const [texto, valor] of [
+          ["Sí", true],
+          ["No", false],
+        ] as const) {
+          const boton = document.createElement("button");
+          boton.type = "button";
+          boton.className = "opcion-pertenencia";
+          boton.textContent = texto;
+          boton.addEventListener("click", () => {
+            for (const otro of opciones.querySelectorAll("button")) {
+              (otro as HTMLButtonElement).disabled = true;
+            }
+            const correcta = valor === pregunta.respuesta;
+            boton.classList.add(correcta ? "acierto" : "fallo");
+            if (correcta) aciertos += 1;
+            setTimeout(() => {
+              indice += 1;
+              actualizarProgreso();
+              if (indice < tanda.length) {
+                mostrarPregunta();
+              } else if (tablero) {
+                tablero.innerHTML = "";
+                if (elMensaje) {
+                  elMensaje.hidden = false;
+                  elMensaje.textContent = `¡Completado! ${aciertos} / ${tanda.length} aciertos.`;
+                }
+              }
+            }, 500);
+          });
+          opciones.appendChild(boton);
+        }
+        tablero.appendChild(opciones);
+      }
+
+      actualizarProgreso();
+      mostrarPregunta();
+    }
+
     const juego = tablero?.dataset.juego;
     if (juego === "emparejar") iniciarEmparejar();
     if (juego === "ordenar") iniciarOrdenar();
+    if (juego === "pertenencia") iniciarPertenencia();
   </script>
 
   <style>
@@ -341,6 +424,40 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .pieza-ordenar.fallo {
+      border-color: crimson;
+    }
+
+    .texto-pregunta {
+      padding: 0 20px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .opciones-pertenencia {
+      display: flex;
+      gap: 12px;
+      padding: 16px 20px;
+    }
+
+    .opcion-pertenencia {
+      flex: 1;
+      padding: 20px;
+      border: 1px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .opcion-pertenencia.acierto {
+      border-color: seagreen;
+      background: color-mix(in srgb, seagreen 15%, var(--color-tarjeta-fondo));
+    }
+
+    .opcion-pertenencia.fallo {
       border-color: crimson;
     }
 
