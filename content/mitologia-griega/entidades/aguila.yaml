@@ -1,0 +1,9 @@
+id: aguila
+tipo: objeto
+nombre: Águila
+resumen: >
+  Ave consagrada a Zeus y portadora de su rayo.
+etiquetas: [atributo]
+relaciones:
+  - tipo: portado_por
+    destino: zeus

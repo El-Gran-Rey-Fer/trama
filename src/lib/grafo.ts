@@ -7,6 +7,7 @@ export interface RelacionCruda {
 	destino: string;
 	fuente?: string;
 	principal?: boolean;
+	foco?: [number, number];
 	nota?: string;
 }
 
@@ -47,6 +48,7 @@ export interface Entidad {
 	etiquetas?: string[];
 	generacion?: number;
 	imagen?: Imagen;
+	retrato?: string;
 	relaciones: RelacionResuelta[];
 	prosa?: ContenidoRenderizado;
 }
@@ -205,6 +207,7 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 			destino: origenId,
 			fuente: relacion.fuente, // propagación explícita, aunque no se use todavía
 			principal: relacion.principal,
+			foco: relacion.foco, // idem: el foco vive en `representa`, la inversa lo hereda
 			nota: relacion.nota,
 			inferida: true,
 		});

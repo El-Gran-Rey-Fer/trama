@@ -14,8 +14,4 @@ atributos:
 relaciones:
   - tipo: devora_a
     destino: metis
-imagen:
-  archivo: /img/gr/zeus.jpg
-  credito: "Júpiter, Louvre-Lens. Foto: Jamain, CC BY-SA 4.0"
-  origen: https://commons.wikimedia.org/wiki/File:Jupiter_J1a.jpg
-  alt: Estatua de mármol de Júpiter portando un rayo, con un águila
+retrato: jupiter-louvre-lens

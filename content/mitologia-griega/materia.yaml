@@ -122,6 +122,17 @@ mitologia-griega:
       conjunto: true # quien construye puede construir varias cosas
     construido_por:
       inversa: construye
+    # Plan de imágenes y álbum §3.1/§3.2/A1. Sin `pregunta`/`pregunta_inversa` a
+    # propósito: no genera tarjeta de práctica en ninguna dirección. La inversa
+    # (representado_en) es solo navegación ("aparece en estas obras" en la
+    # ficha). La directa (representa) queda reservada para un futuro juego de
+    # identificar (ver DESIGN.md/capa-de-progresion.md), no para el quiz de
+    # tarjetas — no se construye todavía, solo se deja anotado aquí para no
+    # perder la idea.
+    representa:
+      inversa: representado_en
+    representado_en:
+      inversa: representa
 
   fuentes:
     teogonia: { autor: "Hesíodo", obra: "Teogonía" }
@@ -151,6 +162,7 @@ mitologia-griega:
     - heroe # teseo-y-el-minotauro: teseo
     - mortal # teseo-y-el-minotauro: minos, pasífae, dédalo, androgeo, egeo, ariadna
     - monstruo # teseo-y-el-minotauro: toro de creta, minotauro
+    - obra # plan de imágenes y álbum §3.1: cuadro, vasija, estatua o ilustración
 
   # etiquetas en uso. Registro descriptivo, sin validación de build todavía (igual que tipos).
   # los `ciclo-*` son un eje geográfico/dinástico ortogonal a `eras`: un mito tiene una era y

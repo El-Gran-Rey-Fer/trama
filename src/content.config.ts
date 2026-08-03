@@ -7,23 +7,22 @@ const relacionSchema = z.object({
 	destino: z.string(),
 	fuente: z.string().optional(),
 	principal: z.boolean().optional(),
+	// Solo tiene sentido en `representa` (modo aventura, plan de imágenes y álbum
+	// §3.2): posición en porcentaje [x, y] del punto de foco dentro de la obra,
+	// para recortarla distinto según sirva de retrato a una figura o a otra.
+	foco: z.tuple([z.number(), z.number()]).optional(),
 	nota: z.string().optional(),
 });
 
-// Compatibilidad hacia atrás: `imagen` admite un string suelto (solo ruta) o
-// el objeto completo con procedencia. El string se normaliza aquí al cargar,
-// para que el resto del código nunca tenga que distinguir entre las dos formas.
-const imagenSchema = z
-	.union([
-		z.string(),
-		z.object({
-			archivo: z.string(),
-			credito: z.string().optional(),
-			origen: z.string().optional(),
-			alt: z.string().optional(),
-		}),
-	])
-	.transform((val) => (typeof val === "string" ? { archivo: val } : val));
+// Solo la llevan las entidades `tipo: obra` (plan de imágenes y álbum §3.1). El
+// campo suelto `imagen` en cualquier otra entidad desapareció: la entidad apunta
+// a su obra con `retrato`.
+const imagenSchema = z.object({
+	archivo: z.string(),
+	credito: z.string().optional(),
+	origen: z.string().optional(),
+	alt: z.string().optional(),
+});
 
 const entidadSchema = z
 	.object({
@@ -38,6 +37,9 @@ const entidadSchema = z
 		etiquetas: z.array(z.string()).optional(),
 		generacion: z.number().optional(),
 		imagen: imagenSchema.optional(),
+		// Id de la entidad `tipo: obra` que sirve de retrato. Si falta, se toma la
+		// primera obra que la `representa` (plan de imágenes y álbum §3.1).
+		retrato: z.string().optional(),
 	})
 	.transform((data) => {
 		if (data.imagen && !data.imagen.credito) {
