@@ -290,54 +290,72 @@ mitologia-griega:
   # capítulo es `participantes de sus relatos ∪ entidades_extra`; no se lista a mano lo que el
   # grafo puede derivar. `orden` en múltiplos de 100 dentro de la era, igual que en relatos.
   capitulos:
-    - id: el-primer-linaje
-      nombre: El primer linaje # provisional
-      era: cosmogonia
-      orden: 100
-      resumen: De dónde sale todo y por qué el primer rey del cosmos dura tan poco.
-      relatos: [nacimiento-del-cosmos, castracion-de-urano]
-      examen: { aciertos: 8, de: 10 }
-    - id: la-guerra-por-el-cosmos
-      nombre: La guerra por el cosmos # provisional
-      era: edad-de-los-titanes
-      orden: 100
-      resumen: Crono devora a sus hijos para esquivar una profecía, y diez años de guerra entre titanes y olímpicos deciden quién gobierna el mundo.
-      relatos: [crono-devora-a-sus-hijos, titanomaquia]
-      entidades_extra: [tartaro, monte-otris] # centrales en la prosa, fuera de `participantes`
-      examen: { aciertos: 8, de: 10 }
-    - id: la-astucia-de-zeus
-      nombre: La astucia de Zeus # provisional
-      era: edad-de-los-olimpicos
-      orden: 100
-      resumen: Zeus se traga a su primera esposa para evitar una profecía, y de su cabeza nace una diosa armada.
-      relatos: [nacimiento-de-atenea]
-      examen: { aciertos: 8, de: 10 }
-    - id: las-estaciones
-      nombre: Las estaciones # provisional
-      era: edad-de-los-olimpicos
-      orden: 200
-      resumen: Un rapto en el inframundo explica por qué la tierra deja de dar fruto una parte del año.
-      relatos: [rapto-de-persefone]
-      examen: { aciertos: 8, de: 10 }
-    - id: el-laberinto
-      nombre: El laberinto # provisional
-      era: edad-de-los-heroes
-      orden: 100
-      resumen: Atenas paga un tributo de sangre a Creta hasta que un héroe se interna en el laberinto.
-      relatos: [teseo-y-el-minotauro]
-      examen: { aciertos: 8, de: 10 }
-    # guerra-de-troya: sin capítulos todavía, cero relatos escritos
+  # ─── cosmogonía ────────────────────────────────────────────────
+  - id: del-caos-al-primer-rey
+    nombre: Del Caos al primer rey
+    era: cosmogonia
+    orden: 100
+    resumen: De dónde sale todo y por qué el primer rey del cosmos dura tan poco.
+    relatos: [nacimiento-del-cosmos, castracion-de-urano]
+    entidades_extra: []
+    examen: { aciertos: 8, de: 10 }
+    medalla: primeras-generaciones
 
-  # --- huecos reservados para hitos futuros (schema-legales, sin uso funcional) ---
-  # atributos:
-  #   fuerza: { pregunta: "..." }
-  # idiomas:
-  #   disponibles: [es]
-  #   porDefecto: es
-  # enlaces:
-  #   - tipo: wikipedia
-  #     url: "https://..."
-  # timeline: relativo
-  # mapa:
-  #   mapeable: true
-  # rutas: {}
+  # ─── edad de los titanes ───────────────────────────────────────
+  - id: el-rey-que-devora
+    nombre: El rey que devora
+    era: edad-de-los-titanes
+    orden: 100
+    resumen: Crono hereda el trono con una profecía encima y hace lo único que se le ocurre.
+    relatos: [crono-devora-a-sus-hijos]
+    entidades_extra: []
+    examen: { aciertos: 8, de: 10 }
+
+  - id: la-guerra-por-el-cosmos
+    nombre: La guerra por el cosmos
+    era: edad-de-los-titanes
+    orden: 200
+    resumen: Diez años de guerra entre titanes y olímpicos deciden quién gobierna el mundo.
+    relatos: [titanomaquia]
+    entidades_extra: [monte-otris]
+    examen: { aciertos: 8, de: 10 }
+
+  # ─── edad de los olímpicos ─────────────────────────────────────
+  # 100 reservado: el reparto del cosmos y Tifón
+  - id: atenea-y-la-ciudad
+    nombre: Atenea y la ciudad
+    era: edad-de-los-olimpicos
+    orden: 200
+    resumen: Zeus se traga a su primera esposa para evitar una profecía, y de su cabeza nace una diosa armada.
+    relatos: [nacimiento-de-atenea]
+    entidades_extra: []
+    examen: { aciertos: 8, de: 10 }
+
+  # 300 reservado: Apolo y Ártemis (Delos, Pitón, Delfos)
+  - id: demeter-y-las-estaciones
+    nombre: Deméter y las estaciones
+    era: edad-de-los-olimpicos
+    orden: 400
+    resumen: Un rapto en el inframundo explica por qué la tierra deja de dar fruto una parte del año.
+    relatos: [rapto-de-persefone]
+    entidades_extra: []
+    examen: { aciertos: 8, de: 10 }
+
+  # 500 Hermes · 600 Hefesto · 700 Dioniso
+  # 800 Prometeo y Pandora · 900 el diluvio · 1000 Zeus y los linajes
+
+  # ─── edad de los héroes ────────────────────────────────────────
+  # 100-300 reservado: Perseo (dos capítulos) y Belerofonte
+  # 400-700 reservado: Heracles
+  # 800 reservado: el camino a Atenas
+  - id: el-laberinto
+    nombre: El laberinto
+    era: edad-de-los-heroes
+    orden: 900
+    resumen: Atenas paga un tributo de sangre a Creta hasta que un héroe se interna en el laberinto.
+    relatos: [teseo-y-el-minotauro]
+    entidades_extra: []
+    examen: { aciertos: 8, de: 10 }
+
+  # ─── guerra de troya ───────────────────────────────────────────
+  # sin capítulos todavía, cero relatos escritos
