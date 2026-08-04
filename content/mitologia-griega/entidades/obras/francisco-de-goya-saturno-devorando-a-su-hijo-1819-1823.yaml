@@ -1,0 +1,12 @@
+id: francisco-de-goya-saturno-devorando-a-su-hijo-1819-1823
+tipo: obra
+nombre: Francisco de Goya, Saturno devorando a su hijo (1819 1823)
+resumen: >
+  PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6).
+imagen:
+  archivo: /img/gr/obras/francisco-de-goya-saturno-devorando-a-su-hijo-1819-1823.jpg
+  origen: https://commons.wikimedia.org/wiki/File:Francisco_de_Goya,_Saturno_devorando_a_su_hijo_(1819-1823).jpg
+relaciones:
+  - tipo: representa
+    destino: crono
+    foco: [42, 22]

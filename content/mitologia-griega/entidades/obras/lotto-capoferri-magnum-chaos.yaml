@@ -1,0 +1,12 @@
+id: lotto-capoferri-magnum-chaos
+tipo: obra
+nombre: Lotto Capoferri Magnum Chaos
+resumen: >
+  PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6).
+imagen:
+  archivo: /img/gr/obras/lotto-capoferri-magnum-chaos.jpg
+  origen: https://commons.wikimedia.org/wiki/File:Lotto_Capoferri_Magnum_Chaos.jpg
+relaciones:
+  - tipo: representa
+    destino: caos
+    foco: [50, 50]
