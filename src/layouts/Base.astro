@@ -1,6 +1,11 @@
 ---
 import "../styles/tokens.css";
-import { rutaAjustes, rutaJugarMenu, rutaMateria } from "../lib/rutas";
+import {
+	rutaAjustes,
+	rutaGrafo,
+	rutaJugarMenu,
+	rutaMateria,
+} from "../lib/rutas";
 
 interface Props {
 	titulo: string;
@@ -23,6 +28,12 @@ const pestanas = materiaSlug
 				etiqueta: "Álbum",
 				icono: "🗂",
 				href: `${rutaMateria(materiaSlug)}#album`,
+			},
+			{
+				id: "arbol",
+				etiqueta: "Árbol",
+				icono: "🌳",
+				href: rutaGrafo(materiaSlug),
 			},
 			{
 				id: "practicar",

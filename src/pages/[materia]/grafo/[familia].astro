@@ -38,10 +38,10 @@ const retratos = new Map(
 const posiciones = new Map((vista?.nodos ?? []).map((n) => [n.id, n]));
 ---
 
-<Base titulo={`Grafo — ${familia.etiqueta}`} materiaSlug={materia}>
+<Base titulo={`Árbol — ${familia.etiqueta}`} materiaSlug={materia}>
   <article class="grafo-pagina">
     <header class="cabecera-juego">
-      <h1>Grafo — {familia.etiqueta}</h1>
+      <h1>Árbol — {familia.etiqueta}</h1>
       <p class="subtitulo">
         {vista ? `${vista.enlaces.length} relaciones, ${vista.nodos.length} entidades` : "Sin datos todavía"}
       </p>
