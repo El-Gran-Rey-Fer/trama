@@ -99,10 +99,24 @@ mitologia-griega:
       inversa: devorado_por
       pregunta: "¿A quién devora {origen}?"
       pregunta_inversa: "¿Quién devora a {destino}?"
-      conjunto: true # crono devora a cinco de sus hijos
+      conjunto: true # crono devora a cinco de sus hijos, y también a la piedra
       pertenencia: "¿Devora {origen} a {candidato}?"
     devorado_por:
       inversa: devora_a
+    oculta_a:
+      inversa: ocultado_por
+      pregunta: "¿A quién oculta {origen}?"
+      pregunta_inversa: "¿Quién oculta a {destino}?"
+      conjunto_inversa: true # rea y los curetes ocultan a zeus a la vez
+      pertenencia_inversa: "¿Oculta {candidato} a {destino}?"
+    ocultado_por:
+      inversa: oculta_a
+    amamanta_a:
+      inversa: amamantado_por
+      pregunta: "¿A quién amamanta {origen}?"
+      pregunta_inversa: "¿Quién amamanta a {destino}?"
+    amamantado_por:
+      inversa: amamanta_a
     encierra_a:
       inversa: encerrado_por
       pregunta: "¿A quién encierra {origen}?"
@@ -192,6 +206,7 @@ mitologia-griega:
     - estirpe
     - lugar
     - objeto
+    - ninfa
     - mito
     - heroe # teseo-y-el-minotauro: teseo
     - mortal # teseo-y-el-minotauro: minos, pasífae, dédalo, androgeo, egeo, ariadna
@@ -285,8 +300,8 @@ mitologia-griega:
       nombre: La guerra por el cosmos # provisional
       era: edad-de-los-titanes
       orden: 100
-      resumen: Diez años de guerra entre titanes y olímpicos deciden quién gobierna el mundo.
-      relatos: [titanomaquia]
+      resumen: Crono devora a sus hijos para esquivar una profecía, y diez años de guerra entre titanes y olímpicos deciden quién gobierna el mundo.
+      relatos: [crono-devora-a-sus-hijos, titanomaquia]
       entidades_extra: [tartaro, monte-otris] # centrales en la prosa, fuera de `participantes`
       examen: { aciertos: 8, de: 10 }
     - id: la-astucia-de-zeus

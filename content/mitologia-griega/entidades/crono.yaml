@@ -37,3 +37,5 @@ relaciones:
     destino: hades
   - tipo: devora_a
     destino: poseidon
+  - tipo: devora_a
+    destino: piedra-de-delfos

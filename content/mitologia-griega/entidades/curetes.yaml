@@ -1,0 +1,10 @@
+id: curetes
+tipo: estirpe
+nombre: Curetes
+resumen: >
+  Jóvenes armados que bailan alrededor de la cueva de Zeus recién nacido
+  golpeando las lanzas contra los escudos, para que su llanto no llegue a
+  oídos de Crono.
+relaciones:
+  - tipo: oculta_a
+    destino: zeus

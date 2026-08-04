@@ -20,3 +20,5 @@ relaciones:
     destino: hades
   - tipo: consorte_de
     destino: crono
+  - tipo: oculta_a
+    destino: zeus
