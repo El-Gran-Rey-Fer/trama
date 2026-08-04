@@ -2,7 +2,6 @@
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import { conjuntoDeRelato } from "../../lib/desbloqueo";
-import { rutaMateria } from "../../lib/rutas";
 import { generarTarjetas } from "../../lib/tarjetas";
 
 export async function getStaticPaths() {
@@ -22,27 +21,30 @@ const relatoConjuntos = Object.fromEntries(
 );
 ---
 
-<Base titulo={`Practicar — ${materia}`} materiaSlug={materia}>
-  <article>
-    <h1>Practicar</h1>
-    <p id="contador"></p>
+<Base titulo={`Tarjetas sueltas — ${materia}`} materiaSlug={materia}>
+  <article class="juego">
+    <header class="cabecera-juego">
+      <button type="button" id="reiniciar" class="reiniciar">↻ Reiniciar</button>
+      <div class="titulo-wrap">
+        <h1>Tarjetas sueltas</h1>
+      </div>
+      <p id="progreso" class="progreso"></p>
+    </header>
 
-    <button id="tarjeta" type="button">
-      <p id="pregunta"></p>
-      <p id="respuesta" hidden></p>
-    </button>
+    <div class="contenido-tarjeta">
+      <button id="tarjeta" type="button" class="tarjeta-flip">
+        <span id="eyebrow" class="eyebrow-tarjeta"></span>
+        <span id="texto-tarjeta" class="texto-tarjeta"></span>
+        <span id="hint" class="hint-tarjeta"></span>
+      </button>
 
-    <p>
-      <button id="siguiente" type="button">Siguiente</button>
-    </p>
+      <button id="siguiente" type="button" class="siguiente-pregunta">Siguiente tarjeta</button>
+    </div>
 
-    <p id="vacio" hidden>
+    <p id="vacio" class="vacio" hidden>
       No hay tarjetas disponibles todavía. Lee un relato para desbloquearlas, o
       cambia a modo sandbox para verlas todas.
     </p>
-    <p id="fin" hidden>Has terminado la baraja.</p>
-
-    <p><a href={rutaMateria(materia)}>&larr; volver</a></p>
   </article>
 
   <script
@@ -65,63 +67,204 @@ const relatoConjuntos = Object.fromEntries(
         })
       : { tarjetas: [] as Tarjeta[], relatoConjuntos: {} };
 
-    const disponibles = tarjetasDisponibles(
-      tarjetas,
-      relatoConjuntos,
-      leerEstado(),
-    );
-
-    const mazo = [...disponibles];
-    for (let i = mazo.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [mazo[i], mazo[j]] = [mazo[j], mazo[i]];
+    function barajar<T>(arr: T[]): T[] {
+      const copia = [...arr];
+      for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copia[i], copia[j]] = [copia[j], copia[i]];
+      }
+      return copia;
     }
 
-    let indice = 0;
-
     const elTarjeta = document.getElementById("tarjeta");
-    const elPregunta = document.getElementById("pregunta");
-    const elRespuesta = document.getElementById("respuesta");
-    const elContador = document.getElementById("contador");
+    const elEyebrow = document.getElementById("eyebrow");
+    const elTexto = document.getElementById("texto-tarjeta");
+    const elHint = document.getElementById("hint");
+    const elProgreso = document.getElementById("progreso");
     const elSiguiente = document.getElementById("siguiente");
     const elVacio = document.getElementById("vacio");
-    const elFin = document.getElementById("fin");
+    const elContenido = document.querySelector<HTMLElement>(".contenido-tarjeta");
+    const elReiniciar = document.getElementById("reiniciar");
 
-    function mostrar() {
-      if (!elTarjeta || !elSiguiente || !elContador || !elVacio || !elFin) {
+    let mazo: Tarjeta[] = [];
+    let indice = 0;
+    let volteada = false;
+
+    function pintar() {
+      if (!elTarjeta || !elEyebrow || !elTexto || !elHint || !elProgreso || !elSiguiente) {
         return;
       }
-      if (mazo.length === 0) {
-        elTarjeta.hidden = true;
-        elSiguiente.hidden = true;
-        elContador.hidden = true;
-        elVacio.hidden = false;
+      const actual = mazo[indice];
+      elProgreso.textContent = `Quedan ${mazo.length - indice}`;
+      elEyebrow.textContent = volteada ? "RESPUESTA" : "PREGUNTA";
+      elTexto.textContent = volteada ? actual.respuesta : actual.pregunta;
+      elHint.textContent = volteada
+        ? "Toca para volver a la pregunta"
+        : "Toca la tarjeta para ver la respuesta";
+      elTarjeta.classList.toggle("volteada", volteada);
+      elSiguiente.textContent =
+        indice === mazo.length - 1 ? "Repasar de nuevo" : "Siguiente tarjeta";
+    }
+
+    // "Reiniciar" arriba y "Repasar de nuevo" al final del mazo hacen lo
+    // mismo: rebarajar. Sin tope de tamaño (a diferencia de emparejar,
+    // limitado a 6 parejas para caber en pantalla): aquí se repasa todo lo
+    // disponible, una tarjeta a la vez.
+    function iniciar() {
+      const disponibles = tarjetasDisponibles(tarjetas, relatoConjuntos, leerEstado());
+      if (disponibles.length === 0) {
+        elContenido?.setAttribute("hidden", "");
+        elVacio?.removeAttribute("hidden");
         return;
       }
-      if (indice >= mazo.length) {
-        elTarjeta.hidden = true;
-        elSiguiente.hidden = true;
-        elContador.hidden = true;
-        elFin.hidden = false;
-        return;
-      }
-      elContador.textContent = `Quedan ${mazo.length - indice}`;
-      if (elPregunta) elPregunta.textContent = mazo[indice].pregunta;
-      if (elRespuesta) {
-        elRespuesta.textContent = mazo[indice].respuesta;
-        elRespuesta.hidden = true;
-      }
+      elContenido?.removeAttribute("hidden");
+      elVacio?.setAttribute("hidden", "");
+      mazo = barajar(disponibles);
+      indice = 0;
+      volteada = false;
+      pintar();
     }
 
     elTarjeta?.addEventListener("click", () => {
-      if (elRespuesta) elRespuesta.hidden = !elRespuesta.hidden;
+      volteada = !volteada;
+      pintar();
     });
 
     elSiguiente?.addEventListener("click", () => {
+      if (indice === mazo.length - 1) {
+        iniciar();
+        return;
+      }
       indice += 1;
-      mostrar();
+      volteada = false;
+      pintar();
     });
 
-    mostrar();
+    elReiniciar?.addEventListener("click", iniciar);
+
+    iniciar();
   </script>
+
+  <style>
+    .cabecera-juego {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px 6px;
+    }
+
+    .reiniciar {
+      flex: 0 0 auto;
+      border: none;
+      background: none;
+      color: var(--color-acento);
+      font-family: var(--fuente-titulo);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 6px 0;
+      cursor: pointer;
+    }
+
+    .titulo-wrap {
+      flex: 1;
+      text-align: center;
+    }
+
+    .titulo-wrap h1 {
+      margin: 0;
+      font-size: 18px;
+      font-family: var(--fuente-titulo);
+    }
+
+    .progreso {
+      flex: 0 0 auto;
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-texto-muted);
+      font-family: var(--fuente-titulo);
+    }
+
+    .contenido-tarjeta {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 10px 20px 28px;
+    }
+
+    .tarjeta-flip {
+      width: 100%;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 28px 20px;
+      border: 1px solid var(--color-tarjeta-borde);
+      border-top-width: 5px;
+      border-top-color: var(--color-acento);
+      border-radius: var(--radio);
+      background: var(--color-fondo-pantalla);
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .tarjeta-flip.volteada {
+      border-top-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 8%, var(--color-fondo-pantalla));
+    }
+
+    .eyebrow-tarjeta {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--color-acento);
+      text-transform: uppercase;
+    }
+
+    .tarjeta-flip.volteada .eyebrow-tarjeta {
+      color: var(--color-acierto);
+    }
+
+    .texto-tarjeta {
+      font-size: 19px;
+      font-weight: 700;
+      font-family: var(--fuente-titulo);
+      color: var(--color-texto);
+      line-height: 1.3;
+    }
+
+    .tarjeta-flip.volteada .texto-tarjeta {
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .hint-tarjeta {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--color-texto-muted);
+    }
+
+    .siguiente-pregunta {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: var(--radio);
+      background: var(--color-acento);
+      color: var(--color-acento-contraste);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .vacio {
+      padding: 0 20px;
+      color: var(--color-texto-muted);
+    }
+  </style>
 </Base>

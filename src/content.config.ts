@@ -126,6 +126,7 @@ const fuenteSchema = z.object({
 
 const materiaSchema = z.object({
 	slug: z.string(),
+	nombre: z.string(),
 	relaciones: z.record(z.string(), registroRelacionSchema),
 	atributos: z.record(z.string(), z.unknown()).optional(),
 	fuentes: z.record(z.string(), fuenteSchema).optional(),

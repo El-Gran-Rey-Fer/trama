@@ -1,5 +1,6 @@
 mitologia-griega:
   slug: gr
+  nombre: Mitología griega
 
   # `pregunta`/`pregunta_inversa` solo se declaran en las relaciones que alguien autoría a
   # mano (o que grafo.ts sintetiza como si lo fueran): son las que tarjetas.ts recorre para

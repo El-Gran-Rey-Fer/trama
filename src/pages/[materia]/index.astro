@@ -98,12 +98,13 @@ if (sinCapitulo.length > 0) {
 const niveles = materiaEntry?.data.niveles ?? [];
 const totalCapitulos = capitulos.length;
 const totalEntidades = entidades.length;
+const nombreMateria = materiaEntry?.data.nombre ?? materia;
 ---
 
-<Base titulo={`${materia} — modo aventura`} materiaSlug={materia}>
+<Base titulo={`${nombreMateria} — modo aventura`} materiaSlug={materia}>
   <section id="capitulos" class="seccion-leer">
     <div class="cabecera-lista">
-      <h1 class="titulo-lista">{materia}</h1>
+      <h1 class="titulo-lista">{nombreMateria}</h1>
     </div>
     {
       eras.map((era) => {

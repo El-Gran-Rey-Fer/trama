@@ -35,6 +35,13 @@ const juegos = [
 		href: rutaJuego(materia, "pertenencia"),
 	},
 	{
+		id: "completar-arbol",
+		titulo: "Completar el árbol",
+		desc: "Rellena el hueco en el árbol genealógico",
+		icono: "🌳",
+		href: rutaJuego(materia, "completar-arbol"),
+	},
+	{
 		id: "tarjetas",
 		titulo: "Tarjetas sueltas",
 		desc: "Repasa preguntas y respuestas, a tu ritmo",
@@ -51,8 +58,8 @@ const juegos = [
 
   <div class="lista-juegos">
     {
-      juegos.map((jg, i) => (
-        <a class="fila-juego" data-primera={i === 0} href={jg.href}>
+      juegos.map((jg) => (
+        <a class="fila-juego" href={jg.href}>
           <span class="icono-juego" aria-hidden="true">
             {jg.icono}
           </span>
@@ -98,10 +105,6 @@ const juegos = [
     color: var(--color-texto);
     text-decoration: none;
     box-sizing: border-box;
-  }
-
-  .fila-juego[data-primera="false"] {
-    background: var(--color-fondo-stub);
   }
 
   .icono-juego {
