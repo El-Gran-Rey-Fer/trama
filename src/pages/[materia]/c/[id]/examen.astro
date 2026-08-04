@@ -41,10 +41,11 @@ const preguntas = tarjetas.filter(
 <Base titulo={`Examen — ${capitulo.nombre}`} materiaSlug={materia}>
   <article class="examen">
     <header class="cabecera-juego">
-      <div>
+      <a class="salir" href={rutaCapitulo(materia, capitulo.id)}>&lsaquo; Salir</a>
+      <div class="titulo-wrap">
         <h1>Examen: {capitulo.nombre}</h1>
       </div>
-      <p id="progreso"></p>
+      <p id="progreso" class="progreso"></p>
     </header>
 
     <div id="tablero"></div>
@@ -53,8 +54,6 @@ const preguntas = tarjetas.filter(
       Este capítulo todavía no tiene suficientes tarjetas evaluables para un
       examen. Vuelve cuando tenga más contenido.
     </p>
-
-    <p class="salir"><a href={rutaCapitulo(materia, capitulo.id)}>&larr; Volver al capítulo</a></p>
   </article>
 
   <script
@@ -166,18 +165,61 @@ const preguntas = tarjetas.filter(
     }
   </script>
 
-  <style>
+  <!--
+    is:global: examenCliente.ts crea el tablero entero con
+    document.createElement, en tiempo de cliente — a esos nodos nunca les
+    llega el atributo data-astro-cid-* que necesita un <style> con scope de
+    componente para aplicar nada (mismo problema, y misma solución, que
+    .mini-ficha en Base.astro). Solo afecta a esta página: Astro solo
+    enlaza esta hoja de estilos en el HTML de esta ruta.
+  -->
+  <style is:global>
     .cabecera-juego {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      padding: 12px 20px;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px 6px;
+    }
+
+    .salir {
+      flex: 0 0 auto;
+      color: var(--color-acento);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .titulo-wrap {
+      flex: 1;
+      text-align: center;
+    }
+
+    .titulo-wrap h1 {
+      margin: 0;
+      font-size: 18px;
+      font-family: var(--fuente-titulo);
+    }
+
+    .progreso {
+      flex: 0 0 auto;
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-texto-muted);
+      font-family: var(--fuente-titulo);
     }
 
     .texto-pregunta {
       padding: 0 20px;
       font-size: 18px;
       font-weight: 600;
+    }
+
+    #sin-preguntas {
+      padding: 0 20px;
+      color: var(--color-texto-muted);
     }
 
     .opciones {
@@ -202,46 +244,89 @@ const preguntas = tarjetas.filter(
     .opcion.acierto {
       border-color: var(--color-acierto);
       background: color-mix(in srgb, var(--color-acierto) 15%, var(--color-tarjeta-fondo));
+      animation: destello-acierto 0.3s ease;
     }
 
     .opcion.fallo {
       border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
     }
 
     .resultado {
-      padding: 0 20px;
+      margin: 0 20px 14px;
+      padding: 0;
       font-size: 20px;
-      font-weight: 700;
+      font-weight: 800;
+      text-align: center;
+      font-family: var(--fuente-titulo);
     }
 
     .exito {
-      padding: 0 20px;
-      color: var(--color-acierto);
-      font-weight: 700;
+      margin: 0 20px 14px;
+      padding: 0;
+      color: var(--color-acento);
+      font-weight: 800;
+      text-align: center;
+      font-size: 18px;
+      font-family: var(--fuente-titulo);
     }
 
-    .lista-falladas {
-      padding: 0 20px 0 40px;
+    #tablero > p:not(.resultado):not(.exito) {
+      margin: 0 20px 14px;
       color: var(--color-texto-muted);
       font-size: 14px;
     }
 
+    .lista-falladas {
+      margin: 0 20px 18px;
+      padding: 14px 14px 14px 34px;
+      border-radius: var(--radio);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-texto);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
     .boton-siguiente {
-      display: inline-block;
-      margin: 12px 20px;
+      display: block;
+      width: calc(100% - 40px);
+      margin: 0 20px 28px;
       padding: 14px 20px;
       border: none;
       border-radius: var(--radio);
       background: var(--color-acento);
       color: var(--color-acento-contraste);
-      font-family: var(--fuente);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
       font-weight: 700;
+      text-align: center;
       text-decoration: none;
       cursor: pointer;
     }
 
-    .salir {
-      padding: 20px;
+    @keyframes destello-acierto {
+      0% {
+        transform: scale(1);
+      }
+      40% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes agitar-fallo {
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+      25% {
+        transform: translateX(-4px);
+      }
+      75% {
+        transform: translateX(4px);
+      }
     }
   </style>
 </Base>

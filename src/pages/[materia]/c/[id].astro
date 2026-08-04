@@ -1,7 +1,10 @@
 ---
 import { getCollection } from "astro:content";
+import Casilla from "../../../components/Casilla.astro";
 import Base from "../../../layouts/Base.astro";
 import { cargarCapitulos } from "../../../lib/capitulos";
+import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
+import { resolverRetrato } from "../../../lib/retrato";
 import { rutaExamen, rutaMateria, rutaRelato } from "../../../lib/rutas";
 import { generarTarjetas } from "../../../lib/tarjetas";
 
@@ -28,37 +31,228 @@ if (!capitulo) throw new Error(`Capítulo no encontrado: ${id}`);
 
 const relatosCol = await getCollection("relatos");
 const relatosPorId = new Map(relatosCol.map((r) => [r.id, r.data]));
-const relatos = capitulo.relatos.map((rid) => ({
-	id: rid,
-	nombre: relatosPorId.get(rid)?.nombre ?? rid,
-}));
+
+// Un relato es un nodo del grafo con pleno derecho (`kind: "relato"`), así que
+// `resolverRetrato` ya funciona sobre él sin cambios: si alguna obra lo
+// `representa`, la fila muestra esa imagen en vez del número.
+const grafo = await construirGrafo(materiaId);
+const relatos = capitulo.relatos.map((rid) => {
+	const nodo = obtenerEntidad(grafo, rid);
+	return {
+		id: rid,
+		nombre: relatosPorId.get(rid)?.nombre ?? rid,
+		tipo: nodo?.tipo ?? "mito",
+		retrato: nodo ? resolverRetrato(grafo, nodo) : undefined,
+	};
+});
 
 const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
 ---
 
 <Base titulo={capitulo.nombre} materiaSlug={materia}>
-  <article>
-    <h1>{capitulo.nombre}</h1>
-    <p>{capitulo.resumen}</p>
+  <article class="pagina-capitulo">
+    <div class="cabecera-lista">
+      <h1 class="titulo-lista">{capitulo.nombre}</h1>
+      <p class="subtitulo-lista">{capitulo.resumen}</p>
+    </div>
 
-    <h2>Relatos</h2>
-    <ol>
+    <ol class="lista-relatos">
       {
-        relatos.map((r) => (
-          <li>
-            <a href={rutaRelato(materia, r.id)}>{r.nombre}</a>
+        relatos.map((r, i) => (
+          <li data-relato={r.id} class="fila-relato">
+            <a href={rutaRelato(materia, r.id)} class="enlace-relato">
+              {r.retrato ? (
+                <span class="miniatura-relato">
+                  <Casilla nombre={r.nombre} tipo={r.tipo} retrato={r.retrato} />
+                </span>
+              ) : (
+                <span class="num-relato" aria-hidden="true">
+                  {i + 1}
+                </span>
+              )}
+              <span class="texto-relato">
+                <span class="titulo-relato">{r.nombre}</span>
+                <span class="estado-relato" />
+              </span>
+              <span class="chevron-relato" aria-hidden="true">
+                ›
+              </span>
+            </a>
           </li>
         ))
       }
     </ol>
 
-    <h2>Tarjetas</h2>
-    <p>{tarjetas.length} tarjetas en este capítulo.</p>
+    <div class="tarjeta-info">
+      <span class="info-numero">{tarjetas.length}</span>
+      <span class="info-etiqueta">tarjetas en este capítulo</span>
+    </div>
 
-    <h2>Examen</h2>
-    <p>Aprueba con {capitulo.examen.aciertos} de {capitulo.examen.de}.</p>
-    <p><a href={rutaExamen(materia, capitulo.id)}>Empezar el examen</a></p>
+    <div class="tarjeta-examen">
+      <p class="examen-umbral">
+        Aprueba con {capitulo.examen.aciertos} de {capitulo.examen.de}.
+      </p>
+      <a class="boton-examen" href={rutaExamen(materia, capitulo.id)}>Empezar el examen</a>
+    </div>
 
-    <p><a href={rutaMateria(materia)}>&larr; volver</a></p>
+    <p class="salir"><a href={rutaMateria(materia)}>&larr; Volver</a></p>
   </article>
+
+  <script
+    is:inline
+    type="application/json"
+    id="datos-relatos"
+    set:html={JSON.stringify(capitulo.relatos)}
+  />
+
+  <script>
+    import { leerEstado } from "../../../lib/estado";
+
+    const datosEl = document.getElementById("datos-relatos");
+    const relatoIds: string[] = datosEl ? JSON.parse(datosEl.textContent ?? "[]") : [];
+    const estado = leerEstado();
+
+    for (const relatoId of relatoIds) {
+      const fila = document.querySelector(`[data-relato="${relatoId}"]`);
+      const el = fila?.querySelector(".estado-relato");
+      const leido = estado.leidos.includes(relatoId);
+      if (el) el.textContent = leido ? "Leído" : "";
+      if (fila instanceof HTMLElement) fila.dataset.leido = String(leido);
+    }
+  </script>
 </Base>
+
+<style>
+  .cabecera-lista {
+    padding: 20px 20px 4px;
+  }
+
+  .titulo-lista {
+    margin: 0;
+    font-size: 26px;
+    font-weight: var(--peso-titulo-grande);
+    font-family: var(--fuente-titulo);
+  }
+
+  .subtitulo-lista {
+    margin: 6px 0 0;
+    color: var(--color-texto-muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .lista-relatos {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fila-relato[data-leido="true"] {
+    opacity: 0.75;
+  }
+
+  .enlace-relato {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+    color: var(--color-texto);
+    text-decoration: none;
+    box-sizing: border-box;
+  }
+
+  .num-relato {
+    flex: 0 0 auto;
+    width: 28px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-acento);
+    font-family: var(--fuente-titulo);
+  }
+
+  .miniatura-relato {
+    flex: 0 0 auto;
+    width: 44px;
+  }
+
+  .texto-relato {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .titulo-relato {
+    font-size: 17px;
+    font-weight: 700;
+    font-family: var(--fuente-titulo);
+  }
+
+  .estado-relato {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--color-texto-muted);
+  }
+
+  .chevron-relato {
+    font-size: 20px;
+    color: var(--color-texto-muted);
+  }
+
+  .tarjeta-info,
+  .tarjeta-examen {
+    margin: 16px 20px 0;
+    padding: 16px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: var(--color-tarjeta-fondo);
+  }
+
+  .tarjeta-info {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .info-numero {
+    font-size: 22px;
+    font-weight: 800;
+    font-family: var(--fuente-titulo);
+    color: var(--color-acento);
+  }
+
+  .info-etiqueta {
+    font-size: 14px;
+    color: var(--color-texto-muted);
+  }
+
+  .examen-umbral {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--color-texto-muted);
+  }
+
+  .boton-examen {
+    display: block;
+    padding: 14px;
+    border-radius: var(--radio);
+    background: var(--color-acento);
+    color: var(--color-acento-contraste);
+    font-family: var(--fuente-titulo);
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .salir {
+    padding: 20px;
+  }
+
+  .salir a {
+    color: var(--color-acento);
+    text-decoration: none;
+    font-weight: 600;
+  }
+</style>

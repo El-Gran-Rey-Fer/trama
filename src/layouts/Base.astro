@@ -2,6 +2,7 @@
 import "../styles/tokens.css";
 import {
 	rutaAjustes,
+	rutaAlbum,
 	rutaGrafo,
 	rutaJugarMenu,
 	rutaMateria,
@@ -27,7 +28,7 @@ const pestanas = materiaSlug
 				id: "album",
 				etiqueta: "Álbum",
 				icono: "🗂",
-				href: `${rutaMateria(materiaSlug)}#album`,
+				href: rutaAlbum(materiaSlug),
 			},
 			{
 				id: "arbol",
@@ -50,14 +51,15 @@ const pestanas = materiaSlug
 		]
 	: [];
 
-// Activa por prefijo de ruta — suficiente para practicar/ajustes, que tienen
-// URL propia. Leer y Álbum comparten página (dos anclas de la misma
-// portada de materia) y no se distinguen aquí; no marcar ninguna es mejor
-// que marcar la incorrecta.
+// Activa por prefijo de ruta — suficiente para el resto de tabs, que tienen
+// URL propia. "Leer" es la excepción: vive en la portada de materia, que es
+// prefijo de todas las demás rutas, así que marcarla por prefijo marcaría
+// siempre "Leer" como activa; no marcar ninguna es mejor que marcar la
+// incorrecta.
 const rutaActual = Astro.url.pathname;
 function activa(id: string, href: string): boolean {
-	if (id === "leer" || id === "album") return false;
-	return rutaActual.startsWith(href.split("#")[0]);
+	if (id === "leer") return false;
+	return rutaActual.startsWith(href);
 }
 ---
 
