@@ -205,12 +205,12 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     function crearPiezaEmparejar(
       texto: string,
       rol: "pregunta" | "respuesta",
-      par: number,
+      par: string,
       tipoRespuesta?: string,
     ) {
       const boton = crear("button", "pieza");
       boton.type = "button";
-      boton.dataset.par = String(par);
+      boton.dataset.par = par;
 
       const eyebrow = crear("span", "eyebrow-pieza");
       eyebrow.textContent = rol === "pregunta" ? "PREGUNTA" : "RESPUESTA";
@@ -290,13 +290,13 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       const columnaPreguntas = crear("div", "columna-emparejar");
       const columnaRespuestas = crear("div", "columna-emparejar");
 
-      for (const [i, t] of barajar(elegidas.map((t, i) => [i, t] as const))) {
-        const boton = crearPiezaEmparejar(t.pregunta, "pregunta", i);
+      for (const t of barajar(elegidas)) {
+        const boton = crearPiezaEmparejar(t.pregunta, "pregunta", t.respuesta);
         boton.addEventListener("click", () => alClic(boton));
         columnaPreguntas.appendChild(boton);
       }
-      for (const [i, t] of barajar(elegidas.map((t, i) => [i, t] as const))) {
-        const boton = crearPiezaEmparejar(t.respuesta, "respuesta", i, t.tipoRespuesta);
+      for (const t of barajar(elegidas)) {
+        const boton = crearPiezaEmparejar(t.respuesta, "respuesta", t.respuesta, t.tipoRespuesta);
         boton.addEventListener("click", () => alClic(boton));
         columnaRespuestas.appendChild(boton);
       }
@@ -741,10 +741,12 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     .pieza.acierto {
       opacity: 0.35;
       cursor: default;
+      animation: destello-acierto 0.3s ease;
     }
 
     .pieza.fallo {
       border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
     }
 
     /* Ordenar: huecos numerados siempre visibles arriba, pool de piezas
@@ -769,6 +771,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     .fila-slot.llena {
       border-color: var(--color-acierto);
       background: color-mix(in srgb, var(--color-acierto) 10%, var(--color-fondo-pantalla));
+      animation: destello-acierto 0.3s ease;
     }
 
     .badge-slot {
@@ -830,6 +833,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
 
     .pieza-ordenar.fallo {
       border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
     }
 
     /* Pertenencia: tarjeta de pregunta con acento a la izquierda, dos
@@ -880,6 +884,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     .opcion-pertenencia.acierto {
       border-color: var(--color-acierto);
       background: color-mix(in srgb, var(--color-acierto) 12%, var(--color-fondo-pantalla));
+      animation: destello-acierto 0.3s ease;
     }
 
     .opcion-pertenencia.acierto .icono-pertenencia {
@@ -888,6 +893,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
 
     .opcion-pertenencia.fallo {
       border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
     }
 
     .opcion-pertenencia.fallo .icono-pertenencia {
@@ -910,10 +916,12 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
 
     .feedback.acierto {
       border: 1px solid var(--color-acierto);
+      animation: destello-acierto 0.3s ease;
     }
 
     .feedback.fallo {
       border: 1px solid var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
     }
 
     .siguiente-pregunta {
@@ -983,12 +991,14 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       border-style: solid;
       border-color: var(--color-acierto);
       background: color-mix(in srgb, var(--color-acierto) 15%, var(--color-tarjeta-fondo));
+      animation: destello-acierto 0.3s ease;
     }
 
     .arbol-juego-nodo.fallo {
       border-style: solid;
       border-color: var(--color-fallo);
       background: color-mix(in srgb, var(--color-fallo) 15%, var(--color-tarjeta-fondo));
+      animation: agitar-fallo 0.3s ease;
     }
 
     .opciones-arbol {
@@ -1014,10 +1024,37 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     .opcion-arbol.acierto {
       border-color: var(--color-acierto);
       background: color-mix(in srgb, var(--color-acierto) 15%, var(--color-tarjeta-fondo));
+      animation: destello-acierto 0.3s ease;
     }
 
     .opcion-arbol.fallo {
       border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
+    }
+
+    @keyframes destello-acierto {
+      0% {
+        transform: scale(1);
+      }
+      40% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes agitar-fallo {
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+      25% {
+        transform: translateX(-4px);
+      }
+      75% {
+        transform: translateX(4px);
+      }
     }
   </style>
 </Base>
