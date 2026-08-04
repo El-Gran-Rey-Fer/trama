@@ -1,7 +1,14 @@
 ---
+import { TIPOS_GENEALOGIA } from "../lib/arbol";
 import type { Entidad, TipoNodo } from "../lib/grafo";
 import type { RetratoResuelto } from "../lib/retrato";
-import { rutaActivo, rutaEntidad, rutaMateria, rutaRelato } from "../lib/rutas";
+import {
+	rutaActivo,
+	rutaArbol,
+	rutaEntidad,
+	rutaMateria,
+	rutaRelato,
+} from "../lib/rutas";
 import E from "./E.astro";
 import Fuente from "./Fuente.astro";
 
@@ -22,6 +29,12 @@ function rutaNodo(id: string): string {
 const relatos = entidad.relaciones.filter((r) => r.tipo === "participa_en");
 const relaciones = entidad.relaciones.filter((r) => r.tipo !== "participa_en");
 const Prosa = entidad.prosa;
+
+// Árbol genealógico (plan de imágenes y álbum, paso A7): solo se enlaza
+// cuando la entidad tiene al menos una arista de parentesco.
+const tieneGenealogia = entidad.relaciones.some((r) =>
+	TIPOS_GENEALOGIA.includes(r.tipo),
+);
 
 // La propia obra muestra su imagen entera (sin foco: aquí no se recorta a
 // una figura, se ve la pieza completa). Cualquier otra entidad muestra su
@@ -100,6 +113,14 @@ const esStub =
           ))}
         </dl>
       ) : null
+    }
+
+    {
+      tieneGenealogia && (
+        <p class="ver-arbol">
+          <a href={rutaArbol(materiaSlug, entidad.id)}>Ver árbol genealógico &rsaquo;</a>
+        </p>
+      )
     }
 
     {
@@ -204,6 +225,16 @@ const esStub =
     font-size: 13px;
     font-style: italic;
     color: var(--color-texto-muted);
+  }
+
+  .ver-arbol {
+    margin: 0 0 14px;
+  }
+
+  .ver-arbol a {
+    color: var(--color-acento);
+    font-weight: 600;
+    text-decoration: none;
   }
 
   .chips {

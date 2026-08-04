@@ -1,0 +1,168 @@
+---
+import { getCollection } from "astro:content";
+import Casilla from "../../../../components/Casilla.astro";
+import Base from "../../../../layouts/Base.astro";
+import { construirArbolGenealogico } from "../../../../lib/arbol";
+import { construirGrafo, obtenerEntidad } from "../../../../lib/grafo";
+import { resolverRetrato } from "../../../../lib/retrato";
+import { rutaEntidad } from "../../../../lib/rutas";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	const entidades = await getCollection("entidades");
+	return materias.flatMap((m) =>
+		entidades.map((e) => ({
+			params: { materia: m.data.slug, id: e.id },
+			props: { materiaId: m.id },
+		})),
+	);
+}
+
+const { materia, id } = Astro.params;
+const { materiaId } = Astro.props;
+
+const grafo = await construirGrafo(materiaId);
+const entidad = obtenerEntidad(grafo, id);
+if (!entidad) throw new Error(`Entidad no encontrada: ${materiaId}/${id}`);
+
+// Vista primero, calculada en build y servida sin JavaScript en cliente
+// (plan de imágenes y álbum, paso A7). El layout ya sale en píxeles listos
+// para posicionar; no hace falta tocarlo en el navegador.
+const arbol = construirArbolGenealogico(grafo, id);
+
+const retratos = new Map(
+	(arbol?.nodos ?? []).map((n) => {
+		const e = obtenerEntidad(grafo, n.id);
+		return [n.id, e ? resolverRetrato(grafo, e) : undefined];
+	}),
+);
+const posiciones = new Map((arbol?.nodos ?? []).map((n) => [n.clave, n]));
+---
+
+<Base titulo={`Árbol — ${entidad.nombre}`} materiaSlug={materia}>
+  <article class="arbol-pagina">
+    <header class="cabecera-juego">
+      <h1>Árbol genealógico</h1>
+      <p class="subtitulo">{entidad.nombre}</p>
+    </header>
+
+    {
+      arbol ? (
+        <div class="lienzo-scroll">
+          <div class="lienzo" style={`width:${arbol.ancho}px; height:${arbol.alto}px`}>
+            <svg
+              class="enlaces"
+              width={arbol.ancho}
+              height={arbol.alto}
+              viewBox={`0 0 ${arbol.ancho} ${arbol.alto}`}
+            >
+              {arbol.enlaces.map((enlace) => {
+                const desde = posiciones.get(enlace.desde);
+                const hasta = posiciones.get(enlace.hasta);
+                if (!desde || !hasta) return null;
+                return <line x1={desde.x} y1={desde.y} x2={hasta.x} y2={hasta.y} />;
+              })}
+            </svg>
+            {arbol.nodos.map((n) => (
+              <div class="nodo" style={`left:${n.x}px; top:${n.y}px`} data-raiz={n.esRaiz}>
+                <a href={rutaEntidad(materia, n.id)} class="nodo-enlace">
+                  <div class="nodo-casilla">
+                    <Casilla nombre={n.nombre} tipo={n.tipo} retrato={retratos.get(n.id)} />
+                  </div>
+                  <span class="nodo-nombre">{n.nombre}</span>
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p class="sin-arbol">
+          No se conocen antepasados ni descendientes de {entidad.nombre} en el grafo todavía.
+        </p>
+      )
+    }
+
+    <p class="salir"><a href={rutaEntidad(materia, id)}>&larr; Volver a la ficha</a></p>
+  </article>
+</Base>
+
+<style>
+  .arbol-pagina {
+    padding-bottom: 24px;
+  }
+
+  .cabecera-juego {
+    padding: 12px 20px;
+  }
+
+  .cabecera-juego h1 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .subtitulo {
+    margin: 2px 0 0;
+    color: var(--color-texto-muted);
+    font-size: 14px;
+  }
+
+  .lienzo-scroll {
+    overflow-x: auto;
+    padding: 12px 20px 20px;
+  }
+
+  .lienzo {
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .enlaces {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+
+  .enlaces line {
+    stroke: var(--color-tarjeta-borde);
+    stroke-width: 2;
+  }
+
+  .nodo {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 64px;
+  }
+
+  .nodo-enlace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    color: var(--color-texto);
+  }
+
+  .nodo-casilla {
+    width: 64px;
+  }
+
+  .nodo[data-raiz="true"] .nodo-casilla .casilla {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+  }
+
+  .nodo-nombre {
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .sin-arbol {
+    padding: 0 20px;
+    color: var(--color-texto-muted);
+  }
+
+  .salir {
+    padding: 8px 20px 0;
+  }
+</style>

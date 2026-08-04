@@ -33,6 +33,11 @@ export function rutaExamenPersonaje(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/e/${id}/examen/`;
 }
 
+// Árbol genealógico (plan de imágenes y álbum, paso A7).
+export function rutaArbol(materiaSlug: string, id: string): string {
+	return `${base()}${materiaSlug}/e/${id}/arbol/`;
+}
+
 export function rutaJuego(materiaSlug: string, juego: string): string {
 	return `${base()}${materiaSlug}/jugar/${juego}/`;
 }
