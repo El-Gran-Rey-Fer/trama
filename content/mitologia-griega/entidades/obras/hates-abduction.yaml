@@ -1,0 +1,21 @@
+id: hates-abduction
+tipo: obra
+nombre: Secuestro de Perséfone
+resumen: >
+  PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6).
+imagen:
+  archivo: /img/gr/obras/hates-abduction.jpg
+  origen: https://commons.wikimedia.org/wiki/File:Hates_abduction.jpg
+relaciones:
+  - tipo: representa
+    destino: rapto-de-persefone
+    foco: [58, 34]
+  - tipo: representa
+    destino: hades
+    foco: [54, 27]
+  - tipo: representa
+    destino: persefone
+    foco: [53, 18]
+  - tipo: representa
+    destino: demeter
+    foco: [9, 62]

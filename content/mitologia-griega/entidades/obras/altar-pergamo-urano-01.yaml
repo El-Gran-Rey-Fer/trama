@@ -6,3 +6,7 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/altar-pergamo-urano-01.jpg
   origen: https://commons.wikimedia.org/wiki/File:Altar_P%C3%A9rgamo_Urano_01.JPG
+relaciones:
+  - tipo: representa
+    destino: urano
+    foco: [49, 18]

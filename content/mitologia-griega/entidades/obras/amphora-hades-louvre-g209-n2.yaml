@@ -1,0 +1,15 @@
+id: amphora-hades-louvre-g209-n2
+tipo: obra
+nombre: Amphora Hades Louvre G209 n2
+resumen: >
+  PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6).
+imagen:
+  archivo: /img/gr/obras/amphora-hades-louvre-g209-n2.jpg
+  origen: https://commons.wikimedia.org/wiki/File:Amphora_Hades_Louvre_G209_n2.jpg
+relaciones:
+  - tipo: representa
+    destino: hades
+    foco: [67, 33]
+  - tipo: representa
+    destino: persefone
+    foco: [22, 25]

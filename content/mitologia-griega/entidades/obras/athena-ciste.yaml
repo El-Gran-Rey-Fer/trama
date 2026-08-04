@@ -1,0 +1,12 @@
+id: athena-ciste
+tipo: obra
+nombre: Athena ciste
+resumen: >
+  PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6).
+imagen:
+  archivo: /img/gr/obras/athena-ciste.jpg
+  origen: https://commons.wikimedia.org/wiki/File:Athena_ciste.jpg
+relaciones:
+  - tipo: representa
+    destino: atenea
+    foco: [39, 43]

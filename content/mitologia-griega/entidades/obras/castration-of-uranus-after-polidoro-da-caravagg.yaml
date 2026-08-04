@@ -1,0 +1,21 @@
+id: castration-of-uranus-after-polidoro-da-caravagg
+tipo: obra
+nombre: Castration of Uranus after Polidoro da Caravagg
+resumen: >
+  PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6).
+imagen:
+  archivo: /img/gr/obras/castration-of-uranus-after-polidoro-da-caravagg.jpg
+  origen: https://mitosymas.com/lunas-de-saturno-titan/
+relaciones:
+  - tipo: representa
+    destino: castracion-de-urano
+    foco: [36, 56]
+  - tipo: representa
+    destino: urano
+    foco: [28, 26]
+  - tipo: representa
+    destino: crono
+    foco: [51, 33]
+  - tipo: representa
+    destino: gea
+    foco: [74, 16]
