@@ -10,3 +10,6 @@ relaciones:
   - tipo: representa
     destino: crono
     foco: [42, 22]
+  - tipo: representa
+    destino: crono-devora-a-sus-hijos
+    foco: [52, 37]

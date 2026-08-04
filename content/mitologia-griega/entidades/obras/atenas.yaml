@@ -1,0 +1,12 @@
+id: atenas
+tipo: obra
+nombre: Atenas
+resumen: >
+  PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6).
+imagen:
+  archivo: /img/gr/obras/atenas.jpg
+  origen: https://commons.wikimedia.org/wiki/File:Atene_antica_(Ricostruzione_grafica_degli_eruditi).jpg
+relaciones:
+  - tipo: representa
+    destino: atenas
+    foco: [27, 39]
