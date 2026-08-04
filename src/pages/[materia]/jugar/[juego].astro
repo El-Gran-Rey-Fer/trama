@@ -181,23 +181,41 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       return copia;
     }
 
+    // Astro solo marca con `data-astro-cid-*` los elementos que escribe él
+    // mismo al renderizar la plantilla; a un nodo creado aquí en cliente con
+    // document.createElement esa marca no le llega, y el <style> con scope
+    // de este componente (que exige esa marca en cada selector) no le
+    // aplica nada — se queda con el estilo por defecto del navegador. `crear`
+    // copia la marca de #tablero (que sí la lleva) a cada nodo que crea el
+    // juego, para que las clases de más abajo sí tengan efecto.
+    const ATRIBUTO_CID = tablero
+      ? [...tablero.attributes].find((a) => a.name.startsWith("data-astro-cid-"))?.name
+      : undefined;
+
+    function crear<K extends keyof HTMLElementTagNameMap>(
+      tag: K,
+      className?: string,
+    ): HTMLElementTagNameMap[K] {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      if (ATRIBUTO_CID) el.setAttribute(ATRIBUTO_CID, "");
+      return el;
+    }
+
     function crearPiezaEmparejar(
       texto: string,
       rol: "pregunta" | "respuesta",
       par: number,
       tipoRespuesta?: string,
     ) {
-      const boton = document.createElement("button");
+      const boton = crear("button", "pieza");
       boton.type = "button";
-      boton.className = "pieza";
       boton.dataset.par = String(par);
 
-      const eyebrow = document.createElement("span");
-      eyebrow.className = "eyebrow-pieza";
+      const eyebrow = crear("span", "eyebrow-pieza");
       eyebrow.textContent = rol === "pregunta" ? "PREGUNTA" : "RESPUESTA";
 
-      const cuerpo = document.createElement("span");
-      cuerpo.className = "texto-pieza";
+      const cuerpo = crear("span", "texto-pieza");
       cuerpo.textContent = texto;
 
       boton.append(eyebrow, cuerpo);
@@ -269,10 +287,8 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         }
       }
 
-      const columnaPreguntas = document.createElement("div");
-      columnaPreguntas.className = "columna-emparejar";
-      const columnaRespuestas = document.createElement("div");
-      columnaRespuestas.className = "columna-emparejar";
+      const columnaPreguntas = crear("div", "columna-emparejar");
+      const columnaRespuestas = crear("div", "columna-emparejar");
 
       for (const [i, t] of barajar(elegidas.map((t, i) => [i, t] as const))) {
         const boton = crearPiezaEmparejar(t.pregunta, "pregunta", i);
@@ -285,8 +301,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         columnaRespuestas.appendChild(boton);
       }
 
-      const contenedor = document.createElement("div");
-      contenedor.className = "rejilla-emparejar";
+      const contenedor = crear("div", "rejilla-emparejar");
       contenedor.append(columnaPreguntas, columnaRespuestas);
       tablero.appendChild(contenedor);
       actualizarProgreso();
@@ -311,30 +326,24 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         }
       }
 
-      const listaSlots = document.createElement("div");
-      listaSlots.className = "lista-ordenar";
+      const listaSlots = crear("div", "lista-ordenar");
       const filas: { fila: HTMLElement; texto: HTMLElement }[] = [];
       secuenciaCorrecta.forEach((_relato, i) => {
-        const fila = document.createElement("div");
-        fila.className = "fila-slot";
-        const badge = document.createElement("span");
-        badge.className = "badge-slot";
+        const fila = crear("div", "fila-slot");
+        const badge = crear("span", "badge-slot");
         badge.textContent = String(i + 1);
-        const texto = document.createElement("span");
-        texto.className = "texto-slot";
+        const texto = crear("span", "texto-slot");
         texto.textContent = "—";
         fila.append(badge, texto);
         listaSlots.appendChild(fila);
         filas.push({ fila, texto });
       });
 
-      const pool = document.createElement("div");
-      pool.className = "pool-ordenar";
+      const pool = crear("div", "pool-ordenar");
 
       for (const relato of barajar(relatosEra)) {
-        const boton = document.createElement("button");
+        const boton = crear("button", "pieza-ordenar");
         boton.type = "button";
-        boton.className = "pieza-ordenar";
         boton.textContent = relato.nombre;
         boton.dataset.id = relato.id;
         boton.addEventListener("click", () => {
@@ -391,28 +400,24 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         tablero.innerHTML = "";
         const pregunta = tanda[indice];
 
-        const tarjeta = document.createElement("p");
-        tarjeta.className = "tarjeta-pertenencia";
+        const tarjeta = crear("p", "tarjeta-pertenencia");
         tarjeta.textContent = pregunta.pregunta;
         tablero.appendChild(tarjeta);
 
-        const opciones = document.createElement("div");
-        opciones.className = "opciones-pertenencia";
+        const opciones = crear("div", "opciones-pertenencia");
         tablero.appendChild(opciones);
 
         for (const [texto, icono, valor] of [
           ["Sí", "✓", true],
           ["No", "✕", false],
         ] as const) {
-          const boton = document.createElement("button");
+          const boton = crear("button", "opcion-pertenencia");
           boton.type = "button";
-          boton.className = "opcion-pertenencia";
           boton.dataset.valor = String(valor);
 
-          const spanIcono = document.createElement("span");
-          spanIcono.className = "icono-pertenencia";
+          const spanIcono = crear("span", "icono-pertenencia");
           spanIcono.textContent = icono;
-          const spanTexto = document.createElement("span");
+          const spanTexto = crear("span");
           spanTexto.textContent = texto;
           boton.append(spanIcono, spanTexto);
 
@@ -434,14 +439,12 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
 
       function mostrarFeedback(correcta: boolean) {
         if (!tablero) return;
-        const feedback = document.createElement("p");
-        feedback.className = correcta ? "feedback acierto" : "feedback fallo";
+        const feedback = crear("p", correcta ? "feedback acierto" : "feedback fallo");
         feedback.textContent = correcta ? "¡Correcto!" : "No.";
         tablero.appendChild(feedback);
 
-        const siguienteBoton = document.createElement("button");
+        const siguienteBoton = crear("button", "siguiente-pregunta");
         siguienteBoton.type = "button";
-        siguienteBoton.className = "siguiente-pregunta";
         siguienteBoton.textContent = indice === tanda.length - 1 ? "Ver resultado" : "Siguiente";
         siguienteBoton.addEventListener("click", () => {
           indice += 1;
