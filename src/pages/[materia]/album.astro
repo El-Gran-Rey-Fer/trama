@@ -28,9 +28,9 @@ const relatoConjuntos = Object.fromEntries(
 const grafo = await construirGrafo(materiaId);
 // Las obras son entidades del grafo (`kind: "entidad"`) igual que un
 // personaje, pero no son coleccionables: decoran a otras entidades y a los
-// mitos, no se "encuentran" ni se "dominan". Sin este filtro caen como
-// casilla huérfana (sin retrato propio, solo su inicial) en "Sin capítulo
-// todavía" — decisión explícita: fuera del álbum y del índice sandbox.
+// mitos, no se "encuentran" ni se "dominan". Sin este filtro caerían como
+// casilla huérfana (sin retrato propio, solo su inicial) — decisión
+// explícita: fuera del álbum y del índice sandbox.
 const entidades = [...grafo.entidades.values()].filter(
 	(e) => e.kind === "entidad" && e.tipo !== "obra",
 );
@@ -44,11 +44,14 @@ function datosParticipante(e: (typeof entidades)[number]) {
 	};
 }
 
-// Sandbox: agrupado por `tipo` (orden del registro en materia.yaml, no
-// alfabético — es el orden en que ya se declaran ahí), alfabético dentro de
-// cada tipo. Sin `era`: las entidades no la llevan todavía (se añadirá
-// cuando el timeline lo pida, decisión ya cerrada); agrupar por era se deja
-// para cuando ese campo exista.
+// Agrupado por `tipo` (orden del registro en materia.yaml, no alfabético —
+// es el orden en que ya se declaran ahí), alfabético dentro de cada tipo.
+// Mismo agrupado en los dos modos — una entidad puede estar en varios
+// capítulos (participa en varios relatos), así que agrupar por capítulo le
+// daba cromos duplicados o un reparto arbitrario; por tipo cada entidad cae
+// en un solo grupo. Sin `era`: las entidades no la llevan todavía (se
+// añadirá cuando el timeline lo pida, decisión ya cerrada); agrupar por era
+// se deja para cuando ese campo exista.
 const ordenTipos = materiaEntry?.data.tipos ?? [];
 const tiposPresentes = [...new Set(entidades.map((e) => e.tipo))];
 tiposPresentes.sort((a, b) => {
@@ -59,43 +62,13 @@ tiposPresentes.sort((a, b) => {
 	if (ib === -1) return -1;
 	return ia - ib;
 });
-const gruposSandbox = tiposPresentes.map((tipo) => ({
+const gruposPorTipo = tiposPresentes.map((tipo) => ({
 	tipo,
 	entidades: entidades
 		.filter((e) => e.tipo === tipo)
 		.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
 		.map(datosParticipante),
 }));
-
-// Aventura: el álbum, agrupado por capítulo (mismo orden que ya calcula
-// cargarCapitulos: era, luego orden). Una entidad puede estar en el
-// `conjunto` de varios capítulos (participa en varios relatos) — el álbum le
-// da una sola casilla, en el primero al que pertenece, para que sea un
-// cromo por figura y no uno por aparición. Lo que no cae en ningún capítulo
-// va a un grupo aparte — no desaparece, porque toda entidad tiene ficha
-// desde el primer día.
-const idsAsignadas = new Set<string>();
-const gruposAlbum = capitulos
-	.map((c) => {
-		const miembros = entidades
-			.filter((e) => c.conjunto.has(e.id) && !idsAsignadas.has(e.id))
-			.map((e) => {
-				idsAsignadas.add(e.id);
-				return datosParticipante(e);
-			});
-		return { id: c.id, nombre: c.nombre, entidades: miembros };
-	})
-	.filter((g) => g.entidades.length > 0);
-const sinCapitulo = entidades
-	.filter((e) => !idsAsignadas.has(e.id))
-	.map(datosParticipante);
-if (sinCapitulo.length > 0) {
-	gruposAlbum.push({
-		id: "sin-capitulo",
-		nombre: "Sin capítulo todavía",
-		entidades: sinCapitulo,
-	});
-}
 
 const niveles = materiaEntry?.data.niveles ?? [];
 const totalCapitulos = capitulos.length;
@@ -105,13 +78,15 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
 
 <Base titulo={`Álbum — ${nombreMateria}`} materiaSlug={materia}>
   <section id="indice-sandbox" hidden>
-    <h2>Índice</h2>
+    <div class="cabecera-lista">
+      <h1 class="titulo-lista">Índice</h1>
+    </div>
     {
-      gruposSandbox.map((g) => (
-        <section>
-          <h3>{g.tipo}</h3>
+      gruposPorTipo.map((g) => (
+        <div class="grupo-album">
+          <h3 class="etiqueta-grupo-album">{g.tipo}</h3>
           <ParticipantesRelato participantes={g.entidades} materiaSlug={materia} />
-        </section>
+        </div>
       ))
     }
   </section>
@@ -122,9 +97,9 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
       <p id="nivel-cosmetico" class="subtitulo-lista"></p>
     </div>
     {
-      gruposAlbum.map((g) => (
+      gruposPorTipo.map((g) => (
         <div class="grupo-album">
-          <h3 class="etiqueta-grupo-album">{g.nombre}</h3>
+          <h3 class="etiqueta-grupo-album">{g.tipo}</h3>
           <ParticipantesRelato participantes={g.entidades} materiaSlug={materia} />
         </div>
       ))
