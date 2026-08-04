@@ -1,0 +1,113 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../../layouts/Base.astro";
+import { construirGrafo } from "../../../lib/grafo";
+import { contarAristasPorFamilia, FAMILIAS } from "../../../lib/grafoCompleto";
+import { rutaGrafoFamilia, rutaMateria } from "../../../lib/rutas";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	return materias.map((m) => ({
+		params: { materia: m.data.slug },
+		props: { materiaId: m.id },
+	}));
+}
+
+const { materia } = Astro.params;
+const { materiaId } = Astro.props;
+
+const grafo = await construirGrafo(materiaId);
+const conteos = contarAristasPorFamilia(grafo);
+---
+
+<Base titulo={`Grafo — ${materia}`} materiaSlug={materia}>
+  <div class="cabecera-lista">
+    <h1 class="titulo-lista">Explorar el grafo</h1>
+    <p class="subtitulo-lista">
+      Una familia de relación a la vez, no todo junto: con todos los tipos mezclados es
+      ilegible.
+    </p>
+  </div>
+
+  <ul class="lista-familias">
+    {
+      FAMILIAS.map((f) => {
+        const n = conteos.get(f.id) ?? 0;
+        return (
+          <li>
+            <a
+              href={rutaGrafoFamilia(materia, f.id)}
+              class="fila-familia"
+              aria-disabled={n === 0}
+            >
+              <span class="nombre-familia">{f.etiqueta}</span>
+              <span class="conteo-familia">{n === 0 ? "sin datos todavía" : `${n} relaciones`}</span>
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+
+  <p class="salir"><a href={rutaMateria(materia)}>&larr; Volver</a></p>
+</Base>
+
+<style>
+  .cabecera-lista {
+    padding: 20px 20px 4px;
+  }
+
+  .titulo-lista {
+    margin: 0;
+    font-size: 26px;
+    font-weight: var(--peso-titulo-grande);
+    font-family: var(--fuente-titulo);
+  }
+
+  .subtitulo-lista {
+    margin: 4px 0 0;
+    padding: 0 20px;
+    color: var(--color-texto-muted);
+    font-size: 14px;
+  }
+
+  .lista-familias {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 12px 20px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fila-familia {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 14px;
+    background: var(--color-tarjeta-fondo);
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    color: var(--color-texto);
+    text-decoration: none;
+  }
+
+  .nombre-familia {
+    font-weight: 700;
+  }
+
+  .conteo-familia {
+    font-size: 13px;
+    color: var(--color-texto-muted);
+  }
+
+  .salir {
+    padding: 8px 20px 24px;
+  }
+
+  .salir a {
+    color: var(--color-acento);
+    text-decoration: none;
+    font-weight: 600;
+  }
+</style>

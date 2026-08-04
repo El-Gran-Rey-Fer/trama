@@ -65,4 +65,17 @@
 	--color-tipo-mortal: oklch(55% 0.02 90);
 	--color-tipo-monstruo: oklch(40% 0.1 140);
 	--color-tipo-obra: oklch(55% 0.01 90);
+
+	/*
+	 * Color de arista por sub-tipo de relación, en las familias del grafo
+	 * completo donde distinguir el sub-tipo importa (acciones, objetos,
+	 * lugares — ver src/lib/grafoCompleto.ts). Paleta corta y reutilizable:
+	 * el sub-tipo concreto decide el índice, no el nombre.
+	 */
+	--color-arista-1: oklch(52% 0.19 25);
+	--color-arista-2: oklch(52% 0.14 150);
+	--color-arista-3: oklch(52% 0.16 260);
+	--color-arista-4: oklch(60% 0.16 85);
+	--color-arista-5: oklch(48% 0.16 320);
+	--color-arista-6: oklch(55% 0.12 200);
 }

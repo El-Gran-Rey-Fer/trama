@@ -6,7 +6,7 @@ import { cargarCapitulos } from "../../lib/capitulos";
 import { conjuntoDeRelato } from "../../lib/desbloqueo";
 import { construirGrafo } from "../../lib/grafo";
 import { resolverRetrato } from "../../lib/retrato";
-import { rutaCapitulo } from "../../lib/rutas";
+import { rutaCapitulo, rutaGrafo } from "../../lib/rutas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -166,6 +166,8 @@ const totalEntidades = entidades.length;
     }
   </section>
 
+  <p class="enlace-grafo"><a href={rutaGrafo(materia)}>Explorar el grafo completo &rsaquo;</a></p>
+
   <script
     is:inline
     type="application/json"
@@ -282,6 +284,17 @@ const totalEntidades = entidades.length;
     margin: 4px 0 0;
     font-size: 13px;
     color: var(--color-texto-muted);
+  }
+
+  .enlace-grafo {
+    padding: 4px 20px 24px;
+  }
+
+  .enlace-grafo a {
+    color: var(--color-acento);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 14px;
   }
 
   .grupo-era,
