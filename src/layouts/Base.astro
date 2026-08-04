@@ -76,18 +76,16 @@ function activa(id: string, href: string): boolean {
     />
   </head>
   <body class:list={{ "con-tabs": pestanas.length > 0 }}>
-    <header class="cabecera-global">
-      <button type="button" id="interruptor-modo" class="interruptor-modo">
-        Modo: <span class="valor-modo">aventura</span>
-      </button>
-    </header>
-    <slot />
-    <div id="minifichas"></div>
     {
       pestanas.length > 0 && (
-        <nav class="tabs" aria-label="Navegación principal">
+        <nav class="sidebar-escritorio" aria-label="Navegación principal">
+          <p class="marca-escritorio">trama</p>
           {pestanas.map((p) => (
-            <a href={p.href} aria-current={activa(p.id, p.href) ? "page" : undefined}>
+            <a
+              class="enlace-sidebar"
+              href={p.href}
+              aria-current={activa(p.id, p.href) ? "page" : undefined}
+            >
               <span aria-hidden="true">{p.icono}</span>
               <span>{p.etiqueta}</span>
             </a>
@@ -95,6 +93,29 @@ function activa(id: string, href: string): boolean {
         </nav>
       )
     }
+    <div class="columna-principal">
+      <header class="cabecera-global">
+        <button type="button" id="interruptor-modo" class="interruptor-modo">
+          Modo: <span class="valor-modo">aventura</span>
+        </button>
+      </header>
+      <main class="contenido">
+        <slot />
+      </main>
+      <div id="minifichas"></div>
+      {
+        pestanas.length > 0 && (
+          <nav class="tabs" aria-label="Navegación principal">
+            {pestanas.map((p) => (
+              <a href={p.href} aria-current={activa(p.id, p.href) ? "page" : undefined}>
+                <span aria-hidden="true">{p.icono}</span>
+                <span>{p.etiqueta}</span>
+              </a>
+            ))}
+          </nav>
+        )
+      }
+    </div>
   </body>
 </html>
 
@@ -160,6 +181,95 @@ function activa(id: string, href: string): boolean {
 
   .tabs a[aria-current="page"] span[aria-hidden] {
     filter: none;
+  }
+
+  /* Modo escritorio (proyecto Trama de Claude Design, handoff "modo
+     ordenador"): la tab bar inferior se sustituye por un sidebar fijo a la
+     izquierda, y el contenido deja de estirarse borde a borde — se centra
+     con un ancho máximo y aire a los dos lados. Un único breakpoint, sin
+     JS: las mismas `pestanas` se pintan dos veces (aquí y en `.tabs`) y
+     cada media consulta esconde la que no le toca. */
+  .sidebar-escritorio {
+    display: none;
+  }
+
+  .contenido {
+    display: block;
+  }
+
+  @media (min-width: 860px) {
+    body.con-tabs {
+      display: flex;
+      align-items: stretch;
+      padding-bottom: 0;
+    }
+
+    .sidebar-escritorio {
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 220px;
+      gap: 2px;
+      padding: 20px 0;
+      border-right: 1px solid var(--color-tarjeta-borde);
+      background: var(--color-fondo-stub);
+    }
+
+    .marca-escritorio {
+      margin: 0;
+      padding: 0 20px 20px;
+      font-family: var(--fuente-titulo);
+      font-weight: 800;
+      font-size: 20px;
+    }
+
+    .enlace-sidebar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-left: 3px solid transparent;
+      color: var(--color-texto);
+      text-decoration: none;
+      font-family: var(--fuente-titulo);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .enlace-sidebar span[aria-hidden] {
+      width: 20px;
+      font-size: 16px;
+      text-align: center;
+      filter: grayscale(1) opacity(0.7);
+    }
+
+    .enlace-sidebar[aria-current="page"] {
+      border-left-color: var(--color-acento);
+      background: color-mix(in srgb, var(--color-acento) 8%, transparent);
+      color: var(--color-acento);
+      font-weight: 700;
+    }
+
+    .enlace-sidebar[aria-current="page"] span[aria-hidden] {
+      filter: none;
+    }
+
+    .columna-principal {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .tabs {
+      display: none;
+    }
+
+    /* El margen izquierdo que faltaba: el contenido ya no se pega al borde
+       de la ventana, se centra con aire a los dos lados dentro de la
+       columna que deja el sidebar. */
+    .contenido {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
   }
 </style>
 
