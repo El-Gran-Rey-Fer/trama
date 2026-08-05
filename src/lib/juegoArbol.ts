@@ -17,6 +17,7 @@ export interface RondaArbol {
 		x: number;
 		y: number;
 		esHueco: boolean;
+		esRaiz: boolean;
 	}[];
 	enlaces: { desde: string; hasta: string }[];
 	ancho: number;
@@ -114,6 +115,7 @@ export async function generarRondasArbol(
 					x: n.x,
 					y: n.y,
 					esHueco: n.clave === nodo.clave,
+					esRaiz: n.esRaiz,
 				})),
 				enlaces: arbol.enlaces,
 				ancho: arbol.ancho,

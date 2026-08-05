@@ -28,9 +28,10 @@ export async function getStaticPaths() {
 
 const { materia, juego } = Astro.params;
 const { materiaId } = Astro.props;
-// El árbol genealógico (completar-arbol) todavía no lleva el rediseño del
-// handoff "Juegos y examen": conserva su cabecera propia (Salir / Volver a
-// Practicar) mientras el resto ya usa Reiniciar + panel "Jugar de nuevo".
+// El árbol genealógico (completar-arbol) conserva su propia cabecera y panel
+// de completado (Salir / Volver a Practicar) en vez de Reiniciar + "Jugar de
+// nuevo" — decisión a propósito del handoff "Diseño del juego del árbol",
+// no un rediseño pendiente.
 const esArbolCompletar = juego === "completar-arbol";
 
 const grafo = await construirGrafo(materiaId);
@@ -137,6 +138,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
   />
 
   <script>
+    import { crearCasilla } from "../../../lib/casillaCliente";
     import { tarjetasDisponibles } from "../../../lib/disponibilidad";
     import { leerEstado } from "../../../lib/estado";
     import type { RondaIdentificar } from "../../../lib/identificar";
@@ -486,8 +488,10 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     // Completar el árbol: mismo árbol de ego a profundidad 2 que la ficha
     // (/e/[id]/arbol/), con un nodo oculto y opciones para adivinarlo. Los
     // datos (posiciones, enlaces, distractores) ya vienen resueltos desde
-    // build (juegoArbol.ts); aquí solo se dibuja y se puntúa. Sin rediseño
-    // todavía: conserva su cabecera y su panel de completado propios.
+    // build (juegoArbol.ts); aquí solo se dibuja y se puntúa. Casillas y
+    // feedback en el mismo lenguaje visual que el resto (Casilla.astro vía
+    // crearCasilla, colores por tipo, feedback + "Siguiente" en vez de
+    // autoavanzar), rediseño "Diseño del juego del árbol".
     function iniciarCompletarArbol() {
       const disponibles = tarjetasDisponibles(
         rondasArbol,
@@ -514,10 +518,8 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         tablero.innerHTML = "";
         const ronda = tanda[indice];
 
-        const scroll = document.createElement("div");
-        scroll.className = "arbol-juego-scroll";
-        const lienzo = document.createElement("div");
-        lienzo.className = "arbol-juego-lienzo";
+        const scroll = crear("div", "arbol-juego-scroll");
+        const lienzo = crear("div", "arbol-juego-lienzo");
         lienzo.style.width = `${ronda.ancho}px`;
         lienzo.style.height = `${ronda.alto}px`;
 
@@ -542,59 +544,80 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         }
         lienzo.appendChild(svg);
 
-        let cajaHueco: HTMLElement | null = null;
+        let hueco: { nodo: RondaArbol["nodos"][number]; caja: HTMLElement; nombreEl: HTMLElement } | null = null;
         for (const nodo of ronda.nodos) {
-          const caja = document.createElement("div");
-          caja.className = "arbol-juego-nodo";
-          caja.style.left = `${nodo.x}px`;
-          caja.style.top = `${nodo.y}px`;
+          const envoltorio = crear("div", "arbol-juego-nodo");
+          envoltorio.style.left = `${nodo.x}px`;
+          envoltorio.style.top = `${nodo.y}px`;
+          if (nodo.esRaiz) envoltorio.classList.add("raiz");
+
+          const nombreEl = crear("span", "arbol-juego-nombre");
+          let caja: HTMLElement;
           if (nodo.esHueco) {
-            caja.classList.add("hueco");
+            caja = crear("div", "arbol-juego-hueco");
             caja.textContent = "?";
-            cajaHueco = caja;
+            nombreEl.textContent = "?";
+            hueco = { nodo, caja, nombreEl };
           } else {
-            caja.textContent = nodo.nombre;
+            caja = crearCasilla(nodo.nombre, nodo.tipo, null);
+            caja.classList.add("arbol-juego-casilla");
+            nombreEl.textContent = nodo.nombre;
           }
-          lienzo.appendChild(caja);
+          envoltorio.append(caja, nombreEl);
+          lienzo.appendChild(envoltorio);
         }
         scroll.appendChild(lienzo);
         tablero.appendChild(scroll);
 
-        const opciones = document.createElement("div");
-        opciones.className = "opciones-arbol";
+        const opciones = crear("div", "opciones-arbol");
         for (const opcion of ronda.opciones) {
-          const boton = document.createElement("button");
+          const boton = crear("button", "opcion-arbol");
           boton.type = "button";
-          boton.className = "opcion-arbol";
           boton.textContent = opcion.nombre;
           boton.addEventListener("click", () => {
-            for (const otro of opciones.querySelectorAll("button")) {
-              (otro as HTMLButtonElement).disabled = true;
-            }
             const correcta = opcion.id === ronda.correctaId;
-            boton.classList.add(correcta ? "acierto" : "fallo");
-            if (cajaHueco) {
-              cajaHueco.textContent = ronda.opciones.find(
-                (o) => o.id === ronda.correctaId,
-              )?.nombre ?? "?";
-              cajaHueco.classList.remove("hueco");
-              cajaHueco.classList.add(correcta ? "acierto" : "fallo");
-            }
             if (correcta) aciertos += 1;
-            setTimeout(() => {
-              indice += 1;
-              actualizarProgreso();
-              if (indice < tanda.length) {
-                mostrarRonda();
-              } else if (tablero) {
-                tablero.innerHTML = "";
-                completar(`¡Completado! ${aciertos} / ${tanda.length} aciertos.`);
+            for (const otro of opciones.querySelectorAll<HTMLButtonElement>("button")) {
+              otro.disabled = true;
+              if (otro.textContent === ronda.opciones.find((o) => o.id === ronda.correctaId)?.nombre) {
+                otro.classList.add("acierto");
+              } else if (otro === boton) {
+                otro.classList.add("fallo");
               }
-            }, 900);
+            }
+            if (hueco) {
+              const casillaRevelada = crearCasilla(hueco.nodo.nombre, hueco.nodo.tipo, null);
+              casillaRevelada.classList.add("arbol-juego-casilla", correcta ? "acierto" : "fallo");
+              hueco.caja.replaceWith(casillaRevelada);
+              hueco.nombreEl.textContent = hueco.nodo.nombre;
+            }
+            mostrarFeedback(correcta);
           });
           opciones.appendChild(boton);
         }
         tablero.appendChild(opciones);
+      }
+
+      function mostrarFeedback(correcta: boolean) {
+        if (!tablero) return;
+        const feedback = crear("p", correcta ? "feedback acierto" : "feedback fallo");
+        feedback.textContent = correcta ? "¡Correcto!" : "No.";
+        tablero.appendChild(feedback);
+
+        const siguienteBoton = crear("button", "siguiente-pregunta");
+        siguienteBoton.type = "button";
+        siguienteBoton.textContent = indice === tanda.length - 1 ? "Ver resultado" : "Siguiente";
+        siguienteBoton.addEventListener("click", () => {
+          indice += 1;
+          actualizarProgreso();
+          if (indice < tanda.length) {
+            mostrarRonda();
+          } else if (tablero) {
+            tablero.innerHTML = "";
+            completar(`${aciertos} / ${tanda.length} aciertos.`);
+          }
+        });
+        tablero.appendChild(siguienteBoton);
       }
 
       actualizarProgreso();
@@ -1110,37 +1133,53 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     .arbol-juego-nodo {
       position: absolute;
       transform: translate(-50%, -50%);
-      max-width: 84px;
-      padding: 6px 8px;
-      border: 1px solid var(--color-tarjeta-borde);
-      border-radius: var(--radio);
-      background: var(--color-tarjeta-fondo);
-      color: var(--color-texto);
-      font-size: 11px;
-      font-weight: 600;
-      text-align: center;
-      line-height: 1.2;
+      width: 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
     }
 
-    .arbol-juego-nodo.hueco {
-      border-style: dashed;
-      border-color: var(--color-acento);
+    .arbol-juego-casilla {
+      width: 64px;
+    }
+
+    .arbol-juego-nodo.raiz .arbol-juego-casilla,
+    .arbol-juego-nodo.raiz .arbol-juego-hueco {
+      outline: 2px solid var(--color-acento);
+      outline-offset: 2px;
+    }
+
+    .arbol-juego-nombre {
+      font-size: 11px;
+      text-align: center;
+      line-height: 1.2;
+      color: var(--color-texto);
+    }
+
+    .arbol-juego-hueco {
+      width: 64px;
+      aspect-ratio: 1;
+      border-radius: var(--radio);
+      border: 2px dashed var(--color-acento);
+      background: var(--color-tarjeta-fondo);
       color: var(--color-acento);
-      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
       font-weight: 700;
     }
 
-    .arbol-juego-nodo.acierto {
-      border-style: solid;
-      border-color: var(--color-acierto);
-      background: color-mix(in srgb, var(--color-acierto) 15%, var(--color-tarjeta-fondo));
+    .arbol-juego-casilla.acierto .casilla-inicial {
+      outline: 2px solid var(--color-acierto);
+      outline-offset: -2px;
       animation: destello-acierto 0.3s ease;
     }
 
-    .arbol-juego-nodo.fallo {
-      border-style: solid;
-      border-color: var(--color-fallo);
-      background: color-mix(in srgb, var(--color-fallo) 15%, var(--color-tarjeta-fondo));
+    .arbol-juego-casilla.fallo .casilla-inicial {
+      outline: 2px solid var(--color-fallo);
+      outline-offset: -2px;
       animation: agitar-fallo 0.3s ease;
     }
 
