@@ -42,16 +42,9 @@ export function rutaArbol(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/e/${id}/arbol/`;
 }
 
-// Súper-grafo por familia de relación (fuera del plan original, después de A7).
+// Árbol de parentesco (fuera del plan original, después de A7).
 export function rutaGrafo(materiaSlug: string): string {
 	return `${base()}${materiaSlug}/grafo/`;
-}
-
-export function rutaGrafoFamilia(
-	materiaSlug: string,
-	familiaId: string,
-): string {
-	return `${base()}${materiaSlug}/grafo/${familiaId}/`;
 }
 
 export function rutaJuego(materiaSlug: string, juego: string): string {

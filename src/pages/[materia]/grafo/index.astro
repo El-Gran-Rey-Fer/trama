@@ -1,9 +1,15 @@
 ---
 import { getCollection } from "astro:content";
+import Casilla from "../../../components/Casilla.astro";
 import Base from "../../../layouts/Base.astro";
 import { construirGrafo } from "../../../lib/grafo";
-import { contarAristasPorFamilia, FAMILIAS } from "../../../lib/grafoCompleto";
-import { rutaGrafoFamilia, rutaMateria } from "../../../lib/rutas";
+import {
+	colorDeTipo,
+	construirVistaFamilia,
+	FAMILIA_PARENTESCO,
+} from "../../../lib/grafoCompleto";
+import { resolverRetrato } from "../../../lib/retrato";
+import { rutaEntidad, rutaMateria } from "../../../lib/rutas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -17,87 +23,176 @@ const { materia } = Astro.params;
 const { materiaId } = Astro.props;
 
 const grafo = await construirGrafo(materiaId);
-const conteos = contarAristasPorFamilia(grafo);
+const vista = construirVistaFamilia(grafo);
+
+const retratos = new Map(
+	(vista?.nodos ?? []).map((n) => {
+		const e = grafo.entidades.get(n.id);
+		return [n.id, e ? resolverRetrato(grafo, e) : undefined];
+	}),
+);
+const posiciones = new Map((vista?.nodos ?? []).map((n) => [n.id, n]));
 ---
 
 <Base titulo={`Árbol — ${materia}`} materiaSlug={materia}>
-  <div class="cabecera-lista">
-    <h1 class="titulo-lista">Árbol</h1>
-    <p class="subtitulo-lista">
-      Una familia de relación a la vez, no todo junto: con todos los tipos mezclados es
-      ilegible.
-    </p>
-  </div>
+  <article class="grafo-pagina">
+    <header class="cabecera-juego">
+      <h1>Árbol genealógico</h1>
+      <p class="subtitulo">
+        {vista ? `${vista.enlaces.length} relaciones, ${vista.nodos.length} entidades` : "Sin datos todavía"}
+      </p>
+    </header>
 
-  <ul class="lista-familias">
     {
-      FAMILIAS.map((f) => {
-        const n = conteos.get(f.id) ?? 0;
-        return (
-          <li>
-            <a
-              href={rutaGrafoFamilia(materia, f.id)}
-              class="fila-familia"
-              aria-disabled={n === 0}
-            >
-              <span class="nombre-familia">{f.etiqueta}</span>
-              <span class="conteo-familia">{n === 0 ? "sin datos todavía" : `${n} relaciones`}</span>
-            </a>
-          </li>
-        );
-      })
+      FAMILIA_PARENTESCO.tiposCanonicos.length > 0 && (
+        <ul class="leyenda">
+          {FAMILIA_PARENTESCO.tiposCanonicos.map((tipo) => (
+            <li>
+              <span class="marca-color" style={`background:${colorDeTipo(FAMILIA_PARENTESCO, tipo)}`} />
+              {tipo.replaceAll("_", " ")}
+            </li>
+          ))}
+        </ul>
+      )
     }
-  </ul>
 
-  <p class="salir"><a href={rutaMateria(materia)}>&larr; Volver</a></p>
+    {
+      vista ? (
+        <div class="lienzo-scroll">
+          <div class="lienzo" style={`width:${vista.ancho}px; height:${vista.alto}px`}>
+            <svg
+              class="enlaces"
+              width={vista.ancho}
+              height={vista.alto}
+              viewBox={`0 0 ${vista.ancho} ${vista.alto}`}
+            >
+              {vista.enlaces.map((enlace) => {
+                const desde = posiciones.get(enlace.desde);
+                const hasta = posiciones.get(enlace.hasta);
+                if (!desde || !hasta) return null;
+                return (
+                  <line
+                    x1={desde.x}
+                    y1={desde.y}
+                    x2={hasta.x}
+                    y2={hasta.y}
+                    stroke={enlace.color}
+                  />
+                );
+              })}
+            </svg>
+            {vista.nodos.map((n) => (
+              <div class="nodo" style={`left:${n.x}px; top:${n.y}px`}>
+                <a href={rutaEntidad(materia, n.id)} class="nodo-enlace">
+                  <div class="nodo-casilla">
+                    <Casilla nombre={n.nombre} tipo={n.tipo} retrato={retratos.get(n.id)} />
+                  </div>
+                  <span class="nodo-nombre">{n.nombre}</span>
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p class="sin-datos">Todavía no hay relaciones de parentesco en el contenido.</p>
+      )
+    }
+
+    <p class="salir"><a href={rutaMateria(materia)}>&larr; Volver</a></p>
+  </article>
 </Base>
 
 <style>
-  .cabecera-lista {
-    padding: 20px 20px 4px;
+  .grafo-pagina {
+    padding-bottom: 24px;
   }
 
-  .titulo-lista {
+  .cabecera-juego {
+    padding: 12px 20px 0;
+  }
+
+  .cabecera-juego h1 {
     margin: 0;
-    font-size: 26px;
-    font-weight: var(--peso-titulo-grande);
-    font-family: var(--fuente-titulo);
+    font-size: 20px;
   }
 
-  .subtitulo-lista {
-    margin: 4px 0 0;
-    padding: 0 20px;
+  .subtitulo {
+    margin: 2px 0 0;
     color: var(--color-texto-muted);
     font-size: 14px;
   }
 
-  .lista-familias {
+  .leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin: 10px 0 0;
+    padding: 0 20px;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-texto-muted);
+  }
+
+  .leyenda li {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .marca-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+  }
+
+  .lienzo-scroll {
+    overflow-x: auto;
+    padding: 16px 20px 20px;
+  }
+
+  .lienzo {
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .enlaces {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+
+  .enlaces line {
+    stroke-width: 2;
+  }
+
+  .nodo {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 60px;
+  }
+
+  .nodo-enlace {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin: 12px 20px;
-    padding: 0;
-    list-style: none;
-  }
-
-  .fila-familia {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 14px;
-    background: var(--color-tarjeta-fondo);
-    border: 1px solid var(--color-tarjeta-borde);
-    border-radius: var(--radio);
-    color: var(--color-texto);
+    align-items: center;
+    gap: 4px;
     text-decoration: none;
+    color: var(--color-texto);
   }
 
-  .nombre-familia {
-    font-weight: 700;
+  .nodo-casilla {
+    width: 44px;
   }
 
-  .conteo-familia {
-    font-size: 13px;
+  .nodo-nombre {
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.15;
+  }
+
+  .sin-datos {
+    padding: 0 20px;
     color: var(--color-texto-muted);
   }
 

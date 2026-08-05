@@ -1,106 +1,30 @@
 import { TIPOS_GENEALOGIA } from "./arbol";
 import { type Arista, type Grafo, obtenerEntidad } from "./grafo";
 
-// Súper-grafo navegable (fuera del plan de imágenes y álbum original, pedido
-// después de A7). Deliberadamente NO es "el grafo entero de golpe" — el
-// propio calendario-construccion.md llama a eso una madeja ilegible. Se
-// filtra por familia semántica de relación: una vista por tema, nunca todos
-// los tipos a la vez.
-//
-// La agrupación es semántica, no por tamaño actual: `hermanos` es su propia
-// familia aunque hoy tenga pocas aristas, porque conceptualmente es un tema
-// distinto de `parentesco`, y el corpus va a crecer con más mitos.
+// Árbol de parentesco navegable (fuera del plan de imágenes y álbum
+// original, pedido después de A7). El propio calendario-construccion.md
+// avisa de que "el grafo entero" con 200 entidades es una madeja ilegible:
+// esta vista se queda solo con la familia de relación de parentesco
+// (padre/madre/hijo + hermanos), que es la que tiene layout resuelto y la
+// que de verdad se quiere consultar. El resto de familias de relación
+// (consortes, relatos, lugares, objetos, acciones, obras) se probaron y se
+// descartaron: no aportaban sobre lo que ya cuenta la ficha de cada
+// entidad.
 export interface FamiliaRelacion {
 	id: string;
 	etiqueta: string;
-	// Todos los nombres de tipo a filtrar en grafo.aristas, incluidas las
-	// inversas por si algún día se autorían directamente (defensivo, sin
-	// coste: un tipo que nunca aparece como original simplemente no filtra
-	// nada).
 	tipos: string[];
 	// Sub-tipos que se distinguen por color en esta familia, en el orden en
-	// que toman color de la paleta. Vacío cuando la familia es un solo tipo
-	// conceptual (aunque el registro lo parta en variantes con/sin madre).
+	// que toman color de la paleta.
 	tiposCanonicos: string[];
 }
 
-export const FAMILIAS: FamiliaRelacion[] = [
-	{
-		id: "parentesco",
-		etiqueta: "Parentesco",
-		tipos: TIPOS_GENEALOGIA,
-		tiposCanonicos: [],
-	},
-	{
-		id: "consortes",
-		etiqueta: "Consortes",
-		tipos: ["consorte_de"],
-		tiposCanonicos: [],
-	},
-	{
-		id: "hermanos",
-		etiqueta: "Hermanos",
-		tipos: ["hermano_de"],
-		tiposCanonicos: [],
-	},
-	{
-		id: "relatos",
-		etiqueta: "Relatos",
-		tipos: ["participa_en", "tiene_participante"],
-		tiposCanonicos: [],
-	},
-	{
-		id: "lugares",
-		etiqueta: "Lugares",
-		tipos: ["habitado_por", "habita", "ocurre_en", "escenario_de"],
-		tiposCanonicos: ["habitado_por", "ocurre_en"],
-	},
-	{
-		id: "objetos",
-		etiqueta: "Objetos",
-		tipos: [
-			"portado_por",
-			"porta",
-			"forjado_por",
-			"forja",
-			"construido_por",
-			"construye",
-		],
-		tiposCanonicos: ["portado_por", "forjado_por", "construido_por"],
-	},
-	{
-		id: "acciones",
-		etiqueta: "Acciones",
-		tipos: [
-			"devora_a",
-			"devorado_por",
-			"encierra_a",
-			"encerrado_por",
-			"rapta_a",
-			"raptado_por",
-			"castiga_a",
-			"castigado_por",
-			"mata_a",
-			"matado_por",
-			"mutila_a",
-			"mutilado_por",
-		],
-		tiposCanonicos: [
-			"devora_a",
-			"encierra_a",
-			"rapta_a",
-			"castiga_a",
-			"mata_a",
-			"mutila_a",
-		],
-	},
-	{
-		id: "obras",
-		etiqueta: "Obras",
-		tipos: ["representa", "representado_en"],
-		tiposCanonicos: [],
-	},
-];
+export const FAMILIA_PARENTESCO: FamiliaRelacion = {
+	id: "parentesco",
+	etiqueta: "Parentesco",
+	tipos: [...TIPOS_GENEALOGIA, "hermano_de"],
+	tiposCanonicos: ["hermano_de"],
+};
 
 const PALETA_ARISTA = [
 	"var(--color-arista-1)",
@@ -150,25 +74,29 @@ function agregar<K>(mapa: Map<K, string[]>, clave: K, valor: string) {
 	else mapa.set(clave, [valor]);
 }
 
-// Parentesco es la única familia con una dirección semántica clara
-// (generación), así que es la única que se dibuja por capas en vez de en
-// círculo. Capa = camino más largo desde una raíz (nadie declarado como su
-// padre/madre dentro de esta familia), no el campo `generacion` de la
+// Layout por capas (generación). Capa = camino más largo desde una raíz
+// (nadie declarado como su padre/madre), no el campo `generacion` de la
 // entidad: ese campo solo está relleno en 8 de 58 entidades y quedaría
 // vacío para el resto.
 function layoutJerarquico(
 	aristas: Arista[],
 ): Map<string, { x: number; y: number }> {
-	const padreHijo: { padre: string; hijo: string }[] = aristas.map((a) =>
-		a.relacion.tipo === "hijo_de"
-			? { padre: a.relacion.destino, hijo: a.origenId }
-			: { padre: a.origenId, hijo: a.relacion.destino },
-	);
+	// Solo padre_de/madre_de/hijo_de deciden la capa (la generación); los
+	// hermanos no tienen dirección jerárquica y ya caen en la misma capa que
+	// sus padres compartidos, así que se excluyen aquí y solo se dibujan como
+	// enlace en `construirVistaFamilia`.
+	const padreHijo: { padre: string; hijo: string }[] = aristas
+		.filter((a) => TIPOS_GENEALOGIA.includes(a.relacion.tipo))
+		.map((a) =>
+			a.relacion.tipo === "hijo_de"
+				? { padre: a.relacion.destino, hijo: a.origenId }
+				: { padre: a.origenId, hijo: a.relacion.destino },
+		);
 
 	const ids = new Set<string>();
-	for (const e of padreHijo) {
-		ids.add(e.padre);
-		ids.add(e.hijo);
+	for (const a of aristas) {
+		ids.add(a.origenId);
+		ids.add(a.relacion.destino);
 	}
 
 	const hijosDe = new Map<string, string[]>();
@@ -237,38 +165,8 @@ function layoutJerarquico(
 	return posiciones;
 }
 
-// El resto de familias no tiene una dirección natural (consortes,
-// participación en relatos, quién forja qué...): un círculo es determinista,
-// no depende de d3-force, y a esta escala (decenas de nodos por familia) se
-// lee mejor que amontonar todo a la izquierda.
-function layoutCircular(
-	ids: string[],
-	grafo: Grafo,
-): Map<string, { x: number; y: number }> {
-	const ordenados = [...ids].sort((a, b) => {
-		const na = obtenerEntidad(grafo, a)?.nombre ?? a;
-		const nb = obtenerEntidad(grafo, b)?.nombre ?? b;
-		return na.localeCompare(nb, "es");
-	});
-	const radio = Math.max(80, ordenados.length * 16);
-	const posiciones = new Map<string, { x: number; y: number }>();
-	ordenados.forEach((id, i) => {
-		const angulo = (2 * Math.PI * i) / ordenados.length - Math.PI / 2;
-		posiciones.set(id, {
-			x: radio + radio * Math.cos(angulo),
-			y: radio + radio * Math.sin(angulo),
-		});
-	});
-	return posiciones;
-}
-
-export function construirVistaFamilia(
-	grafo: Grafo,
-	familiaId: string,
-): VistaGrafo | undefined {
-	const familia = FAMILIAS.find((f) => f.id === familiaId);
-	if (!familia) return undefined;
-
+export function construirVistaFamilia(grafo: Grafo): VistaGrafo | undefined {
+	const familia = FAMILIA_PARENTESCO;
 	const aristas = grafo.aristas.filter((a) =>
 		familia.tipos.includes(a.relacion.tipo),
 	);
@@ -280,10 +178,7 @@ export function construirVistaFamilia(
 		ids.add(a.relacion.destino);
 	}
 
-	const posiciones =
-		familia.id === "parentesco"
-			? layoutJerarquico(aristas)
-			: layoutCircular([...ids], grafo);
+	const posiciones = layoutJerarquico(aristas);
 
 	const nodos: NodoGrafo[] = [...ids]
 		.map((id) => {
@@ -320,17 +215,4 @@ export function construirVistaFamilia(
 		ancho: maxX - minX + MARGEN * 2,
 		alto: maxY - minY + MARGEN * 2,
 	};
-}
-
-// Recuento de aristas por familia, para la landing (§ index.astro): cuántas
-// hay hoy, sin construir el layout completo de las que no se van a mostrar.
-export function contarAristasPorFamilia(grafo: Grafo): Map<string, number> {
-	const conteo = new Map<string, number>();
-	for (const familia of FAMILIAS) {
-		const n = grafo.aristas.filter((a) =>
-			familia.tipos.includes(a.relacion.tipo),
-		).length;
-		conteo.set(familia.id, n);
-	}
-	return conteo;
 }
