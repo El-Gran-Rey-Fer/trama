@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Curar relaciones — Trama</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #111;
+    color: #eee;
+  }
+  header {
+    padding: 12px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #1c1c1c;
+    border-bottom: 1px solid #333;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 15px;
+    margin: 0;
+    font-weight: 600;
+    color: #888;
+  }
+  select, input, textarea, button {
+    background: #1a1a1a;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  button {
+    background: #2a2a2a;
+    cursor: pointer;
+  }
+  button:hover { background: #333; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primario { border-color: #4a7dff; color: #9db8ff; }
+  button.descartar { border-color: #664; color: #d66; }
+  main {
+    padding: 16px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  #vacio { padding: 40px; text-align: center; color: #888; }
+  section {
+    margin-bottom: 22px;
+  }
+  section h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #999;
+    margin: 0 0 10px;
+    border-bottom: 1px solid #262626;
+    padding-bottom: 6px;
+  }
+  .tarjeta {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .tarjeta.faltante { border-color: #a06a1c; }
+  .tarjeta-cabecera {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .tarjeta-cabecera .id {
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    color: #888;
+  }
+  .tarjeta-cabecera .tipo {
+    font-size: 11px;
+    color: #7c9;
+    background: #16261a;
+    border-radius: 3px;
+    padding: 1px 6px;
+  }
+  .tarjeta-cabecera .aviso {
+    font-size: 11px;
+    color: #d9a441;
+  }
+  .relaciones-actuales {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    font-size: 12px;
+    color: #bbb;
+  }
+  .relaciones-actuales li { padding: 2px 0; }
+  .relaciones-actuales .destino { color: #eee; }
+  .relaciones-actuales .extra { color: #888; }
+  .fila {
+    display: flex;
+    gap: 8px;
+    margin: 6px 0;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .fila label {
+    width: 70px;
+    flex: none;
+    font-size: 12px;
+    color: #aaa;
+  }
+  .fila input, .fila select { flex: 1; min-width: 120px; }
+  .fila.checkbox label { width: auto; }
+  .sugerencia {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .sugerencia .texto { flex: 1; }
+  .sugerencia .relacion {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+  }
+  .sugerencia .fragmento {
+    font-size: 12px;
+    color: #999;
+    margin-top: 3px;
+  }
+  .sugerencia .botones { display: flex; gap: 6px; flex: none; }
+  #estado {
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  #estado.error { color: #e77; }
+  #estado.ok { color: #7c7; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Curar relaciones</h1>
+    <select id="selector-relato"><option value="">elige un relato…</option></select>
+  </header>
+
+  <main>
+    <p id="vacio">Elige un relato para repasar sus entidades citadas y sus relaciones.</p>
+
+    <div id="contenido" hidden>
+      <section id="seccion-entidades">
+        <h2>Entidades citadas</h2>
+        <div id="lista-entidades"></div>
+      </section>
+
+      <section id="seccion-sugerencias">
+        <h2>Sugerencias por lectura</h2>
+        <div id="lista-sugerencias"></div>
+        <p id="sin-sugerencias" hidden style="color:#888;font-size:13px;">
+          Sin sugerencias por lectura (o ya están todas declaradas).
+        </p>
+      </section>
+
+      <section id="seccion-manual">
+        <h2>Añadir relación a mano</h2>
+        <form id="form-manual">
+          <div class="fila">
+            <label for="m-origen">origen</label>
+            <input id="m-origen" list="datalist-ids" autocomplete="off" required />
+          </div>
+          <div class="fila">
+            <label for="m-tipo">tipo</label>
+            <input id="m-tipo" list="datalist-tipos-relacion" autocomplete="off" required />
+          </div>
+          <div class="fila">
+            <label for="m-destino">destino</label>
+            <input id="m-destino" list="datalist-ids" autocomplete="off" required />
+          </div>
+          <div class="fila">
+            <label for="m-fuente">fuente</label>
+            <input id="m-fuente" list="datalist-fuentes" autocomplete="off" placeholder="opcional" />
+          </div>
+          <div class="fila checkbox">
+            <label for="m-principal">principal</label>
+            <input id="m-principal" type="checkbox" checked style="flex:none;" />
+          </div>
+          <button class="primario" type="submit">Añadir relación</button>
+        </form>
+      </section>
+    </div>
+
+    <datalist id="datalist-ids"></datalist>
+    <datalist id="datalist-tipos-relacion"></datalist>
+    <datalist id="datalist-fuentes"></datalist>
+
+    <p id="estado"></p>
+  </main>
+
+  <script>
+    const elSelector = document.getElementById("selector-relato");
+    const elVacio = document.getElementById("vacio");
+    const elContenido = document.getElementById("contenido");
+    const elListaEntidades = document.getElementById("lista-entidades");
+    const elListaSugerencias = document.getElementById("lista-sugerencias");
+    const elSinSugerencias = document.getElementById("sin-sugerencias");
+    const elFormManual = document.getElementById("form-manual");
+    const elDatalistIds = document.getElementById("datalist-ids");
+    const elDatalistTiposRelacion = document.getElementById("datalist-tipos-relacion");
+    const elDatalistFuentes = document.getElementById("datalist-fuentes");
+    const elEstado = document.getElementById("estado");
+
+    let relatoActual = null;
+
+    function mostrarEstado(mensaje, clase) {
+      elEstado.textContent = mensaje;
+      elEstado.className = clase ?? "";
+    }
+
+    async function api(ruta, opciones) {
+      const respuesta = await fetch(ruta, opciones);
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw new Error(datos.error ?? `error ${respuesta.status}`);
+      return datos;
+    }
+
+    async function cargarSelector() {
+      const relatos = await api("/api/relatos");
+      for (const r of relatos) {
+        const opcion = document.createElement("option");
+        opcion.value = r.id;
+        opcion.textContent = `${r.nombre} (${r.id})`;
+        elSelector.appendChild(opcion);
+      }
+    }
+
+    function pintarEntidad(entidad, propuestas) {
+      const div = document.createElement("div");
+      div.className = `tarjeta${entidad.existe ? "" : " faltante"}`;
+
+      if (entidad.existe) {
+        const relaciones = (entidad.relaciones ?? [])
+          .map((r) => {
+            const extra = [
+              r.fuente && `fuente: ${r.fuente}`,
+              r.principal === false && "no principal",
+            ]
+              .filter(Boolean)
+              .join(", ");
+            return `<li>${r.tipo} → <span class="destino">${r.destino}</span>${
+              extra ? ` <span class="extra">(${extra})</span>` : ""
+            }</li>`;
+          })
+          .join("");
+        div.innerHTML = `
+          <div class="tarjeta-cabecera">
+            <strong>${entidad.nombre}</strong>
+            <span class="id">${entidad.id}</span>
+            <span class="tipo">${entidad.tipo}</span>
+          </div>
+          <ul class="relaciones-actuales">${
+            relaciones || '<li style="color:#666;">(sin relaciones declaradas)</li>'
+          }</ul>
+        `;
+        elListaEntidades.appendChild(div);
+        return;
+      }
+
+      const idFormulario = `alta-${entidad.id}`;
+      div.innerHTML = `
+        <div class="tarjeta-cabecera">
+          <span class="id">${entidad.id}</span>
+          <span class="aviso">citada en el relato, sin YAML propio</span>
+        </div>
+        <form id="${idFormulario}">
+          <div class="fila">
+            <label>nombre</label>
+            <input name="nombre" value="${propuestas[entidad.id] ?? ""}" required />
+          </div>
+          <div class="fila">
+            <label>tipo</label>
+            <select name="tipo" required>
+              <option value="" disabled selected>elige…</option>
+              ${(relatoActual.tipos ?? [])
+                .map((t) => `<option value="${t}">${t}</option>`)
+                .join("")}
+            </select>
+          </div>
+          <div class="fila">
+            <label>resumen</label>
+            <input name="resumen" placeholder="opcional, PENDIENTE si se omite" />
+          </div>
+          <button class="primario" type="submit">Dar de alta</button>
+        </form>
+      `;
+      elListaEntidades.appendChild(div);
+
+      div.querySelector("form").addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const datos = Object.fromEntries(new FormData(ev.target));
+        try {
+          await api("/api/entidad", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ id: entidad.id, ...datos }),
+          });
+          mostrarEstado(`Dado de alta ${entidad.id}`, "ok");
+          await cargarRelato(relatoActual.id);
+        } catch (error) {
+          mostrarEstado(error.message, "error");
+        }
+      });
+    }
+
+    function pintarSugerencia(sugerencia) {
+      const div = document.createElement("div");
+      div.className = "tarjeta sugerencia";
+      div.innerHTML = `
+        <div class="texto">
+          <div class="relacion">${sugerencia.origen} --${sugerencia.tipo}--> ${sugerencia.destino}</div>
+          <div class="fragmento">"…${sugerencia.fragmento}…"</div>
+        </div>
+        <div class="botones">
+          <button class="primario" type="button">Aceptar</button>
+          <button class="descartar" type="button">Descartar</button>
+        </div>
+      `;
+      const [aceptar, descartar] = div.querySelectorAll("button");
+      aceptar.addEventListener("click", async () => {
+        try {
+          await api("/api/relacion", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              origen: sugerencia.origen,
+              tipo: sugerencia.tipo,
+              destino: sugerencia.destino,
+            }),
+          });
+          mostrarEstado(
+            `Escrito: ${sugerencia.origen} --${sugerencia.tipo}--> ${sugerencia.destino}`,
+            "ok",
+          );
+          await cargarRelato(relatoActual.id);
+        } catch (error) {
+          mostrarEstado(error.message, "error");
+        }
+      });
+      descartar.addEventListener("click", () => div.remove());
+      elListaSugerencias.appendChild(div);
+    }
+
+    function pintarDatalists() {
+      elDatalistIds.innerHTML = relatoActual.idsConocidos
+        .map((id) => `<option value="${id}"></option>`)
+        .join("");
+      elDatalistTiposRelacion.innerHTML = relatoActual.tiposRelacion
+        .map((t) => `<option value="${t}"></option>`)
+        .join("");
+      elDatalistFuentes.innerHTML = relatoActual.fuentes
+        .map((f) => `<option value="${f}"></option>`)
+        .join("");
+    }
+
+    async function cargarRelato(id) {
+      relatoActual = await api(`/api/relato?id=${encodeURIComponent(id)}`);
+
+      elListaEntidades.innerHTML = "";
+      for (const entidad of relatoActual.entidades) {
+        pintarEntidad(entidad, relatoActual.propuestas);
+      }
+
+      elListaSugerencias.innerHTML = "";
+      elSinSugerencias.hidden = relatoActual.sugerencias.length > 0;
+      for (const sugerencia of relatoActual.sugerencias) {
+        pintarSugerencia(sugerencia);
+      }
+
+      pintarDatalists();
+      elVacio.hidden = true;
+      elContenido.hidden = false;
+    }
+
+    elSelector.addEventListener("change", () => {
+      if (!elSelector.value) return;
+      mostrarEstado("");
+      cargarRelato(elSelector.value).catch((error) => mostrarEstado(error.message, "error"));
+    });
+
+    elFormManual.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const origen = document.getElementById("m-origen").value.trim();
+      const tipo = document.getElementById("m-tipo").value.trim();
+      const destino = document.getElementById("m-destino").value.trim();
+      const fuente = document.getElementById("m-fuente").value.trim();
+      const principal = document.getElementById("m-principal").checked;
+      try {
+        await api("/api/relacion", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            origen,
+            tipo,
+            destino,
+            fuente: fuente || undefined,
+            principal: fuente ? principal : undefined,
+          }),
+        });
+        mostrarEstado(`Escrito: ${origen} --${tipo}--> ${destino}`, "ok");
+        elFormManual.reset();
+        document.getElementById("m-principal").checked = true;
+        await cargarRelato(relatoActual.id);
+      } catch (error) {
+        mostrarEstado(error.message, "error");
+      }
+    });
+
+    cargarSelector().catch((error) => mostrarEstado(error.message, "error"));
+  </script>
+</body>
+</html>

@@ -14,6 +14,7 @@ porque tienden a trabajar fichero a fichero (una obra, un relato).
 - [`pnpm nueva-obra <url-de-commons> <id>`](#pnpm-nueva-obra-url-de-commons-id)
 - [`pnpm curar-obra`](#pnpm-curar-obra)
 - [`pnpm relaciones-de-relato <id-de-relato>`](#pnpm-relaciones-de-relato-id-de-relato)
+- [`pnpm curar-relaciones`](#pnpm-curar-relaciones)
 - [`pnpm indice-de-contenido`](#pnpm-indice-de-contenido)
 - [`pnpm validar-contenido`](#pnpm-validar-contenido)
 - [Flujo sugerido en paralelo con Claude Code](#flujo-sugerido-en-paralelo-con-claude-code)
@@ -93,6 +94,25 @@ pnpm relaciones-de-relato tifon-contra-zeus
 
 Es interactivo (alta de entidades, `s/N` por cada sugerencia y luego relaciones a
 mano). No lo lances en background: necesita tu respuesta en la terminal.
+
+## `pnpm curar-relaciones`
+
+Levanta un servidor local (puerto **4323**) con una UI en el navegador
+(`scripts/curar-relaciones.html`): la misma tarea que `relaciones-de-relato`
+(alta de entidades citadas sin YAML, sugerencia por lectura, relaciones a mano)
+pero con formularios en vez de prompts de terminal. Elige un relato en el
+desplegable y las tres fases aparecen como secciones de la página; cada alta o
+relación se escribe en el YAML al confirmarla, igual que en el CLI.
+
+```bash
+pnpm curar-relaciones
+# abre http://localhost:4323 en el navegador
+```
+
+Se queda en primer plano ocupando la terminal mientras el servidor está vivo
+(mismo patrón que `curar-obra`); ábrelo en su propia pestaña/terminal para
+compaginarlo con una sesión de Claude Code. Para pararlo, Ctrl+C, o si quedó
+zombie: `pkill -f "node scripts/curar-relaciones.mjs"`.
 
 ## `pnpm indice-de-contenido`
 

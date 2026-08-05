@@ -15,7 +15,9 @@
 		"format": "biome format --write .",
 		"nueva-obra": "node scripts/nueva-obra.mjs",
 		"curar-obra": "node scripts/curar-obra.mjs",
-		"validar-contenido": "node scripts/validar-contenido.mjs"
+		"validar-contenido": "node scripts/validar-contenido.mjs",
+		"relaciones-de-relato": "node scripts/relaciones-de-relato.mjs",
+		"curar-relaciones": "node scripts/curar-relaciones.mjs"
 	},
 	"dependencies": {
 		"@astrojs/mdx": "^7.0.4",
