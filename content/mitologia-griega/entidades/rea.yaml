@@ -18,6 +18,10 @@ relaciones:
     destino: poseidon
   - tipo: madre_de
     destino: hades
+  - tipo: madre_de
+    destino: hestia
+  - tipo: madre_de
+    destino: demeter
   - tipo: consorte_de
     destino: crono
   - tipo: oculta_a
