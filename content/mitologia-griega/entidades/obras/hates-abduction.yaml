@@ -6,16 +6,22 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/hates-abduction.jpg
   origen: https://commons.wikimedia.org/wiki/File:Hates_abduction.jpg
+  ancho: 994
+  alto: 768
 relaciones:
   - tipo: representa
     destino: rapto-de-persefone
-    foco: [58, 34]
+    foco: [55, 37]
+    recorte: [47, 68]
   - tipo: representa
     destino: hades
-    foco: [54, 27]
+    foco: [54, 46]
+    recorte: [37, 50]
   - tipo: representa
     destino: persefone
-    foco: [53, 18]
+    foco: [57, 29]
+    recorte: [41, 56]
   - tipo: representa
     destino: demeter
-    foco: [9, 62]
+    foco: [19, 70]
+    recorte: [37, 58]

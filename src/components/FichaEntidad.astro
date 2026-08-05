@@ -1,7 +1,7 @@
 ---
 import { TIPOS_GENEALOGIA } from "../lib/arbol";
 import type { Entidad, TipoNodo } from "../lib/grafo";
-import type { RetratoResuelto } from "../lib/retrato";
+import { calcularAspectRatio, type RetratoResuelto } from "../lib/retrato";
 import {
 	rutaActivo,
 	rutaArbol,
@@ -41,6 +41,12 @@ const tieneGenealogia = entidad.relaciones.some((r) =>
 // retrato, recortado con el foco de la relación `representado_en`.
 const imagen = entidad.imagen ?? retrato?.imagen;
 const foco = entidad.imagen ? undefined : retrato?.foco;
+const recorte = entidad.imagen ? undefined : retrato?.recorte;
+// Sin recorte, la ficha usa su caja panorámica fija de siempre (retrocompatible).
+// Con recorte, adapta su alto al aspect-ratio real (una estatua vertical
+// necesita mucho más alto que ancho; ningún `foco` por sí solo lo resuelve).
+const aspectRatio =
+	foco && recorte && imagen ? calcularAspectRatio(imagen, recorte) : undefined;
 
 const esStub =
 	!imagen &&
@@ -55,11 +61,16 @@ const esStub =
 
   {
     imagen && (
-      <figure class="imagen">
+      <figure class={`imagen${aspectRatio ? " imagen--recorte" : ""}`}>
         <img
           src={rutaActivo(imagen.archivo)}
           alt={imagen.alt ?? entidad.nombre}
-          style={foco ? `object-position: ${foco[0]}% ${foco[1]}%` : undefined}
+          style={[
+            foco ? `object-position: ${foco[0]}% ${foco[1]}%` : "",
+            aspectRatio ? `aspect-ratio: ${aspectRatio}` : "",
+          ]
+            .filter(Boolean)
+            .join("; ") || undefined}
         />
         {
           (imagen.credito || imagen.origen) && (
@@ -181,6 +192,10 @@ const esStub =
     width: 100%;
     height: 220px;
     object-fit: cover;
+  }
+
+  .imagen--recorte img {
+    height: auto;
   }
 
   .imagen figcaption {
@@ -319,6 +334,45 @@ const esStub =
   .relaciones a {
     color: var(--color-texto);
     font-weight: 600;
+  }
+
+  /* Escritorio (proyecto Trama de Claude Design): con retrato, la ficha
+     pasa a imagen a la izquierda + texto a la derecha, en vez de imagen
+     arriba y texto debajo. Sin retrato no hay nada que poner en la
+     columna izquierda, así que se queda en una sola columna centrada. */
+  @media (min-width: 860px) {
+    .ficha:has(.imagen) {
+      max-width: 900px;
+      margin: 24px auto;
+      padding: 0 32px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      align-items: start;
+      gap: 32px;
+    }
+
+    .ficha:has(.imagen) .volver {
+      grid-column: 1 / -1;
+      padding: 0;
+    }
+
+    .ficha:has(.imagen) .imagen {
+      margin: 0;
+    }
+
+    .ficha:has(.imagen) .imagen img {
+      height: 100%;
+      min-height: 360px;
+      border-radius: var(--radio);
+    }
+
+    .ficha:has(.imagen) .cuerpo {
+      padding: 0;
+    }
+
+    .ficha:has(.imagen) .tipo {
+      margin-top: 0;
+    }
   }
 </style>
 

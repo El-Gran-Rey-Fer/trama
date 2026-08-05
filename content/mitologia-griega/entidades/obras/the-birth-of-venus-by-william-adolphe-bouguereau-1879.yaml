@@ -6,7 +6,10 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/the-birth-of-venus-by-william-adolphe-bouguereau-1879.jpg
   origen: https://commons.wikimedia.org/wiki/File:The_Birth_of_Venus_by_William-Adolphe_Bouguereau_(1879).jpg
+  ancho: 960
+  alto: 1355
 relaciones:
   - tipo: representa
     destino: afrodita
-    foco: [47, 34]
+    foco: [45, 56]
+    recorte: [48, 63]

@@ -69,6 +69,8 @@ function construirBloqueRelaciones(items) {
 			const lineas = [`  - tipo: ${item.tipo}`, `    destino: ${item.destino}`];
 			if (item.foco)
 				lineas.push(`    foco: [${item.foco[0]}, ${item.foco[1]}]`);
+			if (item.recorte)
+				lineas.push(`    recorte: [${item.recorte[0]}, ${item.recorte[1]}]`);
 			if (item.nota) lineas.push(`    nota: ${escaparEscalar(item.nota)}`);
 			return lineas.join("\n");
 		})
@@ -95,8 +97,13 @@ function parsearItemsRelaciones(bloqueTexto) {
 	});
 }
 
-function localizarBloqueRelaciones(lineas) {
-	const indiceClave = lineas.findIndex((l) => /^relaciones:\s*$/.test(l));
+// Localiza, dentro de `lineas`, el bloque indentado que cuelga de una clave de
+// nivel superior (p. ej. `relaciones:` o `imagen:`): el índice de esa línea y
+// el índice donde termina su contenido indentado.
+function localizarBloqueClave(lineas, clave) {
+	const indiceClave = lineas.findIndex((l) =>
+		new RegExp(`^${clave}:\\s*$`).test(l),
+	);
 	if (indiceClave === -1) return null;
 	let fin = indiceClave + 1;
 	while (
@@ -105,6 +112,35 @@ function localizarBloqueRelaciones(lineas) {
 	)
 		fin++;
 	return { indiceClave, fin };
+}
+
+function localizarBloqueRelaciones(lineas) {
+	return localizarBloqueClave(lineas, "relaciones");
+}
+
+// Añade, reemplaza o quita una línea `  <campo>: <valor>` dentro del bloque
+// `imagen:` de una obra ya existente. Mismo estilo regex-based que el resto
+// del fichero: no hay parser de YAML, se edita texto con cuidado.
+function escribirCampoImagen(yamlTexto, campo, valor) {
+	const lineas = yamlTexto.split("\n");
+	const bloque = localizarBloqueClave(lineas, "imagen");
+	if (!bloque) return yamlTexto; // toda obra tiene `imagen`; no debería pasar
+	const indiceRelativo = lineas
+		.slice(bloque.indiceClave + 1, bloque.fin)
+		.findIndex((l) => new RegExp(`^\\s{2}${campo}:`).test(l));
+	const indiceAbsoluto =
+		indiceRelativo === -1 ? -1 : bloque.indiceClave + 1 + indiceRelativo;
+	if (valor === null || valor === undefined) {
+		if (indiceAbsoluto === -1) return yamlTexto;
+		lineas.splice(indiceAbsoluto, 1);
+		return lineas.join("\n");
+	}
+	if (indiceAbsoluto !== -1) {
+		lineas[indiceAbsoluto] = `  ${campo}: ${valor}`;
+		return lineas.join("\n");
+	}
+	lineas.splice(bloque.fin, 0, `  ${campo}: ${valor}`);
+	return lineas.join("\n");
 }
 
 function parsearRelacionesRepresenta(yamlTexto) {
@@ -119,11 +155,15 @@ function parsearRelacionesRepresenta(yamlTexto) {
 		.map((item) => {
 			const destino = item.texto.match(/destino:\s*(.+)$/m)?.[1]?.trim();
 			const focoBruto = item.texto.match(/foco:\s*\[([^\]]+)\]/m)?.[1];
+			const recorteBruto = item.texto.match(/recorte:\s*\[([^\]]+)\]/m)?.[1];
 			const nota = item.texto.match(/nota:\s*(.+)$/m)?.[1]?.trim();
 			const foco = focoBruto
 				? focoBruto.split(",").map((n) => Number(n.trim()))
 				: undefined;
-			return { destino, foco, nota };
+			const recorte = recorteBruto
+				? recorteBruto.split(",").map((n) => Number(n.trim()))
+				: undefined;
+			return { destino, foco, recorte, nota };
 		});
 }
 
@@ -138,6 +178,7 @@ function reemplazarRelacionesRepresenta(yamlTexto, nuevasRepresenta) {
 			tipo: "representa",
 			destino: r.destino,
 			foco: r.foco,
+			recorte: r.recorte,
 			nota: r.nota,
 		})),
 	);
@@ -190,6 +231,8 @@ function construirYamlObraNueva({
 	resumen,
 	fuente,
 	archivo,
+	ancho,
+	alto,
 	relaciones,
 }) {
 	const resumenLineas = (
@@ -209,11 +252,14 @@ function construirYamlObraNueva({
 		`  archivo: ${archivo}`,
 		`  origen: ${escaparEscalar(fuente)}`,
 	];
+	if (ancho) lineas.push(`  ancho: ${ancho}`);
+	if (alto) lineas.push(`  alto: ${alto}`);
 	const bloqueRelaciones = construirBloqueRelaciones(
 		relaciones.map((r) => ({
 			tipo: "representa",
 			destino: r.destino,
 			foco: r.foco,
+			recorte: r.recorte,
 			nota: r.nota,
 		})),
 	);
@@ -237,8 +283,14 @@ async function listarEntidades() {
 			const id = texto.match(/^id:\s*(.+)$/m)?.[1]?.trim();
 			const nombre = texto.match(/^nombre:\s*(.+)$/m)?.[1]?.trim();
 			const tipo = texto.match(/^tipo:\s*(.+)$/m)?.[1]?.trim();
+			const retrato = texto.match(/^retrato:\s*(.+)$/m)?.[1]?.trim();
 			if (id && nombre)
-				resultado.push({ id, nombre: nombre.replace(/^"|"$/g, ""), tipo });
+				resultado.push({
+					id,
+					nombre: nombre.replace(/^"|"$/g, ""),
+					tipo,
+					retrato,
+				});
 		}
 	}
 	resultado.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
@@ -378,6 +430,8 @@ async function manejarNuevaObra(req, res) {
 		resumen: cuerpo.resumen,
 		fuente,
 		archivo: `/img/gr/obras/${id}.${extension}`,
+		ancho: Number(cuerpo.imagenAncho) || undefined,
+		alto: Number(cuerpo.imagenAlto) || undefined,
 		relaciones: Array.isArray(cuerpo.relaciones) ? cuerpo.relaciones : [],
 	});
 	await writeFile(rutaYaml, yaml);
@@ -395,8 +449,69 @@ async function manejarGuardarRelaciones(req, res) {
 		});
 
 	const relaciones = Array.isArray(cuerpo.relaciones) ? cuerpo.relaciones : [];
-	const yamlNuevo = reemplazarRelacionesRepresenta(yamlActual, relaciones);
+	let yamlNuevo = reemplazarRelacionesRepresenta(yamlActual, relaciones);
+	// Autocompleta las dimensiones naturales de la imagen la primera vez que se
+	// reabre y guarda una obra ya existente (curada antes de este campo).
+	if (cuerpo.imagenAncho)
+		yamlNuevo = escribirCampoImagen(
+			yamlNuevo,
+			"ancho",
+			Number(cuerpo.imagenAncho),
+		);
+	if (cuerpo.imagenAlto)
+		yamlNuevo = escribirCampoImagen(
+			yamlNuevo,
+			"alto",
+			Number(cuerpo.imagenAlto),
+		);
 	await writeFile(rutaYaml, yamlNuevo);
+	responderJson(res, 200, { ok: true });
+}
+
+// Localiza el fichero de una entidad "normal" (no obra) por id, probando las
+// dos carpetas donde puede vivir. Los relatos viven en CARPETA_RELATOS como
+// `.mdx` y no tienen campo `retrato`; no se prueban aquí a propósito.
+async function rutaEntidad(id) {
+	for (const carpeta of [CARPETA_ENTIDADES, CARPETA_ENTIDADES_OBRAS]) {
+		const ruta = path.join(carpeta, `${id}.yaml`);
+		const existe = await readFile(ruta, "utf8")
+			.then(() => true)
+			.catch(() => false);
+		if (existe) return ruta;
+	}
+	return null;
+}
+
+// Añade, reemplaza o quita la línea `retrato: <id-obra>` (campo escalar de
+// nivel superior, no una lista) en el YAML de una entidad.
+function escribirCampoRetrato(yamlTexto, obraId) {
+	const lineas = yamlTexto.split("\n");
+	const indice = lineas.findIndex((l) => /^retrato:\s*.*$/.test(l));
+	if (obraId === null) {
+		if (indice === -1) return yamlTexto;
+		lineas.splice(indice, 1);
+		return lineas.join("\n");
+	}
+	if (indice !== -1) {
+		lineas[indice] = `retrato: ${obraId}`;
+		return lineas.join("\n");
+	}
+	const texto = lineas.join("\n").replace(/\n*$/, "");
+	return `${texto}\nretrato: ${obraId}\n`;
+}
+
+async function manejarRetrato(req, res) {
+	const cuerpo = await leerCuerpoJson(req);
+	const destino = String(cuerpo.destino || "").trim();
+	const obraId =
+		cuerpo.obraId === null ? null : String(cuerpo.obraId || "").trim();
+	const ruta = await rutaEntidad(destino);
+	if (!ruta)
+		return responderJson(res, 404, {
+			error: `no existe entidades/${destino}.yaml (¿es un relato?)`,
+		});
+	const yamlActual = await readFile(ruta, "utf8");
+	await writeFile(ruta, escribirCampoRetrato(yamlActual, obraId));
 	responderJson(res, 200, { ok: true });
 }
 
@@ -443,6 +558,9 @@ const servidor = http.createServer(async (req, res) => {
 		}
 		if (req.method === "POST" && url.pathname === "/api/relaciones") {
 			return await manejarGuardarRelaciones(req, res);
+		}
+		if (req.method === "POST" && url.pathname === "/api/retrato") {
+			return await manejarRetrato(req, res);
 		}
 		if (req.method === "GET" && url.pathname.startsWith("/img/gr/")) {
 			const rutaRelativa = decodeURIComponent(

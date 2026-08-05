@@ -6,16 +6,22 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/castration-of-uranus-after-polidoro-da-caravagg.jpg
   origen: https://mitosymas.com/lunas-de-saturno-titan/
+  ancho: 982
+  alto: 900
 relaciones:
   - tipo: representa
     destino: castracion-de-urano
-    foco: [36, 56]
-  - tipo: representa
-    destino: urano
-    foco: [28, 26]
-  - tipo: representa
-    destino: crono
-    foco: [51, 33]
+    foco: [52, 50]
+    recorte: [86, 70]
   - tipo: representa
     destino: gea
-    foco: [74, 16]
+    foco: [75, 23]
+    recorte: [48, 37]
+  - tipo: representa
+    destino: crono
+    foco: [64, 56]
+    recorte: [61, 66]
+  - tipo: representa
+    destino: urano
+    foco: [33, 57]
+    recorte: [60, 86]

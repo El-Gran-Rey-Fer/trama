@@ -6,7 +6,10 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/zeus-hercules-97.webp
   origen: https://disney.fandom.com/wiki/Zeus_(Hercules)?file=Zeus_Hercules_97.jpg
+  ancho: 833
+  alto: 981
 relaciones:
   - tipo: representa
     destino: zeus
-    foco: [50, 15]
+    foco: [51, 27]
+    recorte: [87, 52]

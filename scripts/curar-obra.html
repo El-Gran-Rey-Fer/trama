@@ -170,6 +170,15 @@
   }
   #relaciones-lista .destino { flex: 1; }
   #relaciones-lista .foco { color: #888; font-size: 11px; font-family: ui-monospace, monospace; }
+  #relaciones-lista .principal {
+    border: none;
+    background: none;
+    color: #ffb84d;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 14px;
+  }
+  #relaciones-lista .principal:disabled { opacity: .4; cursor: default; }
   #relaciones-lista .quitar {
     border: none;
     background: none;
@@ -289,8 +298,13 @@
     let modo = null; // 'nueva' | 'editar'
     let idActual = "";
     let origenImagen = null; // { modo: 'subida', archivo } | { modo: 'repo', ruta }
-    let relaciones = []; // { destino, nombre, foco?, nota? }
-    let entidadPendiente = null; // { destino, nombre } — esperando clic en el lienzo
+    let relaciones = []; // { destino, nombre, foco?, recorte?, nota? }
+    let entidadPendiente = null; // { destino, nombre } — esperando clic/arrastre en el lienzo
+    let arrastre = null; // { x0, y0 } en px de lienzo — inicio de un arrastre en curso
+    let previewFoco = null; // [x, y] en % — punto bajo el cursor mientras se arrastra
+    let previewRecorte = null; // [ancho, alto] en % — tamaño del arrastre en curso
+    let indiceHover = null; // índice en `relaciones` sobre el que está el ratón en la lista
+    const UMBRAL_ARRASTRE_PX = 5; // por debajo de esto, se trata como un click simple (solo foco)
 
     fetch("/api/entidades").then((r) => r.json()).then((datos) => { entidades = datos; });
 
@@ -322,6 +336,23 @@
       elFicha.hidden = false;
     }
 
+    // Rectángulo-guía de un recorte (foco = centro, recorte = ancho/alto, ambos
+    // en % de la imagen): reemplaza el punto suelto por el recorte real que se
+    // fijó a mano, para que se vea de un vistazo cuánto queda visible, no solo
+    // dónde está el centro.
+    function dibujarRecorte([fxPorc, fyPorc], [wPorc, hPorc], color) {
+      const w = (wPorc / 100) * elLienzo.width;
+      const h = (hPorc / 100) * elLienzo.height;
+      const x = (fxPorc / 100) * elLienzo.width - w / 2;
+      const y = (fyPorc / 100) * elLienzo.height - h / 2;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(2, elLienzo.width * 0.003);
+      ctx.setLineDash([Math.max(6, elLienzo.width * 0.006)]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.restore();
+    }
+
     function redibujar() {
       const img = elLienzo._img;
       if (!img) return;
@@ -329,6 +360,9 @@
       ctx.drawImage(img, 0, 0);
       relaciones.forEach((r, i) => {
         if (!r.foco) return;
+        if (r.recorte) {
+          dibujarRecorte(r.foco, r.recorte, i === indiceHover ? "#ffb84d" : "#4a7dff");
+        }
         const x = (r.foco[0] / 100) * elLienzo.width;
         const y = (r.foco[1] / 100) * elLienzo.height;
         ctx.beginPath();
@@ -342,6 +376,9 @@
         ctx.font = `${Math.max(12, elLienzo.width * 0.014)}px sans-serif`;
         ctx.fillText(String(i + 1), x + 8, y - 8);
       });
+      if (entidadPendiente && previewFoco && previewRecorte) {
+        dibujarRecorte(previewFoco, previewRecorte, "#7cff4a");
+      }
     }
 
     function reiniciarFicha({ modoNuevo, id, nombre, archivoNombre, relacionesIniciales }) {
@@ -349,6 +386,10 @@
       idActual = id;
       relaciones = relacionesIniciales || [];
       entidadPendiente = null;
+      arrastre = null;
+      previewFoco = null;
+      previewRecorte = null;
+      indiceHover = null;
       elPendiente.textContent = "";
       elEstado.textContent = "";
       elEstado.className = "";
@@ -441,6 +482,7 @@
           destino: r.destino,
           nombre: entidades.find((e) => e.id === r.destino)?.nombre || r.destino,
           foco: r.foco,
+          recorte: r.recorte,
           nota: r.nota,
         }));
         reiniciarFicha({ modoNuevo: "editar", id: item.id, nombre: entidad?.nombre, relacionesIniciales });
@@ -452,17 +494,83 @@
       elRepoPanel.hidden = true;
     }
 
-    // --- marcar foco en el lienzo ---
-    elLienzo.addEventListener("click", (evento) => {
+    // --- marcar foco (clic) o foco+recorte (arrastre) en el lienzo ---
+    elLienzo.addEventListener("mousedown", (evento) => {
       if (!entidadPendiente) {
         elPendiente.textContent = "Elige primero una entidad en el buscador de abajo.";
         return;
       }
       const rect = elLienzo.getBoundingClientRect();
-      const xPorc = ((evento.clientX - rect.left) / rect.width) * 100;
-      const yPorc = ((evento.clientY - rect.top) / rect.height) * 100;
-      relaciones.push({ ...entidadPendiente, foco: [Math.round(xPorc), Math.round(yPorc)] });
+      arrastre = { x0: evento.clientX - rect.left, y0: evento.clientY - rect.top };
+    });
+
+    elLienzo.addEventListener("mousemove", (evento) => {
+      if (!entidadPendiente) return;
+      const rect = elLienzo.getBoundingClientRect();
+      const xPx = evento.clientX - rect.left;
+      const yPx = evento.clientY - rect.top;
+      if (arrastre) {
+        const x0 = Math.min(arrastre.x0, xPx);
+        const y0 = Math.min(arrastre.y0, yPx);
+        const anchoPx = Math.abs(xPx - arrastre.x0);
+        const altoPx = Math.abs(yPx - arrastre.y0);
+        previewFoco = [
+          ((x0 + anchoPx / 2) / rect.width) * 100,
+          ((y0 + altoPx / 2) / rect.height) * 100,
+        ];
+        previewRecorte =
+          anchoPx > UMBRAL_ARRASTRE_PX || altoPx > UMBRAL_ARRASTRE_PX
+            ? [(anchoPx / rect.width) * 100, (altoPx / rect.height) * 100]
+            : null;
+      } else {
+        previewFoco = [(xPx / rect.width) * 100, (yPx / rect.height) * 100];
+        previewRecorte = null;
+      }
+      redibujar();
+    });
+
+    elLienzo.addEventListener("mouseleave", () => {
+      if (arrastre) return; // seguir viendo el recorte mientras se arrastra fuera del lienzo
+      previewFoco = null;
+      previewRecorte = null;
+      redibujar();
+    });
+
+    elLienzo.addEventListener("mouseup", (evento) => {
+      if (!entidadPendiente || !arrastre) {
+        arrastre = null;
+        return;
+      }
+      const rect = elLienzo.getBoundingClientRect();
+      const xPx = evento.clientX - rect.left;
+      const yPx = evento.clientY - rect.top;
+      const anchoPx = Math.abs(xPx - arrastre.x0);
+      const altoPx = Math.abs(yPx - arrastre.y0);
+      const esArrastre = anchoPx > UMBRAL_ARRASTRE_PX || altoPx > UMBRAL_ARRASTRE_PX;
+      let foco;
+      let recorte;
+      if (esArrastre) {
+        const x0 = Math.min(arrastre.x0, xPx);
+        const y0 = Math.min(arrastre.y0, yPx);
+        foco = [
+          Math.round(((x0 + anchoPx / 2) / rect.width) * 100),
+          Math.round(((y0 + altoPx / 2) / rect.height) * 100),
+        ];
+        recorte = [
+          Math.round((anchoPx / rect.width) * 100),
+          Math.round((altoPx / rect.height) * 100),
+        ];
+      } else {
+        foco = [
+          Math.round((xPx / rect.width) * 100),
+          Math.round((yPx / rect.height) * 100),
+        ];
+      }
+      relaciones.push({ ...entidadPendiente, foco, recorte });
       entidadPendiente = null;
+      arrastre = null;
+      previewFoco = null;
+      previewRecorte = null;
       elPendiente.textContent = "";
       elBuscador.value = "";
       renderRelaciones();
@@ -491,7 +599,7 @@
         li.addEventListener("mousedown", (ev) => {
           ev.preventDefault();
           entidadPendiente = { destino: e.id, nombre: e.nombre };
-          elPendiente.textContent = `Clica la imagen para fijar el foco de «${e.nombre}», o pulsa "sin foco".`;
+          elPendiente.textContent = `Clica la imagen para fijar solo el foco de «${e.nombre}», arrastra para fijar también un recorte, o pulsa "sin foco".`;
           elBuscadorResultados.hidden = true;
           elBuscador.value = "";
         });
@@ -503,7 +611,11 @@
     document.addEventListener("keydown", (evento) => {
       if (evento.key === "Escape" && entidadPendiente) {
         entidadPendiente = null;
+        arrastre = null;
+        previewFoco = null;
+        previewRecorte = null;
         elPendiente.textContent = "";
+        redibujar();
       }
     });
 
@@ -512,19 +624,25 @@
       if (evento.target.dataset.accion === "sin-foco" && entidadPendiente) {
         relaciones.push({ ...entidadPendiente });
         entidadPendiente = null;
+        arrastre = null;
+        previewFoco = null;
+        previewRecorte = null;
         elPendiente.textContent = "";
         renderRelaciones();
+        redibujar();
       }
     });
 
     function renderRelaciones() {
       // el botón "sin foco" vive dentro de elPendiente cuando hay algo pendiente
       if (entidadPendiente) {
-        elPendiente.innerHTML = `Clica la imagen para fijar el foco de «${entidadPendiente.nombre}», o <button type="button" data-accion="sin-foco">márcala sin foco</button>.`;
+        elPendiente.innerHTML = `Clica la imagen para fijar solo el foco de «${entidadPendiente.nombre}», arrastra para fijar también un recorte, o <button type="button" data-accion="sin-foco">márcala sin foco</button>.`;
       }
       elRelacionesLista.innerHTML = "";
       relaciones.forEach((r, i) => {
         const li = document.createElement("li");
+        li.addEventListener("mouseenter", () => { indiceHover = i; redibujar(); });
+        li.addEventListener("mouseleave", () => { indiceHover = null; redibujar(); });
         const num = document.createElement("span");
         num.className = "num";
         num.textContent = r.foco ? String(i + 1) : "–";
@@ -534,7 +652,50 @@
         destino.textContent = r.nombre || r.destino;
         const foco = document.createElement("span");
         foco.className = "foco";
-        foco.textContent = r.foco ? `[${r.foco[0]}, ${r.foco[1]}]` : "sin foco";
+        foco.textContent = r.foco
+          ? `[${r.foco[0]}, ${r.foco[1]}]${r.recorte ? ` · ${r.recorte[0]}×${r.recorte[1]}` : ""}`
+          : "sin foco";
+
+        // Retrato principal: solo tiene sentido sobre una entidad "normal" (no
+        // un relato, que no tiene campo `retrato`) y una vez la obra ya está
+        // guardada en disco (si no, `resolverRetrato` no la encontraría entre
+        // sus candidatas hasta el primer guardado — se refleja igual en cuanto
+        // se guarde, no bloquea nada, solo no tiene efecto inmediato antes).
+        const entidadDestino = entidades.find((e) => e.id === r.destino);
+        let principal = null;
+        if (entidadDestino && entidadDestino.tipo !== "relato") {
+          principal = document.createElement("button");
+          principal.className = "principal";
+          principal.type = "button";
+          const yaEsPrincipal = entidadDestino.retrato === idActual;
+          principal.textContent = yaEsPrincipal ? "★" : "☆";
+          principal.title = yaEsPrincipal
+            ? `Retrato principal de «${entidadDestino.nombre}» — clic para quitarlo`
+            : `Usar como retrato principal de «${entidadDestino.nombre}»`;
+          if (modo !== "editar") {
+            principal.disabled = true;
+            principal.title = "Guarda la obra primero";
+          }
+          principal.addEventListener("click", async () => {
+            principal.disabled = true;
+            const obraId = yaEsPrincipal ? null : idActual;
+            try {
+              const resp = await fetch("/api/retrato", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ destino: r.destino, obraId }),
+              });
+              if (!resp.ok) throw new Error((await resp.json()).error || "fallo al guardar");
+              entidadDestino.retrato = obraId;
+              renderRelaciones();
+            } catch (error) {
+              elEstado.textContent = error.message;
+              elEstado.className = "error";
+              principal.disabled = false;
+            }
+          });
+        }
+
         const quitar = document.createElement("button");
         quitar.className = "quitar";
         quitar.type = "button";
@@ -544,7 +705,9 @@
           renderRelaciones();
           redibujar();
         });
-        li.append(num, destino, foco, quitar);
+        li.append(num, destino, foco);
+        if (principal) li.append(principal);
+        li.append(quitar);
         elRelacionesLista.appendChild(li);
       });
     }
@@ -575,7 +738,9 @@
             id,
             nombre: campo("c-nombre").value.trim(),
             fuente,
-            relaciones: relaciones.map((r) => ({ destino: r.destino, foco: r.foco, nota: r.nota })),
+            relaciones: relaciones.map((r) => ({ destino: r.destino, foco: r.foco, recorte: r.recorte, nota: r.nota })),
+            imagenAncho: elLienzo.width,
+            imagenAlto: elLienzo.height,
             origenImagen:
               origenImagen.modo === "subida"
                 ? { modo: "subida", nombreArchivo: origenImagen.archivo.name, datosBase64: await archivoALeerComoBase64(origenImagen.archivo) }
@@ -597,7 +762,9 @@
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               id: idActual,
-              relaciones: relaciones.map((r) => ({ destino: r.destino, foco: r.foco, nota: r.nota })),
+              relaciones: relaciones.map((r) => ({ destino: r.destino, foco: r.foco, recorte: r.recorte, nota: r.nota })),
+              imagenAncho: elLienzo.width,
+              imagenAlto: elLienzo.height,
             }),
           });
           const datos = await respuesta.json();

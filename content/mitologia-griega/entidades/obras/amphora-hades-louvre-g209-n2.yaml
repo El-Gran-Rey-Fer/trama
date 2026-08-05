@@ -6,10 +6,13 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/amphora-hades-louvre-g209-n2.jpg
   origen: https://commons.wikimedia.org/wiki/File:Amphora_Hades_Louvre_G209_n2.jpg
+  ancho: 960
+  alto: 720
 relaciones:
   - tipo: representa
     destino: hades
-    foco: [67, 33]
+    foco: [98, 84]
   - tipo: representa
     destino: persefone
-    foco: [22, 25]
+    foco: [26, 45]
+    recorte: [43, 75]

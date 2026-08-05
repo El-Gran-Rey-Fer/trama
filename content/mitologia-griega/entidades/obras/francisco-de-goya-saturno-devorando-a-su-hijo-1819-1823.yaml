@@ -6,10 +6,13 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/francisco-de-goya-saturno-devorando-a-su-hijo-1819-1823.jpg
   origen: https://commons.wikimedia.org/wiki/File:Francisco_de_Goya,_Saturno_devorando_a_su_hijo_(1819-1823).jpg
+  ancho: 960
+  alto: 1763
 relaciones:
   - tipo: representa
     destino: crono
-    foco: [42, 22]
+    foco: [84, 61]
   - tipo: representa
     destino: crono-devora-a-sus-hijos
-    foco: [52, 37]
+    foco: [53, 49]
+    recorte: [91, 85]

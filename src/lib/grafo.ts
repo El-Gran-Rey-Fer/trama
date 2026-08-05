@@ -8,6 +8,7 @@ export interface RelacionCruda {
 	fuente?: string;
 	principal?: boolean;
 	foco?: [number, number];
+	recorte?: [number, number];
 	nota?: string;
 }
 
@@ -22,6 +23,8 @@ export interface Imagen {
 	credito?: string;
 	origen?: string;
 	alt?: string;
+	ancho?: number;
+	alto?: number;
 }
 
 export interface RegistroRelacion {
@@ -210,6 +213,7 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 			fuente: relacion.fuente, // propagación explícita, aunque no se use todavía
 			principal: relacion.principal,
 			foco: relacion.foco, // idem: el foco vive en `representa`, la inversa lo hereda
+			recorte: relacion.recorte, // idem: tamaño del recorte, ligado al foco
 			nota: relacion.nota,
 			inferida: true,
 		});

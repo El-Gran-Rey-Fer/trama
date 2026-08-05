@@ -8,10 +8,14 @@ imagen:
   credito: "Júpiter, Louvre-Lens. Foto: Jamain, CC BY-SA 4.0"
   origen: https://commons.wikimedia.org/wiki/File:Jupiter_J1a.jpg
   alt: Estatua de mármol de Júpiter portando un rayo, con un águila a sus pies
+  ancho: 960
+  alto: 1624
 relaciones:
   - tipo: representa
     destino: zeus
-    foco: [50, 15]
+    foco: [45, 23]
+    recorte: [59, 41]
   - tipo: representa
     destino: aguila
-    foco: [19, 68]
+    foco: [25, 75]
+    recorte: [41, 31]

@@ -11,6 +11,12 @@ const relacionSchema = z.object({
 	// §3.2): posición en porcentaje [x, y] del punto de foco dentro de la obra,
 	// para recortarla distinto según sirva de retrato a una figura o a otra.
 	foco: z.tuple([z.number(), z.number()]).optional(),
+	// Tamaño del recorte (ancho, alto en % de la imagen) centrado en `foco`. Sin
+	// esto, la ficha usa su caja panorámica fija de siempre; con esto, adapta su
+	// alto al recorte real (una estatua vertical necesita mucho más alto que
+	// ancho, y ningún `foco` por sí solo lo resuelve: decide qué franja se ve,
+	// no cuánta). Solo tiene sentido junto a `foco`.
+	recorte: z.tuple([z.number(), z.number()]).optional(),
 	nota: z.string().optional(),
 });
 
@@ -22,6 +28,11 @@ const imagenSchema = z.object({
 	credito: z.string().optional(),
 	origen: z.string().optional(),
 	alt: z.string().optional(),
+	// Dimensiones naturales en píxeles, para poder traducir el `recorte` (en %)
+	// de una relación a un aspect-ratio real. Las escribe curar-obra.mjs sola
+	// (a partir de `naturalWidth`/`naturalHeight`), nunca a mano.
+	ancho: z.number().optional(),
+	alto: z.number().optional(),
 });
 
 const entidadSchema = z

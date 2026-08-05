@@ -6,13 +6,18 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/rhea-presentant-une-pierre-emmaillotee-a-cronos-dessin-du-bas-relief-d-un-autel-romain.jpg
   origen: https://commons.wikimedia.org/wiki/File:Rh%C3%A9a_pr%C3%A9sentant_une_pierre_emmaillot%C3%A9e_%C3%A0_Cronos_dessin_du_bas-relief_d%27un_autel_romain.jpg
+  ancho: 717
+  alto: 688
 relaciones:
   - tipo: representa
     destino: rea
-    foco: [20, 13]
+    foco: [21, 49]
+    recorte: [38, 96]
   - tipo: representa
     destino: crono
-    foco: [77, 26]
+    foco: [74, 37]
+    recorte: [51, 69]
   - tipo: representa
     destino: crono-devora-a-sus-hijos
-    foco: [48, 33]
+    foco: [52, 28]
+    recorte: [94, 52]

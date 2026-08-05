@@ -6,16 +6,22 @@ resumen: >
 imagen:
   archivo: /img/gr/obras/detalle-de-una-anfora-atica-con-figuras-negras-en-la-que-se-representa-el-nacimiento-de-atenea-de-la-cabeza-de-zeus-45fc09b6-240320112012-1280x1045.jpg
   origen: https://historia.nationalgeographic.com.es/a/atenea-diosa-guerrera-sabiduria_21052
+  ancho: 1280
+  alto: 1045
 relaciones:
   - tipo: representa
     destino: atenea
-    foco: [56, 18]
-  - tipo: representa
-    destino: zeus
-    foco: [54, 31]
-  - tipo: representa
-    destino: nacimiento-de-atenea
-    foco: [40, 57]
+    foco: [57, 21]
+    recorte: [15, 20]
   - tipo: representa
     destino: poseidon
-    foco: [38, 25]
+    foco: [36, 52]
+    recorte: [25, 77]
+  - tipo: representa
+    destino: zeus
+    foco: [62, 57]
+    recorte: [34, 65]
+  - tipo: representa
+    destino: nacimiento-de-atenea
+    foco: [53, 49]
+    recorte: [90, 87]
