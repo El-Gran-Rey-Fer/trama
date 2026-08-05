@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content";
 import Base from "../../../layouts/Base.astro";
 import { conjuntoDeRelato } from "../../../lib/desbloqueo";
 import { construirGrafo } from "../../../lib/grafo";
+import { generarRondasIdentificar } from "../../../lib/identificar";
 import { generarRondasArbol } from "../../../lib/juegoArbol";
 import { generarPertenencia } from "../../../lib/pertenencia";
 import { rutaJugarMenu } from "../../../lib/rutas";
@@ -10,7 +11,13 @@ import { generarTarjetas, type Tarjeta } from "../../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
-	const juegos = ["emparejar", "ordenar", "pertenencia", "completar-arbol"];
+	const juegos = [
+		"emparejar",
+		"ordenar",
+		"pertenencia",
+		"completar-arbol",
+		"identificar",
+	];
 	return materias.flatMap((m) =>
 		juegos.map((juego) => ({
 			params: { materia: m.data.slug, juego },
@@ -30,6 +37,7 @@ const grafo = await construirGrafo(materiaId);
 const tarjetas = await generarTarjetas(materiaId);
 const pertenencia = await generarPertenencia(materiaId);
 const rondasArbol = await generarRondasArbol(materiaId);
+const rondasIdentificar = await generarRondasIdentificar(materiaId);
 const relatos = await getCollection("relatos");
 const relatoConjuntos = Object.fromEntries(
 	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
@@ -82,6 +90,7 @@ const TITULOS: Record<string, string> = {
 	ordenar: "Ordenar",
 	pertenencia: "Pertenencia",
 	"completar-arbol": "Completar el árbol",
+	identificar: "Identificar",
 };
 const titulo = TITULOS[juego ?? ""] ?? juego;
 ---
@@ -124,14 +133,16 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     is:inline
     type="application/json"
     id="datos-juego"
-    set:html={JSON.stringify({ tarjetasConTipo, pertenencia, rondasArbol, relatoConjuntos, relatosEra })}
+    set:html={JSON.stringify({ tarjetasConTipo, pertenencia, rondasArbol, rondasIdentificar, relatoConjuntos, relatosEra })}
   />
 
   <script>
     import { tarjetasDisponibles } from "../../../lib/disponibilidad";
     import { leerEstado } from "../../../lib/estado";
+    import type { RondaIdentificar } from "../../../lib/identificar";
     import type { RondaArbol } from "../../../lib/juegoArbol";
     import type { TarjetaPertenencia } from "../../../lib/pertenencia";
+    import { rutaActivo } from "../../../lib/rutas";
     import type { Tarjeta } from "../../../lib/tarjetas";
 
     interface TarjetaConTipo extends Tarjeta {
@@ -145,11 +156,19 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     const datosEl = document.getElementById("datos-juego");
-    const { tarjetasConTipo, pertenencia, rondasArbol, relatoConjuntos, relatosEra } = datosEl
+    const {
+      tarjetasConTipo,
+      pertenencia,
+      rondasArbol,
+      rondasIdentificar,
+      relatoConjuntos,
+      relatosEra,
+    } = datosEl
       ? (JSON.parse(datosEl.textContent ?? "{}") as {
           tarjetasConTipo: TarjetaConTipo[];
           pertenencia: TarjetaPertenencia[];
           rondasArbol: RondaArbol[];
+          rondasIdentificar: RondaIdentificar[];
           relatoConjuntos: Record<string, string[]>;
           relatosEra: RelatoEra[];
         })
@@ -157,6 +176,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
           tarjetasConTipo: [] as TarjetaConTipo[],
           pertenencia: [] as TarjetaPertenencia[],
           rondasArbol: [] as RondaArbol[],
+          rondasIdentificar: [] as RondaIdentificar[],
           relatoConjuntos: {},
           relatosEra: [] as RelatoEra[],
         };
@@ -179,6 +199,19 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         [copia[i], copia[j]] = [copia[j], copia[i]];
       }
       return copia;
+    }
+
+    // Copia local de retrato.ts#calcularAspectRatio: ese módulo importa
+    // grafo.ts, que trae "astro:content" (server-only) — inaceptable en un
+    // script de cliente. La cuenta es tres líneas, no vale la pena partir el
+    // módulo solo por esto.
+    function calcularAspectRatio(
+      imagen: { ancho?: number; alto?: number },
+      recorte: [number, number],
+    ): number | undefined {
+      if (!imagen.ancho || !imagen.alto) return undefined;
+      const ratio = ((recorte[0] / 100) * imagen.ancho) / ((recorte[1] / 100) * imagen.alto);
+      return Math.min(Math.max(ratio, 0.5), 3);
     }
 
     // Astro solo marca con `data-astro-cid-*` los elementos que escribe él
@@ -581,6 +614,104 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       mostrarRonda();
     }
 
+    // Identificar (plan de imágenes y álbum, reservado en materia.yaml junto a
+    // `representa`/`representado_en`): sale la imagen de una obra y hay que
+    // elegir a quién o qué representa entre hasta cuatro opciones. Mismo
+    // patrón de feedback + "Siguiente" que pertenencia.
+    function iniciarIdentificar() {
+      const disponibles = tarjetasDisponibles(
+        rondasIdentificar,
+        relatoConjuntos,
+        leerEstado(),
+      );
+
+      const total = Math.min(10, disponibles.length);
+      if (!tablero || total < 3) {
+        elSinTarjetas?.removeAttribute("hidden");
+        return;
+      }
+
+      const tanda = barajar(disponibles).slice(0, total);
+      let indice = 0;
+      let aciertos = 0;
+
+      function actualizarProgreso() {
+        if (elProgreso) elProgreso.textContent = `${indice} / ${tanda.length}`;
+      }
+
+      function mostrarRonda() {
+        if (!tablero) return;
+        tablero.innerHTML = "";
+        const ronda = tanda[indice];
+
+        const figura = crear("figure", "figura-identificar");
+        const img = document.createElement("img");
+        img.src = rutaActivo(ronda.imagen.archivo);
+        img.alt = ronda.imagen.alt ?? "";
+        const estilos: string[] = [];
+        if (ronda.foco) estilos.push(`object-position: ${ronda.foco[0]}% ${ronda.foco[1]}%`);
+        if (ronda.foco && ronda.recorte) {
+          const ratio = calcularAspectRatio(ronda.imagen, ronda.recorte);
+          if (ratio) estilos.push(`aspect-ratio: ${ratio}`, "height: auto");
+        }
+        if (estilos.length) img.style.cssText = estilos.join("; ");
+        figura.appendChild(img);
+        tablero.appendChild(figura);
+
+        const pregunta = crear("p", "pregunta-identificar");
+        pregunta.textContent = "¿Quién o qué es?";
+        tablero.appendChild(pregunta);
+
+        const opciones = crear("div", "opciones-identificar");
+        tablero.appendChild(opciones);
+
+        for (const opcion of ronda.opciones) {
+          const boton = crear("button", "opcion-identificar");
+          boton.type = "button";
+          boton.textContent = opcion.nombre;
+          boton.addEventListener("click", () => {
+            const correcta = opcion.id === ronda.correctaId;
+            if (correcta) aciertos += 1;
+            for (const otro of opciones.querySelectorAll<HTMLButtonElement>("button")) {
+              otro.disabled = true;
+              if (otro.textContent === ronda.opciones.find((o) => o.id === ronda.correctaId)?.nombre) {
+                otro.classList.add("acierto");
+              } else if (otro === boton) {
+                otro.classList.add("fallo");
+              }
+            }
+            mostrarFeedback(correcta);
+          });
+          opciones.appendChild(boton);
+        }
+      }
+
+      function mostrarFeedback(correcta: boolean) {
+        if (!tablero) return;
+        const feedback = crear("p", correcta ? "feedback acierto" : "feedback fallo");
+        feedback.textContent = correcta ? "¡Correcto!" : "No.";
+        tablero.appendChild(feedback);
+
+        const siguienteBoton = crear("button", "siguiente-pregunta");
+        siguienteBoton.type = "button";
+        siguienteBoton.textContent = indice === tanda.length - 1 ? "Ver resultado" : "Siguiente";
+        siguienteBoton.addEventListener("click", () => {
+          indice += 1;
+          actualizarProgreso();
+          if (indice < tanda.length) {
+            mostrarRonda();
+          } else if (tablero) {
+            tablero.innerHTML = "";
+            completar(`${aciertos} / ${tanda.length} aciertos.`);
+          }
+        });
+        tablero.appendChild(siguienteBoton);
+      }
+
+      actualizarProgreso();
+      mostrarRonda();
+    }
+
     const juego = tablero?.dataset.juego;
 
     function iniciar() {
@@ -592,6 +723,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       if (juego === "ordenar") iniciarOrdenar();
       if (juego === "pertenencia") iniciarPertenencia();
       if (juego === "completar-arbol") iniciarCompletarArbol();
+      if (juego === "identificar") iniciarIdentificar();
     }
 
     // "Reiniciar"/"Jugar de nuevo" solo existen en emparejar/ordenar/
@@ -1030,6 +1162,62 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     .opcion-arbol.fallo {
       border-color: var(--color-fallo);
       animation: agitar-fallo 0.3s ease;
+    }
+
+    /* Identificar: imagen grande arriba (recorte fiel si la ronda trae foco +
+       recorte, caja fija de lo contrario), pregunta corta, rejilla de hasta
+       cuatro opciones. */
+    .figura-identificar {
+      margin: 0 0 16px;
+    }
+
+    .figura-identificar img {
+      display: block;
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+    }
+
+    .pregunta-identificar {
+      margin: 0 20px 14px;
+      font-family: var(--fuente-titulo);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .opciones-identificar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 0 20px;
+    }
+
+    .opcion-identificar {
+      padding: 14px 10px;
+      border: 1.5px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-fondo-pantalla);
+      color: var(--color-texto);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .opcion-identificar.acierto {
+      border-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 12%, var(--color-fondo-pantalla));
+      animation: destello-acierto 0.3s ease;
+    }
+
+    .opcion-identificar.fallo {
+      border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
+    }
+
+    .opcion-identificar:disabled {
+      cursor: default;
     }
 
     @keyframes destello-acierto {
