@@ -46,7 +46,9 @@ export interface Entidad {
 	materia: string;
 	tipo: string;
 	nombre: string;
-	resumen: string;
+	// Opcional solo en `tipo: obra` (content.config.ts); el resto de tipos lo
+	// exige validar-contenido.mjs.
+	resumen?: string;
 	alias?: string[];
 	epitetos?: string[];
 	atributos?: Record<string, unknown>;

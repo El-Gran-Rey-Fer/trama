@@ -106,9 +106,9 @@ const esStub =
         <div class="prosa">
           <Prosa components={{ E, Fuente }} />
         </div>
-      ) : (
+      ) : entidad.resumen ? (
         <p class="resumen">{entidad.resumen}</p>
-      )
+      ) : null
     }
 
     {esStub && <p class="nota-stub">Ficha mínima. Aún no hay más contenido para esta entidad.</p>}

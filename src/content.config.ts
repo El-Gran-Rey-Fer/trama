@@ -40,7 +40,10 @@ const entidadSchema = z
 		id: z.string(),
 		tipo: z.string(),
 		nombre: z.string(),
-		resumen: z.string(),
+		// Obligatorio salvo en `tipo: obra` (las obras no llevan prosa propia y
+		// no siempre hace falta describirlas en texto). validar-contenido.mjs
+		// exige el campo para el resto de tipos.
+		resumen: z.string().optional(),
 		alias: z.array(z.string()).optional(),
 		epitetos: z.array(z.string()).optional(),
 		atributos: z.record(z.string(), z.unknown()).optional(),

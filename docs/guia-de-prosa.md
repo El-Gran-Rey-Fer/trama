@@ -48,7 +48,7 @@ nada de referencias a colores, botones o disposición.
 | Vive en | `content/<materia>/relatos/<id>.mdx` | `content/<materia>/paginas/<slug>.mdx` | `content/<materia>/entidades/<id>.mdx` | `content/<materia>/entidades/<id>.mdx` |
 | Frontmatter | Sí, es un nodo del grafo | Sí, `slug` y `titulo` | **No.** Los campos están en el `.yaml` hermano | **No.** Los campos están en el `.yaml` hermano |
 | ¿Es parte del grafo? | **Sí.** Es una entidad de pleno derecho, con id, participantes y lugar | Solo apunta hacia dentro; no pertenece al grafo | Es el cuerpo de un nodo que ya existe | Es el cuerpo de un nodo que ya existe |
-| Genera tarjetas | Sí, automáticas | No, solo manuales | No. Es material de lectura | No. Pero su `resumen` alimenta el juego de identificar |
+| Genera tarjetas | Sí, automáticas | No, solo manuales | No. Es material de lectura | No. Pero su `alt` alimenta el juego de identificar |
 | Voz | Narrativa, pasado | Expositiva, presente | Expositiva, presente | Descriptiva, presente |
 | Extensión | 600-1.200 palabras | Libre | 150-350 palabras | 80-180 palabras |
 
@@ -153,6 +153,15 @@ tiene un miembro no es una etiqueta.
 
 **`relaciones`** — opcional. Un relato puede declarar relaciones como cualquier entidad, p. ej.
 `precede_a: fundacion-de-tebas`. Úsalo con moderación y solo con tipos ya declarados.
+
+### Mito reservado (frontmatter sin prosa)
+
+Un relato puede crearse con el frontmatter completo (`participantes`, `relaciones`, `era`,
+`orden`, `fuente_principal`, `etiquetas`) y el cuerpo vacío o con un comentario MDX invisible
+(`{/* pendiente de prosa */}`), para que sus relaciones y participantes ya conecten el grafo —
+aparecen en las fichas de sus participantes — antes de escribir el texto. El grafo lo trata
+igual con o sin cuerpo. Lo único que no se hace todavía es declararlo en `capitulos:` de
+`materia.yaml`: eso espera a que el relato tenga prosa real.
 
 ---
 
@@ -353,23 +362,21 @@ De ahí sale la única regla que gobierna esta sección:
 
 Un texto de obra que no señala los atributos identificativos ha desaprovechado la imagen.
 
-### El `resumen` carga más peso aquí que en ninguna otra entidad
-
-Se lee bajo la imagen, y es lo que aparece en el juego de identificar. Reglas:
-
-- **Describe lo que se ve**, no lo que la obra "evoca". "Tiziano pinta a Europa ya sobre el
-  toro, en pleno mar y sin salida" es un resumen; "una obra maestra del color veneciano" no.
-- **Una frase, presente, 15-30 palabras**, como todos los resúmenes.
-- **No reveles la respuesta si es obvia.** Si el juego enseña la imagen y pregunta a quién
-  representa, un resumen que empieza por el nombre lo estropea. Nombra la escena, no al
-  protagonista, cuando se pueda.
-
 ### El `alt` es escritura, no relleno
 
+Las obras no llevan `resumen`: la imagen ya está ahí, y describirla dos veces —una en un campo
+corto y otra en el `alt`— era redundante. Todo ese peso lo lleva ahora el `alt` solo.
+
 Va en el YAML pero lo escribe quien escribe la prosa, porque es texto. Describe la imagen
-para quien no puede verla: qué figuras hay, qué hacen y qué llevan. **No repite el resumen y
-no valora.** "Estatua de mármol de Júpiter portando un rayo, con un águila a sus pies" es un
-`alt`; "una impresionante estatua romana" no.
+para quien no puede verla: qué figuras hay, qué hacen y qué llevan. Reglas:
+
+- **Describe lo que se ve**, no lo que la obra "evoca". "Tiziano pinta a Europa ya sobre el
+  toro, en pleno mar y sin salida" es un `alt`; "una obra maestra del color veneciano" no.
+- **No reveles la respuesta si es obvia.** Si el juego enseña la imagen y pregunta a quién
+  representa, un `alt` que empieza por el nombre lo estropea. Describe la escena, no al
+  protagonista, cuando se pueda.
+- **No valora.** "Estatua de mármol de Júpiter portando un rayo, con un águila a sus pies" es
+  un `alt`; "una impresionante estatua romana" no.
 
 ### Qué va en la prosa y qué es un campo
 
@@ -410,7 +417,7 @@ más:
 ### Cuándo no escribir nada
 
 **La mayoría de las obras no necesitan prosa.** Una obra que existe para ser el retrato de una
-entidad —una estatua frontal de un dios, sin escena— se explica con el `resumen` y el `alt`.
+entidad —una estatua frontal de un dios, sin escena— se explica con el `alt`.
 
 Escribe prosa cuando la obra **enseña algo que el grafo no dice**: una escena con varias
 figuras, una versión que se aparta de la fuente, o una representación moderna que reinterpreta
@@ -462,7 +469,7 @@ masculina barbada con esos dos elementos se lea como Júpiter sin necesidad de i
 ```
 
 Un párrafo, y solo porque hay algo que enseñar sobre la fórmula iconográfica. Si no lo
-hubiera, el `resumen` y el `alt` bastarían.
+hubiera, el `alt` bastaría.
 
 ---
 
@@ -597,8 +604,8 @@ y quien escribe prosa es el primero que nota dónde duele.
 
 Si escribes prosa para varias entidades u obras de una vez, una ruta y un bloque por cada una.
 
-En una obra, entrega además el **`resumen`** y el **`alt`** propuestos, aunque vayan en el
-YAML: los escribe quien escribe la prosa.
+En una obra, entrega además el **`alt`** propuesto, aunque vaya en el YAML: lo escribe quien
+escribe la prosa.
 
 ---
 
@@ -607,8 +614,8 @@ YAML: los escribe quien escribe la prosa.
 **Siempre:**
 
 - [ ] El id del campo coincide con el nombre del fichero
-- [ ] Están los cuatro campos obligatorios: `id`, `tipo`, `nombre`, `resumen`
-- [ ] El `resumen` es una frase, en presente, comprensible sin contexto
+- [ ] Están los campos obligatorios: `id`, `tipo`, `nombre`, y `resumen` salvo en `tipo: obra`
+- [ ] El `resumen` (si aplica) es una frase, en presente, comprensible sin contexto
 - [ ] Ningún `<E />` en el frontmatter
 - [ ] Ninguna entidad enlazada más de una vez
 - [ ] Ningún párrafo con más de tres enlaces
@@ -624,6 +631,11 @@ YAML: los escribe quien escribe la prosa.
 - [ ] `orden` es múltiplo de 100 y está pensado dentro de esa era, no global
 - [ ] `fuente_principal` es un id de obra antigua, no de autor
 - [ ] Sin encabezados ni viñetas
+- [ ] Cada acción entre participantes (`devora_a`, `encierra_a`, `rapta_a`, `castiga_a`,
+      `mata_a`, `mutila_a`, `forja`, `construye`, y las de parentesco) está en el YAML de la
+      entidad sujeto, no solo contada en la prosa. `participa_en`/`tiene_participante` y
+      `ocurre_en` salen solos de `participantes`/`lugar`; esto es solo sobre las de acción y
+      parentesco. Repásalo con `pnpm relaciones-de-relato <id>`
 
 **Si es prosa de entidad:**
 
@@ -641,7 +653,7 @@ YAML: los escribe quien escribe la prosa.
 - [ ] No valora la obra ni describe técnica que no explique lo que se ve
 - [ ] Como mucho dos `<E />`, y no uno por cada cosa que la obra representa
 - [ ] Entre 80 y 180 palabras
-- [ ] Van incluidos el `resumen` y el `alt` propuestos
+- [ ] Va incluido el `alt` propuesto
 - [ ] Nada descrito que no esté en la imagen
 
 ---
@@ -675,5 +687,4 @@ probable es reescribir el `resumen` en tres párrafos, y no se puede evitar sin 
 >
 > A quién y qué representa: **[ids, si los sé]**.
 >
-> Entrega la ruta, el MDX completo, el `resumen` y el `alt` propuestos, y los ids nuevos que
-> hagan falta.
+> Entrega la ruta, el MDX completo, el `alt` propuesto, y los ids nuevos que hagan falta.

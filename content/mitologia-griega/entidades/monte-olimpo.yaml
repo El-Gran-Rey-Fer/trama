@@ -8,3 +8,5 @@ relaciones:
     destino: zeus
   - tipo: habitado_por
     destino: hera
+  - tipo: habitado_por
+    destino: poseidon

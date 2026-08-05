@@ -228,26 +228,16 @@ function reemplazarRelacionesRepresenta(yamlTexto, nuevasRepresenta) {
 function construirYamlObraNueva({
 	id,
 	nombre,
-	resumen,
 	fuente,
 	archivo,
 	ancho,
 	alto,
 	relaciones,
 }) {
-	const resumenLineas = (
-		resumen ||
-		"PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6)."
-	)
-		.split("\n")
-		.map((l) => `  ${l}`)
-		.join("\n");
 	const lineas = [
 		`id: ${id}`,
 		"tipo: obra",
 		`nombre: ${escaparEscalar(nombre)}`,
-		"resumen: >",
-		resumenLineas,
 		"imagen:",
 		`  archivo: ${archivo}`,
 		`  origen: ${escaparEscalar(fuente)}`,
@@ -427,7 +417,6 @@ async function manejarNuevaObra(req, res) {
 	const yaml = construirYamlObraNueva({
 		id,
 		nombre: cuerpo.nombre || id,
-		resumen: cuerpo.resumen,
 		fuente,
 		archivo: `/img/gr/obras/${id}.${extension}`,
 		ancho: Number(cuerpo.imagenAncho) || undefined,

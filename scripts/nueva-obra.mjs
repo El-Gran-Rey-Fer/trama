@@ -91,8 +91,6 @@ function construirYaml({ id, nombre, extension, credito, origen, alt, autor }) {
 		`id: ${id}`,
 		"tipo: obra",
 		`nombre: ${nombre}`,
-		"resumen: >",
-		"  PENDIENTE: una frase, presente, qué se ve (ver guia-de-prosa.md §6).",
 		"atributos:",
 		`  autor: ${autor ?? "desconocido"}`,
 		"  fecha: PENDIENTE",
@@ -159,7 +157,7 @@ async function main() {
 	console.log(`Imagen descargada en ${path.relative(RAIZ, rutaImagen)}`);
 	console.log(`YAML escrito en ${path.relative(RAIZ, rutaYaml)}`);
 	console.log(
-		"Quedan a mano: resumen, autor/fecha/periodo/soporte/museo, alt final, y representa + foco.",
+		"Quedan a mano: autor/fecha/periodo/soporte/museo, alt final, y representa + foco.",
 	);
 }
 

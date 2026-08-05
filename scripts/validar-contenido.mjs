@@ -163,6 +163,16 @@ function validarObra(doc, rutaAbsoluta) {
 	}
 }
 
+// `resumen` es opcional en el schema (content.config.ts) solo para poder
+// omitirlo en `tipo: obra`; en el resto de tipos sigue siendo obligatorio,
+// y esa parte de la regla vive aquí en vez de en Zod.
+function validarResumen(doc, rutaAbsoluta) {
+	const { datos, linea } = doc;
+	if (datos.tipo !== "obra" && !datos.resumen) {
+		error(rutaAbsoluta, linea(["id"]), "falta resumen");
+	}
+}
+
 function main() {
 	const registro = cargarMateria();
 
@@ -196,6 +206,7 @@ function main() {
 	for (const { ruta, doc } of documentosEntidades) {
 		validarNodo(doc, ruta, registro, idsConocidos);
 		validarObra(doc, ruta);
+		validarResumen(doc, ruta);
 	}
 	for (const { ruta, doc } of documentosRelatos) {
 		validarNodo(doc, ruta, registro, idsConocidos);

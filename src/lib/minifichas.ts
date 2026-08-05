@@ -8,7 +8,7 @@ interface DatosMiniFicha {
 	tipo: string;
 	nombre: string;
 	epitetos: string[];
-	resumen: string;
+	resumen?: string;
 	href: string;
 	etiquetaVerMas: string;
 	retrato: DatosRetrato | null;
@@ -53,10 +53,12 @@ function crearMiniFicha(popoverId: string, datos: DatosMiniFicha): HTMLElement {
 		div.appendChild(lista);
 	}
 
-	const resumen = document.createElement("p");
-	resumen.className = "mini-resumen";
-	resumen.textContent = datos.resumen;
-	div.appendChild(resumen);
+	if (datos.resumen) {
+		const resumen = document.createElement("p");
+		resumen.className = "mini-resumen";
+		resumen.textContent = datos.resumen;
+		div.appendChild(resumen);
+	}
 
 	const acciones = document.createElement("div");
 	acciones.className = "mini-acciones";

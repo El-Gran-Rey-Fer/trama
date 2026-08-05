@@ -11,3 +11,8 @@ atributos:
   dominio: el fuego y la forja
   culto: Lemnos
   equivalente_romano: Vulcano
+relaciones:
+  - tipo: mutila_a
+    destino: zeus
+    fuente: olimpicas
+    principal: false

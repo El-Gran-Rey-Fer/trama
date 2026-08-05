@@ -15,3 +15,7 @@ atributos:
 relaciones:
   - tipo: rapta_a
     destino: persefone
+  - tipo: encierra_a
+    destino: titanes
+  - tipo: gobierna
+    destino: inframundo

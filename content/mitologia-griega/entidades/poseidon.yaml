@@ -16,3 +16,5 @@ relaciones:
     destino: hades
   - tipo: castiga_a
     destino: minos
+  - tipo: encierra_a
+    destino: titanes
