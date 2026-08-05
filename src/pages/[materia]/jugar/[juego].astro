@@ -226,6 +226,19 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       return el;
     }
 
+    // Botones de opción con una respuesta correcta/incorrecta (pertenencia,
+    // árbol, identificar, opción múltiple): el veredicto se escribe dentro
+    // de la propia casilla que se marca (su `.marca-opcion`), no en un aviso
+    // aparte.
+    function marcarOpcion(boton: HTMLButtonElement, resultado: "acierto" | "fallo") {
+      boton.classList.add(resultado);
+      const marca = boton.querySelector<HTMLElement>(".marca-opcion");
+      if (marca) {
+        marca.classList.add(resultado);
+        marca.textContent = resultado === "acierto" ? "Correcto" : "Incorrecto";
+      }
+    }
+
     function crearPiezaEmparejar(
       texto: string,
       rol: "pregunta" | "respuesta",
@@ -443,30 +456,26 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
           spanIcono.textContent = icono;
           const spanTexto = crear("span");
           spanTexto.textContent = texto;
-          boton.append(spanIcono, spanTexto);
+          const spanMarca = crear("span", "marca-opcion");
+          boton.append(spanIcono, spanTexto, spanMarca);
 
           boton.addEventListener("click", () => {
             if (boton.disabled) return;
-            const correcta = valor === pregunta.respuesta;
-            if (correcta) aciertos += 1;
+            if (valor === pregunta.respuesta) aciertos += 1;
             for (const otro of opciones.querySelectorAll<HTMLButtonElement>("button")) {
               otro.disabled = true;
               const otroValor = otro.dataset.valor === "true";
-              if (otroValor === pregunta.respuesta) otro.classList.add("acierto");
-              else if (otro === boton) otro.classList.add("fallo");
+              if (otroValor === pregunta.respuesta) marcarOpcion(otro, "acierto");
+              else if (otro === boton) marcarOpcion(otro, "fallo");
             }
-            mostrarFeedback(correcta);
+            mostrarSiguiente();
           });
           opciones.appendChild(boton);
         }
       }
 
-      function mostrarFeedback(correcta: boolean) {
+      function mostrarSiguiente() {
         if (!tablero) return;
-        const feedback = crear("p", correcta ? "feedback acierto" : "feedback fallo");
-        feedback.textContent = correcta ? "¡Correcto!" : "No.";
-        tablero.appendChild(feedback);
-
         const siguienteBoton = crear("button", "siguiente-pregunta");
         siguienteBoton.type = "button";
         siguienteBoton.textContent = indice === tanda.length - 1 ? "Ver resultado" : "Siguiente";
@@ -580,17 +589,18 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         for (const opcion of ronda.opciones) {
           const boton = crear("button", "opcion-arbol");
           boton.type = "button";
-          boton.textContent = opcion.nombre;
+          boton.dataset.id = opcion.id;
+          const spanTexto = crear("span", "texto-opcion");
+          spanTexto.textContent = opcion.nombre;
+          const spanMarca = crear("span", "marca-opcion");
+          boton.append(spanTexto, spanMarca);
           boton.addEventListener("click", () => {
             const correcta = opcion.id === ronda.correctaId;
             if (correcta) aciertos += 1;
             for (const otro of opciones.querySelectorAll<HTMLButtonElement>("button")) {
               otro.disabled = true;
-              if (otro.textContent === ronda.opciones.find((o) => o.id === ronda.correctaId)?.nombre) {
-                otro.classList.add("acierto");
-              } else if (otro === boton) {
-                otro.classList.add("fallo");
-              }
+              if (otro.dataset.id === ronda.correctaId) marcarOpcion(otro, "acierto");
+              else if (otro === boton) marcarOpcion(otro, "fallo");
             }
             if (hueco) {
               const casillaRevelada = crearCasilla(hueco.nodo.nombre, hueco.nodo.tipo, null);
@@ -598,19 +608,15 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
               hueco.caja.replaceWith(casillaRevelada);
               hueco.nombreEl.textContent = hueco.nodo.nombre;
             }
-            mostrarFeedback(correcta);
+            mostrarSiguiente();
           });
           opciones.appendChild(boton);
         }
         tablero.appendChild(opciones);
       }
 
-      function mostrarFeedback(correcta: boolean) {
+      function mostrarSiguiente() {
         if (!tablero) return;
-        const feedback = crear("p", correcta ? "feedback acierto" : "feedback fallo");
-        feedback.textContent = correcta ? "¡Correcto!" : "No.";
-        tablero.appendChild(feedback);
-
         const siguienteBoton = crear("button", "siguiente-pregunta");
         siguienteBoton.type = "button";
         siguienteBoton.textContent = indice === tanda.length - 1 ? "Ver resultado" : "Siguiente";
@@ -709,30 +715,27 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         for (const opcion of ronda.opciones) {
           const boton = crear("button", "opcion-identificar");
           boton.type = "button";
-          boton.textContent = opcion.nombre;
+          boton.dataset.id = opcion.id;
+          const spanTexto = crear("span", "texto-opcion");
+          spanTexto.textContent = opcion.nombre;
+          const spanMarca = crear("span", "marca-opcion");
+          boton.append(spanTexto, spanMarca);
           boton.addEventListener("click", () => {
             const correcta = opcion.id === ronda.correctaId;
             if (correcta) aciertos += 1;
             for (const otro of opciones.querySelectorAll<HTMLButtonElement>("button")) {
               otro.disabled = true;
-              if (otro.textContent === ronda.opciones.find((o) => o.id === ronda.correctaId)?.nombre) {
-                otro.classList.add("acierto");
-              } else if (otro === boton) {
-                otro.classList.add("fallo");
-              }
+              if (otro.dataset.id === ronda.correctaId) marcarOpcion(otro, "acierto");
+              else if (otro === boton) marcarOpcion(otro, "fallo");
             }
-            mostrarFeedback(correcta);
+            mostrarSiguiente();
           });
           opciones.appendChild(boton);
         }
       }
 
-      function mostrarFeedback(correcta: boolean) {
+      function mostrarSiguiente() {
         if (!tablero) return;
-        const feedback = crear("p", correcta ? "feedback acierto" : "feedback fallo");
-        feedback.textContent = correcta ? "¡Correcto!" : "No.";
-        tablero.appendChild(feedback);
-
         const siguienteBoton = crear("button", "siguiente-pregunta");
         siguienteBoton.type = "button";
         siguienteBoton.textContent = indice === tanda.length - 1 ? "Ver resultado" : "Siguiente";
@@ -795,27 +798,27 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         for (const opcion of barajar([pregunta.respuesta, ...pregunta.distractores])) {
           const boton = crear("button", "opcion-opcion-multiple");
           boton.type = "button";
-          boton.textContent = opcion;
+          boton.dataset.valor = opcion;
+          const spanTexto = crear("span", "texto-opcion");
+          spanTexto.textContent = opcion;
+          const spanMarca = crear("span", "marca-opcion");
+          boton.append(spanTexto, spanMarca);
           boton.addEventListener("click", () => {
             const correcta = opcion === pregunta.respuesta;
             if (correcta) aciertos += 1;
             for (const otro of opciones.querySelectorAll<HTMLButtonElement>("button")) {
               otro.disabled = true;
-              if (otro.textContent === pregunta.respuesta) otro.classList.add("acierto");
-              else if (otro === boton) otro.classList.add("fallo");
+              if (otro.dataset.valor === pregunta.respuesta) marcarOpcion(otro, "acierto");
+              else if (otro === boton) marcarOpcion(otro, "fallo");
             }
-            mostrarFeedback(correcta);
+            mostrarSiguiente();
           });
           opciones.appendChild(boton);
         }
       }
 
-      function mostrarFeedback(correcta: boolean) {
+      function mostrarSiguiente() {
         if (!tablero) return;
-        const feedback = crear("p", correcta ? "feedback acierto" : "feedback fallo");
-        feedback.textContent = correcta ? "¡Correcto!" : "No.";
-        tablero.appendChild(feedback);
-
         const siguienteBoton = crear("button", "siguiente-pregunta");
         siguienteBoton.type = "button";
         siguienteBoton.textContent = indice === tanda.length - 1 ? "Ver resultado" : "Siguiente";
@@ -1186,6 +1189,10 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .opcion-opcion-multiple {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
       padding: 14px;
       border: 1.5px solid var(--color-tarjeta-borde);
       border-radius: var(--radio);
@@ -1212,24 +1219,22 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       cursor: default;
     }
 
-    .feedback {
-      margin: 16px 20px 0;
-      padding: 14px;
-      border-radius: var(--radio);
-      background: var(--color-tarjeta-fondo);
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--color-texto);
+    /* El veredicto ("Correcto"/"Incorrecto") se escribe dentro de la propia
+       casilla marcada, no en un aviso aparte: compartido por pertenencia,
+       árbol, identificar y opción múltiple. */
+    .marca-opcion {
+      font-family: var(--fuente-titulo);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
     }
 
-    .feedback.acierto {
-      border: 1px solid var(--color-acierto);
-      animation: destello-acierto 0.3s ease;
+    .marca-opcion.acierto {
+      color: var(--color-acierto);
     }
 
-    .feedback.fallo {
-      border: 1px solid var(--color-fallo);
-      animation: agitar-fallo 0.3s ease;
+    .marca-opcion.fallo {
+      color: var(--color-fallo);
     }
 
     .siguiente-pregunta {
@@ -1334,6 +1339,10 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
 
     .opcion-arbol {
       flex: 1 1 40%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
       padding: 14px;
       border: 1px solid var(--color-tarjeta-borde);
       border-radius: var(--radio);
@@ -1409,6 +1418,10 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .opcion-identificar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
       padding: 14px 10px;
       border: 1.5px solid var(--color-tarjeta-borde);
       border-radius: var(--radio);

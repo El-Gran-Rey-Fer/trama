@@ -262,6 +262,10 @@ const preguntas: PreguntaMixta[] = [
     }
 
     .opcion {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
       padding: 14px;
       border: 1px solid var(--color-tarjeta-borde);
       border-radius: var(--radio);
@@ -288,27 +292,23 @@ const preguntas: PreguntaMixta[] = [
       cursor: default;
     }
 
-    /* Examen mixto: feedback + botón "Siguiente" tras cada ronda, y las
-       cuatro rondas no-opción-múltiple que puede mezclar, portadas de
-       [juego].astro (mismo lenguaje visual que ya usa Practicar). */
-    .feedback {
-      margin: 16px 20px 0;
-      padding: 14px;
-      border-radius: var(--radio);
-      background: var(--color-tarjeta-fondo);
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--color-texto);
+    /* Examen mixto: el veredicto ("Correcto"/"Incorrecto") se escribe dentro
+       de la propia casilla marcada, no en un aviso aparte — compartido por
+       las cuatro rondas que puede mezclar, portado de [juego].astro (mismo
+       lenguaje visual que ya usa Practicar). */
+    .marca-opcion {
+      font-family: var(--fuente-titulo);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
     }
 
-    .feedback.acierto {
-      border: 1px solid var(--color-acierto);
-      animation: destello-acierto 0.3s ease;
+    .marca-opcion.acierto {
+      color: var(--color-acierto);
     }
 
-    .feedback.fallo {
-      border: 1px solid var(--color-fallo);
-      animation: agitar-fallo 0.3s ease;
+    .marca-opcion.fallo {
+      color: var(--color-fallo);
     }
 
     .tarjeta-pertenencia {
@@ -460,6 +460,10 @@ const preguntas: PreguntaMixta[] = [
 
     .opcion-arbol {
       flex: 1 1 40%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
       padding: 14px;
       border: 1px solid var(--color-tarjeta-borde);
       border-radius: var(--radio);
@@ -529,6 +533,10 @@ const preguntas: PreguntaMixta[] = [
     }
 
     .opcion-identificar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
       padding: 14px 10px;
       border: 1.5px solid var(--color-tarjeta-borde);
       border-radius: var(--radio);
@@ -575,7 +583,7 @@ const preguntas: PreguntaMixta[] = [
       font-family: var(--fuente-titulo);
     }
 
-    #tablero > p:not(.resultado):not(.exito):not(.feedback):not(.tarjeta-pertenencia):not(.pregunta-identificar) {
+    #tablero > p:not(.resultado):not(.exito):not(.tarjeta-pertenencia):not(.pregunta-identificar) {
       margin: 0 20px 14px;
       color: var(--color-texto-muted);
       font-size: 14px;

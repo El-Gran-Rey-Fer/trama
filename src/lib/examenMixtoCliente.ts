@@ -62,6 +62,20 @@ function barajar<T>(arr: T[]): T[] {
 	return copia;
 }
 
+// El veredicto se escribe dentro de la propia casilla que se marca (su
+// `.marca-opcion`), no en un aviso aparte debajo de las opciones.
+function marcarOpcion(
+	boton: HTMLButtonElement,
+	resultado: "acierto" | "fallo",
+) {
+	boton.classList.add(resultado);
+	const marca = boton.querySelector<HTMLElement>(".marca-opcion");
+	if (marca) {
+		marca.classList.add(resultado);
+		marca.textContent = resultado === "acierto" ? "Correcto" : "Incorrecto";
+	}
+}
+
 function renderOpcionMultiple(
 	tablero: HTMLElement,
 	tarjeta: Tarjeta,
@@ -78,14 +92,20 @@ function renderOpcionMultiple(
 		const boton = document.createElement("button");
 		boton.type = "button";
 		boton.className = "opcion";
-		boton.textContent = opcion;
+		boton.dataset.valor = opcion;
+		const spanTexto = document.createElement("span");
+		spanTexto.className = "texto-opcion";
+		spanTexto.textContent = opcion;
+		const spanMarca = document.createElement("span");
+		spanMarca.className = "marca-opcion";
+		boton.append(spanTexto, spanMarca);
 		boton.addEventListener("click", () => {
 			const correcta = opcion === tarjeta.respuesta;
 			for (const otro of lista.querySelectorAll<HTMLButtonElement>("button")) {
 				otro.disabled = true;
-				if (otro.textContent === tarjeta.respuesta)
-					otro.classList.add("acierto");
-				else if (otro === boton) otro.classList.add("fallo");
+				if (otro.dataset.valor === tarjeta.respuesta)
+					marcarOpcion(otro, "acierto");
+				else if (otro === boton) marcarOpcion(otro, "fallo");
 			}
 			resolver(correcta, tarjeta.pregunta, tarjeta.respuesta);
 		});
@@ -122,7 +142,9 @@ function renderPertenencia(
 		spanIcono.textContent = icono;
 		const spanTexto = document.createElement("span");
 		spanTexto.textContent = texto;
-		boton.append(spanIcono, spanTexto);
+		const spanMarca = document.createElement("span");
+		spanMarca.className = "marca-opcion";
+		boton.append(spanIcono, spanTexto, spanMarca);
 
 		boton.addEventListener("click", () => {
 			const correcta = valor === ronda.respuesta;
@@ -131,8 +153,8 @@ function renderPertenencia(
 			)) {
 				otro.disabled = true;
 				const otroValor = otro.dataset.valor === "true";
-				if (otroValor === ronda.respuesta) otro.classList.add("acierto");
-				else if (otro === boton) otro.classList.add("fallo");
+				if (otroValor === ronda.respuesta) marcarOpcion(otro, "acierto");
+				else if (otro === boton) marcarOpcion(otro, "fallo");
 			}
 			resolver(correcta, ronda.pregunta, ronda.respuesta ? "Sí" : "No");
 		});
@@ -217,15 +239,21 @@ function renderArbol(
 		const boton = document.createElement("button");
 		boton.type = "button";
 		boton.className = "opcion-arbol";
-		boton.textContent = opcion.nombre;
+		boton.dataset.id = opcion.id;
+		const spanTexto = document.createElement("span");
+		spanTexto.className = "texto-opcion";
+		spanTexto.textContent = opcion.nombre;
+		const spanMarca = document.createElement("span");
+		spanMarca.className = "marca-opcion";
+		boton.append(spanTexto, spanMarca);
 		boton.addEventListener("click", () => {
 			const correcta = opcion.id === ronda.correctaId;
 			for (const otro of opciones.querySelectorAll<HTMLButtonElement>(
 				"button",
 			)) {
 				otro.disabled = true;
-				if (otro.textContent === nombreCorrecta) otro.classList.add("acierto");
-				else if (otro === boton) otro.classList.add("fallo");
+				if (otro.dataset.id === ronda.correctaId) marcarOpcion(otro, "acierto");
+				else if (otro === boton) marcarOpcion(otro, "fallo");
 			}
 			if (hueco) {
 				const casillaRevelada = crearCasilla(
@@ -300,15 +328,21 @@ function renderIdentificar(
 		const boton = document.createElement("button");
 		boton.type = "button";
 		boton.className = "opcion-identificar";
-		boton.textContent = opcion.nombre;
+		boton.dataset.id = opcion.id;
+		const spanTexto = document.createElement("span");
+		spanTexto.className = "texto-opcion";
+		spanTexto.textContent = opcion.nombre;
+		const spanMarca = document.createElement("span");
+		spanMarca.className = "marca-opcion";
+		boton.append(spanTexto, spanMarca);
 		boton.addEventListener("click", () => {
 			const correcta = opcion.id === ronda.correctaId;
 			for (const otro of opciones.querySelectorAll<HTMLButtonElement>(
 				"button",
 			)) {
 				otro.disabled = true;
-				if (otro.textContent === nombreCorrecta) otro.classList.add("acierto");
-				else if (otro === boton) otro.classList.add("fallo");
+				if (otro.dataset.id === ronda.correctaId) marcarOpcion(otro, "acierto");
+				else if (otro === boton) marcarOpcion(otro, "fallo");
 			}
 			resolver(correcta, textoPregunta, nombreCorrecta);
 		});
@@ -364,15 +398,10 @@ export function iniciarExamenMixto(opciones: OpcionesExamenMixto): void {
 		) {
 			if (correcta) aciertos += 1;
 			else falladas.push({ textoPregunta, textoRespuesta });
-			mostrarFeedback(correcta);
+			mostrarSiguiente();
 		}
 
-		function mostrarFeedback(correcta: boolean) {
-			const feedback = document.createElement("p");
-			feedback.className = correcta ? "feedback acierto" : "feedback fallo";
-			feedback.textContent = correcta ? "¡Correcto!" : "No.";
-			tablero.appendChild(feedback);
-
+		function mostrarSiguiente() {
 			const siguienteBoton = document.createElement("button");
 			siguienteBoton.type = "button";
 			siguienteBoton.className = "boton-siguiente";
