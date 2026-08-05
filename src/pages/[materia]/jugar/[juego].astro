@@ -529,6 +529,10 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         svg.setAttribute("width", String(ronda.ancho));
         svg.setAttribute("height", String(ronda.alto));
         svg.setAttribute("viewBox", `0 0 ${ronda.ancho} ${ronda.alto}`);
+        // createElementNS, a diferencia de crear(), no copia data-astro-cid-*
+        // (ver el comentario de ATRIBUTO_CID): sin ella el <style> con scope
+        // de abajo no le aplica el trazo a las líneas y salen invisibles.
+        if (ATRIBUTO_CID) svg.setAttribute(ATRIBUTO_CID, "");
 
         const posiciones = new Map(ronda.nodos.map((n) => [n.clave, n]));
         for (const enlace of ronda.enlaces) {
@@ -540,6 +544,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
           linea.setAttribute("y1", String(desde.y));
           linea.setAttribute("x2", String(hasta.x));
           linea.setAttribute("y2", String(hasta.y));
+          if (ATRIBUTO_CID) linea.setAttribute(ATRIBUTO_CID, "");
           svg.appendChild(linea);
         }
         lienzo.appendChild(svg);
