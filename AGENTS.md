@@ -8,7 +8,11 @@ Lee `docs/esqueleto-proyecto.md` (qué se construye) y `docs/calendario-construc
 ## Reglas que no se negocian
 - `src/` nunca menciona una entidad concreta. `content/` nunca importa de `src/`.
 - YAML para lo que se consulta, MDX para lo que se lee.
-- Estamos en el **hito 1**. No implementes nada de hitos posteriores aunque lo veas venir.
+- Los hitos 1-3 (PoC) están cerrados y el proyecto lleva bloques enteros de Parte II/III
+  construidos (capítulos, exámenes, árbol genealógico, identificar, álbum, modo aventura...).
+  `docs/calendario-construccion.md` y `docs/estado-del-proyecto.md` son instantáneas de una
+  etapa anterior y no reflejan esto — para saber en qué punto está el proyecto de verdad, mira
+  lo que ya hay en `content/` y `src/`, no la lista de bloques.
 - Cero dependencias nuevas sin preguntar antes.
 - Español en interfaz, contenido, nombres de fichero, variables y comentarios.
 

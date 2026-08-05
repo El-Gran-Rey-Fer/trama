@@ -17,6 +17,7 @@ export async function getStaticPaths() {
 		"pertenencia",
 		"completar-arbol",
 		"identificar",
+		"opcion-multiple",
 	];
 	return materias.flatMap((m) =>
 		juegos.map((juego) => ({
@@ -92,6 +93,7 @@ const TITULOS: Record<string, string> = {
 	pertenencia: "Pertenencia",
 	"completar-arbol": "Completar el árbol",
 	identificar: "Identificar",
+	"opcion-multiple": "Opción múltiple",
 };
 const titulo = TITULOS[juego ?? ""] ?? juego;
 ---
@@ -751,6 +753,89 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       mostrarRonda();
     }
 
+    // Opción múltiple: pregunta + hasta cuatro opciones sobre la misma
+    // `Tarjeta` de respuesta única que ya usa emparejar y el examen (mismo
+    // criterio de elegibilidad: sin `conjunto`, con al menos un distractor).
+    // Antes vivía solo dentro del examen; ahora es un juego más de
+    // Practicar, con el mismo patrón de feedback + "Siguiente" que
+    // pertenencia/identificar en vez del autoavance que sigue usando el
+    // examen mixto (examenMixtoCliente.ts).
+    function iniciarOpcionMultiple() {
+      const elegibles = tarjetasConTipo.filter(
+        (t) => !t.conjunto && t.distractores.length > 0,
+      );
+      const disponibles = tarjetasDisponibles(elegibles, relatoConjuntos, leerEstado());
+
+      const total = Math.min(10, disponibles.length);
+      if (!tablero || total < 3) {
+        elSinTarjetas?.removeAttribute("hidden");
+        return;
+      }
+
+      const tanda = barajar(disponibles).slice(0, total);
+      let indice = 0;
+      let aciertos = 0;
+
+      function actualizarProgreso() {
+        if (elProgreso) elProgreso.textContent = `${indice} / ${tanda.length}`;
+      }
+
+      function mostrarRonda() {
+        if (!tablero) return;
+        tablero.innerHTML = "";
+        const pregunta = tanda[indice];
+
+        const texto = crear("p", "tarjeta-opcion-multiple");
+        texto.textContent = pregunta.pregunta;
+        tablero.appendChild(texto);
+
+        const opciones = crear("div", "opciones-opcion-multiple");
+        tablero.appendChild(opciones);
+
+        for (const opcion of barajar([pregunta.respuesta, ...pregunta.distractores])) {
+          const boton = crear("button", "opcion-opcion-multiple");
+          boton.type = "button";
+          boton.textContent = opcion;
+          boton.addEventListener("click", () => {
+            const correcta = opcion === pregunta.respuesta;
+            if (correcta) aciertos += 1;
+            for (const otro of opciones.querySelectorAll<HTMLButtonElement>("button")) {
+              otro.disabled = true;
+              if (otro.textContent === pregunta.respuesta) otro.classList.add("acierto");
+              else if (otro === boton) otro.classList.add("fallo");
+            }
+            mostrarFeedback(correcta);
+          });
+          opciones.appendChild(boton);
+        }
+      }
+
+      function mostrarFeedback(correcta: boolean) {
+        if (!tablero) return;
+        const feedback = crear("p", correcta ? "feedback acierto" : "feedback fallo");
+        feedback.textContent = correcta ? "¡Correcto!" : "No.";
+        tablero.appendChild(feedback);
+
+        const siguienteBoton = crear("button", "siguiente-pregunta");
+        siguienteBoton.type = "button";
+        siguienteBoton.textContent = indice === tanda.length - 1 ? "Ver resultado" : "Siguiente";
+        siguienteBoton.addEventListener("click", () => {
+          indice += 1;
+          actualizarProgreso();
+          if (indice < tanda.length) {
+            mostrarRonda();
+          } else if (tablero) {
+            tablero.innerHTML = "";
+            completar(`${aciertos} / ${tanda.length} aciertos.`);
+          }
+        });
+        tablero.appendChild(siguienteBoton);
+      }
+
+      actualizarProgreso();
+      mostrarRonda();
+    }
+
     const juego = tablero?.dataset.juego;
 
     function iniciar() {
@@ -763,6 +848,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       if (juego === "pertenencia") iniciarPertenencia();
       if (juego === "completar-arbol") iniciarCompletarArbol();
       if (juego === "identificar") iniciarIdentificar();
+      if (juego === "opcion-multiple") iniciarOpcionMultiple();
     }
 
     // "Reiniciar"/"Jugar de nuevo" solo existen en emparejar/ordenar/
@@ -1072,6 +1158,57 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .opcion-pertenencia:disabled {
+      cursor: default;
+    }
+
+    /* Opción múltiple: mismo lenguaje que pertenencia (tarjeta con acento a
+       la izquierda), con hasta cuatro opciones apiladas en vez de dos. */
+    .tarjeta-opcion-multiple {
+      margin: 0 20px 14px;
+      padding: 20px;
+      border: 1px solid var(--color-tarjeta-borde);
+      border-left-width: 4px;
+      border-left-color: var(--color-acento);
+      border-radius: var(--radio);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-texto);
+      font-family: var(--fuente-titulo);
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .opciones-opcion-multiple {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 20px;
+    }
+
+    .opcion-opcion-multiple {
+      padding: 14px;
+      border: 1.5px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-fondo-pantalla);
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      font-size: 15px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .opcion-opcion-multiple.acierto {
+      border-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 12%, var(--color-fondo-pantalla));
+      animation: destello-acierto 0.3s ease;
+    }
+
+    .opcion-opcion-multiple.fallo {
+      border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
+    }
+
+    .opcion-opcion-multiple:disabled {
       cursor: default;
     }
 
