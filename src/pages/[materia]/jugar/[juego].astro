@@ -644,17 +644,27 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         tablero.innerHTML = "";
         const ronda = tanda[indice];
 
+        // `crear`, no `document.createElement`: un <img> creado a pelo no
+        // lleva la marca data-astro-cid-* (ver el comentario de ATRIBUTO_CID
+        // más arriba) y el CSS con scope de abajo no le aplica nada — el
+        // primer intento de esta pantalla se quedó sin `object-fit: cover`
+        // por este motivo exacto, y el resultado era una imagen estirada
+        // (sin recortar) dentro de la caja del `aspect-ratio`.
         const figura = crear("figure", "figura-identificar");
-        const img = document.createElement("img");
+        const img = crear("img");
         img.src = rutaActivo(ronda.imagen.archivo);
         img.alt = ronda.imagen.alt ?? "";
-        const estilos: string[] = [];
-        if (ronda.foco) estilos.push(`object-position: ${ronda.foco[0]}% ${ronda.foco[1]}%`);
+        // Con `recorte`: recorte fiel de una figura dentro de un cuadro de
+        // grupo (`object-fit: cover`, nunca estira). Sin `recorte`: la obra
+        // entera a su proporción real, escalada por `width: 100%; height:
+        // auto` sin recortar ni deformar (regla por defecto en el CSS).
         if (ronda.foco && ronda.recorte) {
+          figura.classList.add("figura-identificar--recorte");
           const ratio = calcularAspectRatio(ronda.imagen, ronda.recorte);
-          if (ratio) estilos.push(`aspect-ratio: ${ratio}`, "height: auto");
+          const estilos = [`object-position: ${ronda.foco[0]}% ${ronda.foco[1]}%`];
+          if (ratio) estilos.push(`aspect-ratio: ${ratio}`);
+          img.style.cssText = estilos.join("; ");
         }
-        if (estilos.length) img.style.cssText = estilos.join("; ");
         figura.appendChild(img);
         tablero.appendChild(figura);
 
@@ -1164,9 +1174,12 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       animation: agitar-fallo 0.3s ease;
     }
 
-    /* Identificar: imagen grande arriba (recorte fiel si la ronda trae foco +
-       recorte, caja fija de lo contrario), pregunta corta, rejilla de hasta
-       cuatro opciones. */
+    /* Identificar: imagen grande arriba, pregunta corta, rejilla de hasta
+       cuatro opciones. Por defecto la obra se ve entera, a su proporción
+       real (width 100%, height auto: nunca se recorta ni se deforma). Solo
+       cuando la ronda trae `recorte` (una figura dentro de un cuadro de
+       grupo) se recorta con `object-fit: cover` al aspect-ratio real del
+       recorte — recortar, nunca estirar. */
     .figura-identificar {
       margin: 0 0 16px;
     }
@@ -1174,7 +1187,10 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     .figura-identificar img {
       display: block;
       width: 100%;
-      height: 240px;
+      height: auto;
+    }
+
+    .figura-identificar--recorte img {
       object-fit: cover;
     }
 
