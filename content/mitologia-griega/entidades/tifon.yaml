@@ -1,0 +1,13 @@
+id: tifon
+tipo: monstruo
+nombre: Tifón
+resumen: Hijo menor de Gea y el Tártaro, monstruo de cien cabezas de serpiente
+  que estuvo a punto de arrebatar el trono a Zeus.
+relaciones:
+  - tipo: consorte_de
+    destino: equidna
+    fuente: teogonia
+  - tipo: mutila_a
+    destino: zeus
+    fuente: biblioteca
+    principal: false

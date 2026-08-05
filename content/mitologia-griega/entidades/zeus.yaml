@@ -4,8 +4,8 @@ nombre: Zeus
 resumen: >
   Rey de los dioses olímpicos, dios del cielo y del rayo.
 generacion: 3
-etiquetas: [olimpico]
-epitetos: [Padre de dioses y hombres, Olímpico, Tonante]
+etiquetas: [ olimpico ]
+epitetos: [ Padre de dioses y hombres, Olímpico, Tonante ]
 atributos:
   simbolo: el rayo
   dominio: el cielo y el trueno
@@ -14,4 +14,18 @@ atributos:
 relaciones:
   - tipo: devora_a
     destino: metis
+  - tipo: padre_de
+    destino: atenea
+  - tipo: encierra_a
+    destino: titanes
+  - tipo: hermano_de
+    destino: poseidon
+  - tipo: hermano_de
+    destino: hades
+  - tipo: mutila_a
+    destino: tifon
+    fuente: teogonia
+  - tipo: encierra_a
+    destino: tifon
+    fuente: teogonia
 retrato: jupiter-louvre-lens
