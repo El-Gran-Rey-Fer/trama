@@ -170,6 +170,14 @@ mitologia-griega:
       pertenencia: "¿Construye {origen} {candidato}?"
     construido_por:
       inversa: construye
+    gobierna:
+      inversa: gobernado_por
+      pregunta: "¿Qué gobierna {origen}?"
+      pregunta_inversa: "¿Quién gobierna {destino}?"
+      conjunto: true # un rey o un dios puede gobernar varios dominios
+      pertenencia: "¿Gobierna {origen} {candidato}?"
+    gobernado_por:
+      inversa: gobierna
     # Plan de imágenes y álbum §3.1/§3.2/A1. Sin `pregunta`/`pregunta_inversa` a
     # propósito: no genera tarjeta de práctica en ninguna dirección. La inversa
     # (representado_en) es solo navegación ("aparece en estas obras" en la
@@ -321,7 +329,16 @@ mitologia-griega:
     examen: { aciertos: 8, de: 10 }
 
   # ─── edad de los olímpicos ─────────────────────────────────────
-  # 100 reservado: el reparto del cosmos y Tifón
+  - id: el-reparto-del-cosmos
+    nombre: El reparto del cosmos
+    era: edad-de-los-olimpicos
+    orden: 100
+    resumen: Zeus, Poseidón y Hades echan suertes tras la guerra contra los Titanes y se reparten el cosmos.
+    relatos: [el-reparto-del-cosmos]
+    entidades_extra: []
+    examen: { aciertos: 8, de: 10 }
+    # tifón entra aquí cuando su relato esté escrito
+
   - id: atenea-y-la-ciudad
     nombre: Atenea y la ciudad
     era: edad-de-los-olimpicos

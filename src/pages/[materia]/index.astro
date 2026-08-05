@@ -18,6 +18,7 @@ const materiaEntry = await getEntry("materias", materiaId);
 const eras = materiaEntry?.data.eras ?? [];
 const capitulos = await cargarCapitulos(materiaId);
 const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
+const numeroPorCapitulo = new Map(capitulos.map((c, i) => [c.id, i + 1]));
 
 const nombreMateria = materiaEntry?.data.nombre ?? materia;
 ---
@@ -37,11 +38,11 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
               <p class="sin-capitulos">Sin capítulos todavía.</p>
             ) : (
               <ol class="lista-capitulos">
-                {capitulosDeEra.map((c, i) => (
+                {capitulosDeEra.map((c) => (
                   <li data-capitulo={c.id} class="fila-capitulo">
                     <a href={rutaCapitulo(materia, c.id)} class="enlace-capitulo">
                       <span class="num-capitulo" aria-hidden="true">
-                        {i + 1}
+                        {numeroPorCapitulo.get(c.id)}
                       </span>
                       <span class="texto-capitulo">
                         <span class="titulo-capitulo">{c.nombre}</span>
