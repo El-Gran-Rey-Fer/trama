@@ -19,7 +19,15 @@ const eras = materiaEntry?.data.eras ?? [];
 const capitulos = await cargarCapitulos(materiaId);
 const capitulosPrevistos = await cargarCapitulosPrevistos(materiaId);
 const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
-const numeroPorCapitulo = new Map(capitulos.map((c, i) => [c.id, i + 1]));
+// era.posición, no un índice global: así insertar un capítulo en una era no
+// corre la numeración de las demás.
+const numeroPorCapitulo = new Map<string, string>();
+eras.forEach((era, indiceEra) => {
+	const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
+	capitulosDeEra.forEach((c, indiceCapitulo) => {
+		numeroPorCapitulo.set(c.id, `${indiceEra + 1}.${indiceCapitulo + 1}`);
+	});
+});
 
 const nombreMateria = materiaEntry?.data.nombre ?? materia;
 ---
@@ -168,8 +176,8 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
 
   .num-capitulo {
     flex: 0 0 auto;
-    width: 28px;
-    font-size: 22px;
+    min-width: 28px;
+    font-size: 17px;
     font-weight: 700;
     color: var(--color-acento);
     font-family: var(--fuente-titulo);
