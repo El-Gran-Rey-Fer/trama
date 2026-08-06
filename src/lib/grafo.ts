@@ -29,6 +29,7 @@ export interface Imagen {
 
 export interface RegistroRelacion {
 	inversa: string;
+	inversa_por_genero?: Record<string, string>;
 	simetrica?: boolean;
 	pregunta?: string;
 	pregunta_inversa?: string;
@@ -54,6 +55,7 @@ export interface Entidad {
 	atributos?: Record<string, unknown>;
 	etiquetas?: string[];
 	generacion?: number;
+	genero?: string;
 	imagen?: Imagen;
 	retrato?: string;
 	relaciones: RelacionResuelta[];
@@ -195,11 +197,34 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 		}
 	}
 
-	// Pasada 2: sintetizar inversas SOLO a partir de aristasOriginales
-	// (nunca releyendo entidad.relaciones, que ya puede contener inferidas),
+	// Resolución de aristas cuyo tipo depende del género del destino (ej.
+	// hijo_de: el destino puede ser el padre o la madre). `inversa_por_genero`
+	// en el registro dice a qué tipo "real" equivale la arista cuando el
+	// destino tiene ese género — la arista se trata entonces como si el
+	// destino la hubiera autoriado directamente en sentido contrario, con
+	// ese tipo. Así da igual qué lado del contenido escribe la relación (el
+	// hijo o el progenitor); todo lo que viene después (preguntas,
+	// agrupación, síntesis de inversas) ve una arista ya canónica. Sin
+	// `genero` en el destino, o sin entrada para ese género, la arista se
+	// deja tal cual (es el caso por defecto: melias/gigantes/erinias
+	// apuntando a Urano, que no lo necesita).
+	const aristas: Arista[] = aristasOriginales.map(({ origenId, relacion }) => {
+		const definicion = registro[relacion.tipo];
+		const destino = entidades.get(relacion.destino);
+		const tipoResuelto =
+			destino?.genero && definicion?.inversa_por_genero?.[destino.genero];
+		if (!tipoResuelto) return { origenId, relacion };
+		return {
+			origenId: relacion.destino,
+			relacion: { ...relacion, tipo: tipoResuelto, destino: origenId },
+		};
+	});
+
+	// Pasada 2: sintetizar inversas SOLO a partir de `aristas` (nunca
+	// releyendo entidad.relaciones, que ya puede contener inferidas),
 	// deduplicando por origen+tipo+destino para que declarar una relación
 	// por los dos lados sea inocuo en vez de producir aristas repetidas.
-	for (const { origenId, relacion } of aristasOriginales) {
+	for (const { origenId, relacion } of aristas) {
 		const definicion = registro[relacion.tipo];
 		if (!definicion) continue; // tipo no registrado: se conserva la arista tal cual, sin inversa (fuera del alcance de A5)
 		const destino = entidades.get(relacion.destino);
@@ -227,7 +252,7 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 		slug: materiaEntry.data.slug,
 		entidades,
 		registro,
-		aristas: aristasOriginales,
+		aristas,
 		plantillasTarjeta: materiaEntry.data.plantillas_tarjeta ?? {},
 	};
 }

@@ -51,6 +51,14 @@ const entidadSchema = z
 		relaciones: z.array(relacionSchema).optional(),
 		etiquetas: z.array(z.string()).optional(),
 		generacion: z.number().optional(),
+		// Solo hace falta declararlo cuando importa para resolver una relación
+		// gendered (ver `inversa_por_genero` en el registro de relaciones):
+		// hijo_de necesita saber si el destino es la madre o el padre para
+		// sintetizar la inversa correcta, autorice quien autorice la relación
+		// original. Sin este campo, la inversa por defecto (`inversa`) asume
+		// masculino — así que solo las entidades que son madre en algún
+		// momento necesitan `genero: femenino`.
+		genero: z.enum(["masculino", "femenino"]).optional(),
 		imagen: imagenSchema.optional(),
 		// Id de la entidad `tipo: obra` que sirve de retrato. Si falta, se toma la
 		// primera obra que la `representa` (plan de imágenes y álbum §3.1).
@@ -120,6 +128,14 @@ const relatos = defineCollection({
 
 const registroRelacionSchema = z.object({
 	inversa: z.string(),
+	// Cuando este tipo es azúcar sintáctico que puede apuntar a cualquiera de
+	// dos progenitores según el género (p.ej. hijo_de, que no distingue padre
+	// de madre), este mapa dice a qué tipo "real" equivale la arista cuando
+	// el destino tiene ese género — grafo.ts la trata entonces como si el
+	// destino la hubiera autoriado en sentido contrario con ese tipo, antes
+	// de generar preguntas o sintetizar inversas. Sin `genero` en el destino,
+	// o si su género no tiene entrada aquí, la arista se deja tal cual.
+	inversa_por_genero: z.record(z.string(), z.string()).optional(),
 	simetrica: z.boolean().optional(),
 	pregunta: z.string().optional(),
 	pregunta_inversa: z.string().optional(),

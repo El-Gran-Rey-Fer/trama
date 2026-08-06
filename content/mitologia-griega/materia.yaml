@@ -36,8 +36,11 @@ mitologia-griega:
       conjunto: true # una madre puede tener varios hijos
       pertenencia: "¿Es {origen} la madre de {candidato}?"
     hijo_de:
-      inversa: padre_de # fijo a padre_de: si algún día se autoría hijo_de apuntando a una
-      # madre, se agruparía como si fuera el padre. No pasa con el contenido actual.
+      inversa: padre_de # por defecto, y lo que queda si el destino no declara `genero`
+      inversa_por_genero:
+        femenino: madre_de # el destino de hijo_de necesita `genero: femenino` en su yaml
+        # para agruparse como madre en vez de padre — autoría hijo_de: <mi_madre> desde el
+        # hijo sin miedo, en el orden que toque, y esto lo resuelve solo (grafo.ts).
       pregunta: "¿Quién es el padre de {origen}?"
       pregunta_inversa: "¿De quién es padre {destino}?" # mismo texto que padre_de.pregunta:
       # ambas plantillas alimentan el mismo grupo agrupado (urano:padre_de) y así da igual
