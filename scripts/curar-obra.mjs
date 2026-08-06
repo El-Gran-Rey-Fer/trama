@@ -266,7 +266,10 @@ async function listarEntidades() {
 		CARPETA_ENTIDADES_OBRAS,
 		CARPETA_RELATOS,
 	]) {
-		const ficheros = await readdir(carpeta).catch(() => []);
+		// Los relatos viven en subcarpetas por era; entidades/obras no tiene anidamiento propio.
+		const ficheros = await readdir(carpeta, {
+			recursive: carpeta === CARPETA_RELATOS,
+		}).catch(() => []);
 		for (const fichero of ficheros) {
 			if (!fichero.endsWith(".yaml") && !fichero.endsWith(".mdx")) continue;
 			const texto = await readFile(path.join(carpeta, fichero), "utf8");

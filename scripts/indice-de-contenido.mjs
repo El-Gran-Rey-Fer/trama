@@ -20,8 +20,10 @@ const FICHERO_MATERIA = path.join(
 	"content/mitologia-griega/materia.yaml",
 );
 
-function listarConExtension(carpeta, extension) {
-	return readdirSync(carpeta).filter((f) => f.endsWith(extension));
+function listarConExtension(carpeta, extension, { recursivo = false } = {}) {
+	return readdirSync(carpeta, { recursive: recursivo }).filter((f) =>
+		f.endsWith(extension),
+	);
 }
 
 function cargarEntidades() {
@@ -41,12 +43,15 @@ function cargarEntidades() {
 }
 
 function cargarRelatos() {
-	return listarConExtension(CARPETA_RELATOS, ".mdx").map((f) => {
-		const ruta = path.join(CARPETA_RELATOS, f);
-		const texto = readFileSync(ruta, "utf-8");
-		const bloque = texto.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "";
-		return { ruta, datos: parse(bloque) };
-	});
+	// recursivo: true porque los relatos viven en subcarpetas por era.
+	return listarConExtension(CARPETA_RELATOS, ".mdx", { recursivo: true }).map(
+		(f) => {
+			const ruta = path.join(CARPETA_RELATOS, f);
+			const texto = readFileSync(ruta, "utf-8");
+			const bloque = texto.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "";
+			return { ruta, datos: parse(bloque) };
+		},
+	);
 }
 
 function cargarMateria() {

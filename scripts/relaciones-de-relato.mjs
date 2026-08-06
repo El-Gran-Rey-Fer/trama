@@ -62,9 +62,22 @@ function listarYaml(carpeta) {
 }
 
 function listarMdx(carpeta) {
-	return readdirSync(carpeta)
+	// recursive: true porque los relatos viven en subcarpetas por era.
+	return readdirSync(carpeta, { recursive: true })
 		.filter((f) => f.endsWith(".mdx"))
 		.map((f) => path.join(carpeta, f));
+}
+
+// Busca el .mdx de un relato por su `id` de frontmatter, no por ruta directa:
+// con subcarpetas por era no hay forma de derivar la ruta solo a partir del id.
+function buscarRelatoPorId(id) {
+	for (const ruta of listarMdx(CARPETA_RELATOS)) {
+		const texto = readFileSync(ruta, "utf-8");
+		if (texto.match(/^id:\s*(.+)$/m)?.[1]?.trim() === id) {
+			return { ruta, texto };
+		}
+	}
+	return null;
 }
 
 function cargarMateria() {
@@ -413,14 +426,14 @@ async function main() {
 		process.exit(1);
 	}
 
-	const rutaRelato = path.join(CARPETA_RELATOS, `${id}.mdx`);
-	let textoRelato;
-	try {
-		textoRelato = readFileSync(rutaRelato, "utf-8");
-	} catch {
-		console.error(`No existe ${relativa(rutaRelato)}`);
+	const encontrado = buscarRelatoPorId(id);
+	if (!encontrado) {
+		console.error(
+			`No existe ningún relato con id "${id}" en ${relativa(CARPETA_RELATOS)}`,
+		);
 		process.exit(1);
 	}
+	const { texto: textoRelato } = encontrado;
 
 	const { frontmatter, cuerpo } = extraerFrontmatterYCuerpo(textoRelato);
 	const datosRelato = parse(frontmatter);

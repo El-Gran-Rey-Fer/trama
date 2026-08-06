@@ -73,7 +73,8 @@ function listarYaml(carpeta) {
 }
 
 function listarMdx(carpeta) {
-	return readdirSync(carpeta)
+	// recursive: true porque los relatos viven en subcarpetas por era.
+	return readdirSync(carpeta, { recursive: true })
 		.filter((f) => f.endsWith(".mdx"))
 		.map((f) => path.join(carpeta, f));
 }

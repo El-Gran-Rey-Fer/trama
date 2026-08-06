@@ -104,7 +104,9 @@ const relatoSchema = z.object({
 
 const relatos = defineCollection({
 	loader: glob({
-		pattern: "*.mdx",
+		// Recursivo: los relatos viven en subcarpetas por era (relatos/<era>/), mismo
+		// criterio que entidades/obras/ — el id sale del YAML, no de la ruta.
+		pattern: "**/*.mdx",
 		base: "./content/mitologia-griega/relatos",
 		generateId: ({ data }) => (data as { id: string }).id,
 	}),
