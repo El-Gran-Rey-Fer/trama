@@ -7,5 +7,3 @@ resumen: >
 relaciones:
   - tipo: hijo_de
     destino: urano
-  - tipo: hijo_de
-    destino: gea

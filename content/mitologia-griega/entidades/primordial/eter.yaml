@@ -7,5 +7,3 @@ resumen: >
 relaciones:
   - tipo: hijo_de
     destino: erebo
-  - tipo: hijo_de
-    destino: nix

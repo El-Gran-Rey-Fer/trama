@@ -9,3 +9,7 @@ relaciones:
     destino: caos
   - tipo: consorte_de
     destino: erebo
+  - tipo: madre_de
+    destino: eter
+  - tipo: madre_de
+    destino: hemera

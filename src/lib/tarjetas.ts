@@ -56,6 +56,7 @@ export function candidatosNoConectados(
 	const otroLado = grafo.registro[tipoRelacion]?.inversa;
 	const tiposConexion = new Set([tipoRelacion, otroLado].filter(Boolean));
 	const excluidos = new Set(excluidosExtra);
+	excluidos.add(sujetoId); // una entidad nunca es candidata de una relación consigo misma
 	for (const r of sujeto.relaciones) {
 		if (tiposConexion.has(r.tipo)) excluidos.add(r.destino);
 	}

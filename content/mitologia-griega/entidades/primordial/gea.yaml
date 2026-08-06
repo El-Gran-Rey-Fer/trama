@@ -20,3 +20,11 @@ relaciones:
   - tipo: madre_de
     destino: tifon
     fuente: teogonia
+  - tipo: madre_de
+    destino: titanes
+  - tipo: madre_de
+    destino: ciclopes
+  - tipo: madre_de
+    destino: hecatonquiros
+  - tipo: madre_de
+    destino: ponto
