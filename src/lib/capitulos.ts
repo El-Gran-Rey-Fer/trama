@@ -76,3 +76,30 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 
 	return capitulos;
 }
+
+export interface CapituloPrevisto {
+	nombre: string;
+	era: string;
+}
+
+// docs/mapa-de-contenido.md §11: vista previa de "próximamente" para el resto del
+// temario. A propósito mucho más pobre que Capitulo: sin id, sin relatos, sin
+// examen — no es un capítulo real y no se puede abrir.
+export async function cargarCapitulosPrevistos(
+	materiaId: string,
+): Promise<CapituloPrevisto[]> {
+	const materiaEntry = await getEntry("materias", materiaId);
+	const eras = materiaEntry?.data.eras ?? [];
+	const erasIds = new Set(eras.map((e) => e.id));
+	const previstos = materiaEntry?.data.capitulos_previstos ?? [];
+
+	for (const p of previstos) {
+		if (!erasIds.has(p.era)) {
+			throw new Error(
+				`el capítulo previsto "${p.nombre}" referencia una era inexistente: ${p.era}`,
+			);
+		}
+	}
+
+	return previstos;
+}

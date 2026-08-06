@@ -376,3 +376,99 @@ mitologia-griega:
 
   # ─── guerra de troya ───────────────────────────────────────────
   # sin capítulos todavía, cero relatos escritos
+
+  # Resto del temario de docs/mapa-de-contenido.md §11: nombre y era nada más.
+  # Es la vista previa de "próximamente" en la portada de la materia, no un
+  # capítulo real — sin id, sin relatos, sin examen. Pasa a `capitulos` cuando
+  # se escriban sus relatos.
+  capitulos_previstos:
+    - { nombre: La creación de los mortales, era: edad-de-los-titanes }
+
+    - { nombre: Zeus y Hera, era: edad-de-los-olimpicos }
+    - { nombre: La soberbia castigada, era: edad-de-los-olimpicos }
+    - { nombre: El reino de los muertos, era: edad-de-los-olimpicos }
+    - { nombre: Los castigos eternos, era: edad-de-los-olimpicos }
+    - { nombre: El señor del mar, era: edad-de-los-olimpicos }
+    - { nombre: Apolo y Ártemis, era: edad-de-los-olimpicos }
+    - { nombre: Los amores de Apolo, era: edad-de-los-olimpicos }
+    - { nombre: Asclepio, era: edad-de-los-olimpicos }
+    - { nombre: Los que desafiaron a Apolo, era: edad-de-los-olimpicos }
+    - { nombre: Ártemis y los cazadores, era: edad-de-los-olimpicos }
+    - { nombre: El ladrón recién nacido, era: edad-de-los-olimpicos }
+    - { nombre: Hefesto, el dios que cojea, era: edad-de-los-olimpicos }
+    - { nombre: La red, era: edad-de-los-olimpicos }
+    - { nombre: Afrodita, era: edad-de-los-olimpicos }
+    - { nombre: Dioniso, el que llega de fuera, era: edad-de-los-olimpicos }
+    - { nombre: Penteo y las bacantes, era: edad-de-los-olimpicos }
+    - { nombre: El fuego y la mujer, era: edad-de-los-olimpicos }
+    - { nombre: El diluvio, era: edad-de-los-olimpicos }
+    - { nombre: Zeus y los linajes, era: edad-de-los-olimpicos }
+    - { nombre: Leda y los Dioscuros, era: edad-de-los-olimpicos }
+    - { nombre: Faetón, era: edad-de-los-olimpicos }
+    - { nombre: Cuerpos que cambian, era: edad-de-los-olimpicos }
+    - { nombre: Amores desgraciados, era: edad-de-los-olimpicos }
+    - { nombre: La casa de Atenas, era: edad-de-los-olimpicos }
+
+    - { nombre: Las Danaides, era: edad-de-los-heroes }
+    - { nombre: La lluvia de oro, era: edad-de-los-heroes }
+    - { nombre: La cabeza de la Gorgona, era: edad-de-los-heroes }
+    - { nombre: El monstruo del mar, era: edad-de-los-heroes }
+    - { nombre: El jinete que quiso subir, era: edad-de-los-heroes }
+    - { nombre: El rey de Creta, era: edad-de-los-heroes }
+    - { nombre: El artesano, era: edad-de-los-heroes }
+    - { nombre: El camino a Atenas, era: edad-de-los-heroes }
+    - { nombre: Las velas negras, era: edad-de-los-heroes }
+    - { nombre: Las amazonas, era: edad-de-los-heroes }
+    - { nombre: Fedra e Hipólito, era: edad-de-los-heroes }
+    - { nombre: Pirítoo, era: edad-de-los-heroes }
+    - { nombre: El niño que estranguló serpientes, era: edad-de-los-heroes }
+    - { nombre: La locura, era: edad-de-los-heroes }
+    - { nombre: Las primeras fieras, era: edad-de-los-heroes }
+    - { nombre: El Peloponeso limpio, era: edad-de-los-heroes }
+    - { nombre: Más allá del mar, era: edad-de-los-heroes }
+    - { nombre: Los confines del mundo, era: edad-de-los-heroes }
+    - { nombre: Por el camino, era: edad-de-los-heroes }
+    - { nombre: Alcestis, era: edad-de-los-heroes }
+    - { nombre: La Gigantomaquia, era: edad-de-los-heroes }
+    - { nombre: Ónfale, era: edad-de-los-heroes }
+    - { nombre: La túnica y la pira, era: edad-de-los-heroes }
+    - { nombre: Cadmo funda Tebas, era: edad-de-los-heroes }
+    - { nombre: Anfión y Zeto, era: edad-de-los-heroes }
+    - { nombre: Edipo y la esfinge, era: edad-de-los-heroes }
+    - { nombre: La verdad de Edipo, era: edad-de-los-heroes }
+    - { nombre: Los siete contra Tebas, era: edad-de-los-heroes }
+    - { nombre: Antígona, era: edad-de-los-heroes }
+    - { nombre: Los Epígonos, era: edad-de-los-heroes }
+    - { nombre: El carnero de oro, era: edad-de-los-heroes }
+    - { nombre: La nave Argo, era: edad-de-los-heroes }
+    - { nombre: Fineo y las rocas, era: edad-de-los-heroes }
+    - { nombre: La Cólquide, era: edad-de-los-heroes }
+    - { nombre: El regreso, era: edad-de-los-heroes }
+    - { nombre: Medea, era: edad-de-los-heroes }
+    - { nombre: La caza de Calidón, era: edad-de-los-heroes }
+    - { nombre: Atalanta, era: edad-de-los-heroes }
+    - { nombre: Orfeo, era: edad-de-los-heroes }
+    - { nombre: Pélope, era: edad-de-los-heroes }
+    - { nombre: Atreo y Tiestes, era: edad-de-los-heroes }
+
+    - { nombre: Las bodas de Peleo y Tetis, era: guerra-de-troya }
+    - { nombre: La manzana, era: guerra-de-troya }
+    - { nombre: El rapto de Helena, era: guerra-de-troya }
+    - { nombre: La flota en Áulide, era: guerra-de-troya }
+    - { nombre: La cólera de Aquiles, era: guerra-de-troya }
+    - { nombre: Héctor y Andrómaca, era: guerra-de-troya }
+    - { nombre: Patroclo, era: guerra-de-troya }
+    - { nombre: La muerte de Héctor, era: guerra-de-troya }
+    - { nombre: El rescate de Príamo, era: guerra-de-troya }
+    - { nombre: Pentesilea y Memnón, era: guerra-de-troya }
+    - { nombre: La muerte de Aquiles, era: guerra-de-troya }
+    - { nombre: La locura de Áyax, era: guerra-de-troya }
+    - { nombre: El caballo de madera, era: guerra-de-troya }
+    - { nombre: La caída de Troya, era: guerra-de-troya }
+    - { nombre: El regreso de Agamenón, era: guerra-de-troya }
+    - { nombre: Orestes, era: guerra-de-troya }
+    - { nombre: El cíclope, era: guerra-de-troya }
+    - { nombre: Circe y los muertos, era: guerra-de-troya }
+    - { nombre: El camino a casa, era: guerra-de-troya }
+    - { nombre: Ítaca, era: guerra-de-troya }
+    - { nombre: Los pretendientes, era: guerra-de-troya }

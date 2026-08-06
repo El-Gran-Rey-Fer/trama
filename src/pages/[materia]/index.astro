@@ -1,7 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { cargarCapitulos } from "../../lib/capitulos";
+import { cargarCapitulos, cargarCapitulosPrevistos } from "../../lib/capitulos";
 import { rutaCapitulo } from "../../lib/rutas";
 
 export async function getStaticPaths() {
@@ -17,6 +17,7 @@ const { materiaId } = Astro.props;
 const materiaEntry = await getEntry("materias", materiaId);
 const eras = materiaEntry?.data.eras ?? [];
 const capitulos = await cargarCapitulos(materiaId);
+const capitulosPrevistos = await cargarCapitulosPrevistos(materiaId);
 const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
 const numeroPorCapitulo = new Map(capitulos.map((c, i) => [c.id, i + 1]));
 
@@ -31,6 +32,7 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     {
       eras.map((era) => {
         const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
+        const previstosDeEra = capitulosPrevistos.filter((c) => c.era === era.id);
         return (
           <div class="grupo-era">
             <h2 class="etiqueta-era">{era.nombre}</h2>
@@ -52,6 +54,18 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
                         ›
                       </span>
                     </a>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {previstosDeEra.length > 0 && (
+              <ol class="lista-capitulos lista-previstos">
+                {previstosDeEra.map((c) => (
+                  <li class="fila-prevista">
+                    <span class="texto-capitulo">
+                      <span class="titulo-capitulo">{c.nombre}</span>
+                      <span class="estado">Próximamente</span>
+                    </span>
                   </li>
                 ))}
               </ol>
@@ -182,5 +196,13 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
   .chevron-capitulo {
     font-size: 20px;
     color: var(--color-texto-muted);
+  }
+
+  .lista-previstos .fila-prevista {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px 16px 62px;
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+    opacity: 0.5;
   }
 </style>

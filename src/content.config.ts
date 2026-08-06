@@ -172,6 +172,12 @@ const materiaSchema = z.object({
 			}),
 		)
 		.optional(),
+	// docs/mapa-de-contenido.md §11: el resto del temario previsto, sin relatos
+	// escritos todavía. Solo vista previa —nombre y era—, nunca un capítulo real:
+	// no lleva id, ni relatos, ni examen, y cargarCapitulos no lo toca.
+	capitulos_previstos: z
+		.array(z.object({ nombre: z.string(), era: z.string() }))
+		.optional(),
 	// Plan de imágenes y álbum §3.5: nivel cosmético según cobertura (cromos
 	// dominados + capítulos cerrados), nunca constancia. Ordenado de menor a
 	// mayor `umbral` (fracción 0-1); `calcularNivel` en lib/estado.ts toma el
