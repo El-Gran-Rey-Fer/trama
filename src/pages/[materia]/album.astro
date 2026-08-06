@@ -45,13 +45,18 @@ function datosParticipante(e: (typeof entidades)[number]) {
 }
 
 // Agrupado por `tipo` (orden del registro en materia.yaml, no alfabético —
-// es el orden en que ya se declaran ahí), alfabético dentro de cada tipo.
+// es el orden en que ya se declaran ahí); dentro de cada tipo, primarias
+// (con prosa propia, `e.prosa` truthy) antes que menores, y alfabético
+// dentro de cada peso — así no se mezclan entidades mayores y menores.
 // Mismo agrupado en los dos modos — una entidad puede estar en varios
 // capítulos (participa en varios relatos), así que agrupar por capítulo le
 // daba cromos duplicados o un reparto arbitrario; por tipo cada entidad cae
 // en un solo grupo. Sin `era`: las entidades no la llevan todavía (se
 // añadirá cuando el timeline lo pida, decisión ya cerrada); agrupar por era
 // se deja para cuando ese campo exista.
+function peso(e: (typeof entidades)[number]): number {
+	return e.prosa ? 0 : 1;
+}
 const ordenTipos = materiaEntry?.data.tipos ?? [];
 const tiposPresentes = [...new Set(entidades.map((e) => e.tipo))];
 tiposPresentes.sort((a, b) => {
@@ -66,7 +71,11 @@ const gruposPorTipo = tiposPresentes.map((tipo) => ({
 	tipo,
 	entidades: entidades
 		.filter((e) => e.tipo === tipo)
-		.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+		.sort((a, b) => {
+			const dPeso = peso(a) - peso(b);
+			if (dPeso !== 0) return dPeso;
+			return a.nombre.localeCompare(b.nombre, "es");
+		})
 		.map(datosParticipante),
 }));
 
