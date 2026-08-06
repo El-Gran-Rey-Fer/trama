@@ -1,4 +1,5 @@
 import { defineCollection } from "astro:content";
+import path from "node:path";
 import { file, glob } from "astro/loaders";
 import { z } from "astro/zod";
 
@@ -66,10 +67,10 @@ const entidadSchema = z
 
 const entidades = defineCollection({
 	loader: glob({
-		// Recursivo: las obras viven en entidades/obras/ para no mezclarse con el
-		// resto (mismo criterio que public/img/gr/obras/), pero siguen siendo la
-		// misma colección — el id sale del YAML, no de la ruta, así que
-		// `destino: <id>` en cualquier relación las resuelve igual.
+		// Recursivo: cada entidad vive en entidades/<tipo>/ (las obras en
+		// entidades/obra/, mismo criterio que public/img/gr/obras/), pero todas
+		// siguen siendo la misma colección — el id sale del YAML, no de la ruta,
+		// así que `destino: <id>` en cualquier relación las resuelve igual.
 		pattern: "**/*.yaml",
 		base: "./content/mitologia-griega/entidades",
 		generateId: ({ data }) => (data as { id: string }).id,
@@ -79,11 +80,15 @@ const entidades = defineCollection({
 
 const entidadesProsa = defineCollection({
 	loader: glob({
-		pattern: "*.mdx",
+		// Recursivo: la prosa vive junto a su YAML hermano, en entidades/<tipo>/.
+		pattern: "**/*.mdx",
 		base: "./content/mitologia-griega/entidades",
+		// Sin frontmatter: el id sale del nombre del fichero, no de la ruta —
+		// si tomara la ruta completa (comportamiento por defecto del loader),
+		// el id incluiría la subcarpeta de tipo y dejaría de coincidir con el
+		// id del YAML hermano.
+		generateId: ({ entry }) => path.basename(entry, ".mdx"),
 	}),
-	// Sin frontmatter: el id sale del nombre del fichero (comportamiento por
-	// defecto del loader), así que no puede desincronizarse del YAML hermano.
 	schema: z.object({}),
 });
 
@@ -105,7 +110,7 @@ const relatoSchema = z.object({
 const relatos = defineCollection({
 	loader: glob({
 		// Recursivo: los relatos viven en subcarpetas por era (relatos/<era>/), mismo
-		// criterio que entidades/obras/ — el id sale del YAML, no de la ruta.
+		// criterio que entidades/<tipo>/ — el id sale del YAML, no de la ruta.
 		pattern: "**/*.mdx",
 		base: "./content/mitologia-griega/relatos",
 		generateId: ({ data }) => (data as { id: string }).id,
@@ -160,6 +165,11 @@ const materiaSchema = z.object({
 	// Modo aventura, paso 2 (docs/plan-modo-aventura.md): el conjunto de un capítulo
 	// —de donde salen sus tarjetas y su examen— es `participantes` de sus `relatos`
 	// más `entidades_extra`; no se lista a mano lo que el grafo puede derivar.
+	//
+	// `relatos` es la lista prevista del mapa, no una garantía de que ya existan:
+	// cargarCapitulos (src/lib/capitulos.ts) calcula cuántos de esos ids están
+	// escritos y de ahí sale `activo`. `resumen` es opcional porque un capítulo
+	// sin ningún relato escrito todavía no tiene nada que resumir.
 	capitulos: z
 		.array(
 			z.object({
@@ -167,18 +177,12 @@ const materiaSchema = z.object({
 				nombre: z.string(),
 				era: z.string(),
 				orden: z.number(),
-				resumen: z.string(),
+				resumen: z.string().optional(),
 				relatos: z.array(z.string()),
 				entidades_extra: z.array(z.string()).optional(),
 				examen: z.object({ aciertos: z.number(), de: z.number() }),
 			}),
 		)
-		.optional(),
-	// docs/mapa-de-contenido.md §11: el resto del temario previsto, sin relatos
-	// escritos todavía. Solo vista previa —nombre y era—, nunca un capítulo real:
-	// no lleva id, ni relatos, ni examen, y cargarCapitulos no lo toca.
-	capitulos_previstos: z
-		.array(z.object({ nombre: z.string(), era: z.string() }))
 		.optional(),
 	// Plan de imágenes y álbum §3.5: nivel cosmético según cobertura (cromos
 	// dominados + capítulos cerrados), nunca constancia. Ordenado de menor a

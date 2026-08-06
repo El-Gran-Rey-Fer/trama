@@ -27,19 +27,25 @@ function listarConExtension(carpeta, extension, { recursivo = false } = {}) {
 }
 
 function cargarEntidades() {
-	// Solo el nivel superior de entidades/: las obras (entidades/obras/) quedan
-	// fuera a propósito, igual que pidió el usuario para este índice.
-	const ficheros = listarConExtension(CARPETA_ENTIDADES, ".yaml");
+	// Recursivo: las entidades viven en subcarpetas por tipo (incluida
+	// entidades/obra/). Las obras quedan fuera del resultado a propósito, igual
+	// que pidió el usuario para este índice — antes se lograba no bajando a
+	// entidades/obra/, ahora se filtra por el campo `tipo` del propio YAML.
+	const ficheros = listarConExtension(CARPETA_ENTIDADES, ".yaml", {
+		recursivo: true,
+	});
 	const mdxDisponibles = new Set(
-		listarConExtension(CARPETA_ENTIDADES, ".mdx").map((f) =>
-			f.replace(/\.mdx$/, ""),
+		listarConExtension(CARPETA_ENTIDADES, ".mdx", { recursivo: true }).map(
+			(f) => path.basename(f, ".mdx"),
 		),
 	);
-	return ficheros.map((f) => {
-		const ruta = path.join(CARPETA_ENTIDADES, f);
-		const datos = parse(readFileSync(ruta, "utf-8"));
-		return { ruta, datos, tieneMdx: mdxDisponibles.has(datos.id) };
-	});
+	return ficheros
+		.map((f) => {
+			const ruta = path.join(CARPETA_ENTIDADES, f);
+			const datos = parse(readFileSync(ruta, "utf-8"));
+			return { ruta, datos, tieneMdx: mdxDisponibles.has(datos.id) };
+		})
+		.filter(({ datos }) => datos.tipo !== "obra");
 }
 
 function cargarRelatos() {

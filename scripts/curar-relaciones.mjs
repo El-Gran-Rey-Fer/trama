@@ -13,7 +13,7 @@
 // (nueva-obra.mjs y curar-obra.mjs tampoco lo hacen), así que cada uno se
 // sigue pudiendo lanzar y leer de forma aislada.
 
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,7 +21,6 @@ import { parse, parseDocument } from "yaml";
 
 const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CARPETA_ENTIDADES = path.join(RAIZ, "content/mitologia-griega/entidades");
-const CARPETA_OBRAS = path.join(CARPETA_ENTIDADES, "obras");
 const CARPETA_RELATOS = path.join(RAIZ, "content/mitologia-griega/relatos");
 const FICHERO_MATERIA = path.join(
 	RAIZ,
@@ -30,6 +29,7 @@ const FICHERO_MATERIA = path.join(
 const PUERTO = 4323;
 
 const ID_VALIDO = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const TIPO_RELACION_VALIDO = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
 
 // Mismas raíces de verbo que relaciones-de-relato.mjs — si se amplían allí,
 // hay que ampliarlas aquí también.
@@ -50,7 +50,8 @@ function relativa(ruta) {
 }
 
 function listarYaml(carpeta) {
-	return readdirSync(carpeta)
+	// recursive: true porque las entidades viven en subcarpetas por tipo.
+	return readdirSync(carpeta, { recursive: true })
 		.filter((f) => f.endsWith(".yaml"))
 		.map((f) => path.join(carpeta, f));
 }
@@ -69,10 +70,7 @@ function cargarMateria() {
 
 function indexarEntidades() {
 	const indice = new Map();
-	for (const ruta of [
-		...listarYaml(CARPETA_ENTIDADES),
-		...listarYaml(CARPETA_OBRAS),
-	]) {
+	for (const ruta of listarYaml(CARPETA_ENTIDADES)) {
 		const datos = parse(readFileSync(ruta, "utf-8"));
 		if (datos?.id) indice.set(datos.id, { ruta, datos });
 	}
@@ -286,7 +284,8 @@ async function manejarAltaEntidad(req, res) {
 	if (entidades.has(id) || idsRelatos.has(id))
 		return responderJson(res, 409, { error: `"${id}" ya existe` });
 
-	const ruta = path.join(CARPETA_ENTIDADES, `${id}.yaml`);
+	const ruta = path.join(CARPETA_ENTIDADES, tipo, `${id}.yaml`);
+	mkdirSync(path.dirname(ruta), { recursive: true });
 	writeFileSync(ruta, construirYamlEntidad({ id, tipo, nombre, resumen }));
 	responderJson(res, 200, { ok: true, ruta: relativa(ruta) });
 }

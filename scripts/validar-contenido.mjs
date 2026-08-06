@@ -67,7 +67,8 @@ function cargarMateria() {
 }
 
 function listarYaml(carpeta) {
-	return readdirSync(carpeta)
+	// recursive: true porque las entidades viven en subcarpetas por tipo.
+	return readdirSync(carpeta, { recursive: true })
 		.filter((f) => f.endsWith(".yaml"))
 		.map((f) => path.join(carpeta, f));
 }

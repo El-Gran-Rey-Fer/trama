@@ -24,7 +24,7 @@ porque tienden a trabajar fichero a fichero (una obra, un relato).
 
 Da de alta una obra a partir de una URL de fichero de Wikimedia Commons: descarga la
 imagen a `public/img/gr/obras/<id>.<ext>` y escribe
-`content/mitologia-griega/entidades/obras/<id>.yaml` con crédito/origen/alt (los campos
+`content/mitologia-griega/entidades/obra/<id>.yaml` con crédito/origen/alt (los campos
 que Commons no da de forma fiable quedan como `PENDIENTE`).
 
 No es interactivo ni levanta servidor: corre, imprime dos rutas y termina.

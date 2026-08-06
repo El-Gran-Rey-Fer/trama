@@ -16,11 +16,12 @@ const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CARPETA_IMG = path.join(RAIZ, "public/img/gr");
 const CARPETA_OBRAS = path.join(CARPETA_IMG, "obras");
 const CARPETA_ENTIDADES = path.join(RAIZ, "content/mitologia-griega/entidades");
-// Las obras viven en su propia subcarpeta dentro de entidades/ (no mezclarse
-// con el resto), igual que sus imágenes viven en public/img/gr/obras/. El id
-// sigue saliendo del YAML, no de la ruta (content.config.ts glob recursivo),
-// así que esto no cambia cómo se resuelven las relaciones.
-const CARPETA_ENTIDADES_OBRAS = path.join(CARPETA_ENTIDADES, "obras");
+// Las obras viven en su propia subcarpeta dentro de entidades/ (una más entre
+// las de tipo, entidades/obra/), igual que sus imágenes viven en
+// public/img/gr/obras/. El id sigue saliendo del YAML, no de la ruta
+// (content.config.ts glob recursivo), así que esto no cambia cómo se
+// resuelven las relaciones.
+const CARPETA_ENTIDADES_OBRAS = path.join(CARPETA_ENTIDADES, "obra");
 const CARPETA_RELATOS = path.join(RAIZ, "content/mitologia-griega/relatos");
 const PUERTO = 4322;
 
@@ -261,15 +262,12 @@ function construirYamlObraNueva({
 
 async function listarEntidades() {
 	const resultado = [];
-	for (const carpeta of [
-		CARPETA_ENTIDADES,
-		CARPETA_ENTIDADES_OBRAS,
-		CARPETA_RELATOS,
-	]) {
-		// Los relatos viven en subcarpetas por era; entidades/obras no tiene anidamiento propio.
-		const ficheros = await readdir(carpeta, {
-			recursive: carpeta === CARPETA_RELATOS,
-		}).catch(() => []);
+	// entidades/obra/ ya queda cubierta al recorrer CARPETA_ENTIDADES: es una
+	// subcarpeta suya más, no hace falta listarla aparte.
+	for (const carpeta of [CARPETA_ENTIDADES, CARPETA_RELATOS]) {
+		const ficheros = await readdir(carpeta, { recursive: true }).catch(
+			() => [],
+		);
 		for (const fichero of ficheros) {
 			if (!fichero.endsWith(".yaml") && !fichero.endsWith(".mdx")) continue;
 			const texto = await readFile(path.join(carpeta, fichero), "utf8");
@@ -374,7 +372,7 @@ async function manejarNuevaObra(req, res) {
 		.catch(() => false);
 	if (yaExiste)
 		return responderJson(res, 409, {
-			error: `ya existe content/mitologia-griega/entidades/obras/${id}.yaml`,
+			error: `ya existe content/mitologia-griega/entidades/obra/${id}.yaml`,
 		});
 
 	const origenImagen = cuerpo.origenImagen || {};
@@ -437,7 +435,7 @@ async function manejarGuardarRelaciones(req, res) {
 	const yamlActual = await readFile(rutaYaml, "utf8").catch(() => null);
 	if (yamlActual === null)
 		return responderJson(res, 404, {
-			error: `no existe content/mitologia-griega/entidades/obras/${id}.yaml`,
+			error: `no existe content/mitologia-griega/entidades/obra/${id}.yaml`,
 		});
 
 	const relaciones = Array.isArray(cuerpo.relaciones) ? cuerpo.relaciones : [];
@@ -460,18 +458,19 @@ async function manejarGuardarRelaciones(req, res) {
 	responderJson(res, 200, { ok: true });
 }
 
-// Localiza el fichero de una entidad "normal" (no obra) por id, probando las
-// dos carpetas donde puede vivir. Los relatos viven en CARPETA_RELATOS como
-// `.mdx` y no tienen campo `retrato`; no se prueban aquí a propósito.
+// Localiza el fichero de una entidad "normal" (no obra) por id, buscando en
+// entidades/<tipo>/<id>.yaml sin asumir de qué tipo es. Los relatos viven en
+// CARPETA_RELATOS como `.mdx` y no tienen campo `retrato`; no se prueban aquí
+// a propósito.
 async function rutaEntidad(id) {
-	for (const carpeta of [CARPETA_ENTIDADES, CARPETA_ENTIDADES_OBRAS]) {
-		const ruta = path.join(carpeta, `${id}.yaml`);
-		const existe = await readFile(ruta, "utf8")
-			.then(() => true)
-			.catch(() => false);
-		if (existe) return ruta;
-	}
-	return null;
+	const objetivo = `${id}.yaml`;
+	const ficheros = await readdir(CARPETA_ENTIDADES, { recursive: true }).catch(
+		() => [],
+	);
+	const encontrado = ficheros.find(
+		(f) => f === objetivo || f.endsWith(`${path.sep}${objetivo}`),
+	);
+	return encontrado ? path.join(CARPETA_ENTIDADES, encontrado) : null;
 }
 
 // Añade, reemplaza o quita la línea `retrato: <id-obra>` (campo escalar de

@@ -296,12 +296,15 @@ proyecto/
 │   └── mitologia-griega/
 │       ├── materia.yaml               # tipos, atributos, relaciones, fuentes, timeline
 │       ├── entidades/
-│       │   ├── zeus.yaml              # un fichero por entidad
-│       │   ├── hera.yaml
-│       │   └── crono.yaml
+│       │   ├── dios/
+│       │   │   ├── zeus.yaml          # un fichero por entidad, en subcarpeta por `tipo`
+│       │   │   └── hera.yaml
+│       │   └── titan/
+│       │       └── crono.yaml
 │       ├── relatos/
-│       │   ├── titanomaquia.mdx
-│       │   └── rapto-de-europa.mdx
+│       │   └── edad-de-los-titanes/   # subcarpeta por `era`
+│       │       ├── titanomaquia.mdx
+│       │       └── rapto-de-europa.mdx
 │       └── paginas/
 │           ├── los-doce-olimpicos.mdx
 │           └── etimologia-de-zeus.mdx
@@ -310,7 +313,9 @@ proyecto/
 
 Un fichero por entidad: Astro los lee con un glob, así que cien ficheros cuestan lo mismo
 que uno con cien entidades. A cambio, el diff de git dice "has tocado a Zeus" en vez de
-"has tocado la línea 447".
+"has tocado la línea 447". La subcarpeta (`tipo` en entidades, `era` en relatos) es solo
+para navegar el repo — el id sigue saliendo del YAML/frontmatter, nunca de la ruta, así que
+moverse de subcarpeta no rompe ninguna relación.
 
 Añadir mitología nórdica = crear `content/mitologia-nordica/` con su `materia.yaml`.
 Cero cambios en `src/`.

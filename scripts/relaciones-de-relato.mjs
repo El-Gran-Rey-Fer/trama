@@ -22,7 +22,7 @@
 // primero es lo que permite que las relaciones sugeridas después se lleguen
 // a escribir de verdad.
 
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import readline from "node:readline/promises";
 import { fileURLToPath } from "node:url";
@@ -30,7 +30,6 @@ import { parse, parseDocument } from "yaml";
 
 const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CARPETA_ENTIDADES = path.join(RAIZ, "content/mitologia-griega/entidades");
-const CARPETA_OBRAS = path.join(CARPETA_ENTIDADES, "obras");
 const CARPETA_RELATOS = path.join(RAIZ, "content/mitologia-griega/relatos");
 const FICHERO_MATERIA = path.join(
 	RAIZ,
@@ -57,7 +56,8 @@ function relativa(ruta) {
 }
 
 function listarYaml(carpeta) {
-	return readdirSync(carpeta)
+	// recursive: true porque las entidades viven en subcarpetas por tipo.
+	return readdirSync(carpeta, { recursive: true })
 		.filter((f) => f.endsWith(".yaml"))
 		.map((f) => path.join(carpeta, f));
 }
@@ -96,10 +96,7 @@ function cargarTipos() {
 
 function indexarEntidades() {
 	const indice = new Map();
-	for (const ruta of [
-		...listarYaml(CARPETA_ENTIDADES),
-		...listarYaml(CARPETA_OBRAS),
-	]) {
+	for (const ruta of listarYaml(CARPETA_ENTIDADES)) {
 		const datos = parse(readFileSync(ruta, "utf-8"));
 		if (datos?.id) indice.set(datos.id, { ruta, datos });
 	}
@@ -205,8 +202,9 @@ async function altaDeEntidadesFaltantes(idsCitados, entidades, idsRelatos, rl) {
 				await rl.question("  resumen (opcional, enter para PENDIENTE): ")
 			).trim() || "PENDIENTE";
 
-		const ruta = path.join(CARPETA_ENTIDADES, `${id}.yaml`);
+		const ruta = path.join(CARPETA_ENTIDADES, tipo, `${id}.yaml`);
 		const datos = { id, tipo, nombre, resumen };
+		mkdirSync(path.dirname(ruta), { recursive: true });
 		writeFileSync(ruta, construirYamlEntidad(datos));
 		entidades.set(id, { ruta, datos });
 		console.log(`  Escrito ${relativa(ruta)}`);

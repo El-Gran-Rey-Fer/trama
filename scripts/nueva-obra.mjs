@@ -22,7 +22,7 @@ const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CARPETA_OBRAS = path.join(RAIZ, "public/img/gr/obras");
 const CARPETA_ENTIDADES_OBRAS = path.join(
 	RAIZ,
-	"content/mitologia-griega/entidades/obras",
+	"content/mitologia-griega/entidades/obra",
 );
 
 function quitarEtiquetasHtml(texto) {
