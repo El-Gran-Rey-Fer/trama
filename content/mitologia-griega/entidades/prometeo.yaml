@@ -1,0 +1,8 @@
+id: prometeo
+tipo: titan
+nombre: Prometeo
+resumen: Titán hijo de Jápeto que toma partido por los mortales frente a Zeus, y a quien una tradición atribuye haberlos modelado con tierra y agua.
+relaciones:
+  - tipo: modela_a
+    destino: humanidad
+    fuente: biblioteca

@@ -154,6 +154,12 @@ mitologia-griega:
       pregunta_inversa: "¿Quién mutila a {destino}?"
     mutilado_por:
       inversa: mutila_a
+    modela_a:
+      inversa: modelado_por
+      pregunta: "¿A quién modela {origen}?"
+      pregunta_inversa: "¿Quién modela a {destino}?"
+    modelado_por:
+      inversa: modela_a
     forja:
       inversa: forjado_por
       pregunta: "¿Qué forja {origen}?"

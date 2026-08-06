@@ -42,6 +42,7 @@ const VERBOS_POR_TIPO = {
 	mutila_a: ["mutil", "castr"],
 	forja: ["forj"],
 	construye: ["constru"],
+	modela_a: ["model"],
 };
 
 function relativa(ruta) {
