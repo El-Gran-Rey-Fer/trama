@@ -202,17 +202,6 @@ mitologia-griega:
       pregunta_inversa: "¿Qué se convierte en {destino}?"
     surge_de:
       inversa: se_convierte_en
-    prueba_temporal_a:
-      inversa: prueba_temporal_por
-      pregunta: ¿P {origen}?
-      pregunta_inversa: ¿Q {destino}?
-      conjunto: true
-    prueba_temporal_por:
-      inversa: prueba_temporal_a
-    prueba_simetrica:
-      inversa: prueba_simetrica
-      simetrica: true
-      pregunta: ¿Quién es X de {origen}?
 
   fuentes:
     teogonia: { autor: "Hesíodo", obra: "Teogonía" }

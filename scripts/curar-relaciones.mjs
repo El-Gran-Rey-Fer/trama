@@ -17,7 +17,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { parse, parseDocument } from "yaml";
+import { parse, parseDocument, Scalar } from "yaml";
 
 const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CARPETA_ENTIDADES = path.join(RAIZ, "content/mitologia-griega/entidades");
@@ -196,10 +196,15 @@ function escribirTipoRelacion({
 	const doc = parseDocument(texto);
 	const relaciones = doc.getIn(["mitologia-griega", "relaciones"], true);
 
+	// entre comillas dobles, como el resto de plantillas pregunta/pregunta_inversa del registro.
+	const comillas = (texto) =>
+		Object.assign(new Scalar(texto), { type: Scalar.QUOTE_DOUBLE });
+
 	const definicionDirecta = { inversa };
 	if (simetrica) definicionDirecta.simetrica = true;
-	if (pregunta) definicionDirecta.pregunta = pregunta;
-	if (preguntaInversa) definicionDirecta.pregunta_inversa = preguntaInversa;
+	if (pregunta) definicionDirecta.pregunta = comillas(pregunta);
+	if (preguntaInversa)
+		definicionDirecta.pregunta_inversa = comillas(preguntaInversa);
 	if (conjunto) definicionDirecta.conjunto = true;
 	if (conjuntoInversa) definicionDirecta.conjunto_inversa = true;
 	relaciones.set(tipo, doc.createNode(definicionDirecta));
