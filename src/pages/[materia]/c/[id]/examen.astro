@@ -14,10 +14,12 @@ export async function getStaticPaths() {
 	const porMateria = await Promise.all(
 		materias.map(async (m) => {
 			const capitulos = await cargarCapitulos(m.id);
-			return capitulos.map((c) => ({
-				params: { materia: m.data.slug, id: c.id },
-				props: { materiaId: m.id },
-			}));
+			return capitulos
+				.filter((c) => c.activo)
+				.map((c) => ({
+					params: { materia: m.data.slug, id: c.id },
+					props: { materiaId: m.id },
+				}));
 		}),
 	);
 	return porMateria.flat();
