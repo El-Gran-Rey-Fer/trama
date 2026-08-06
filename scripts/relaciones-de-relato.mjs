@@ -264,6 +264,148 @@ function escribirRelacion(entrada, { tipo, destino, fuente, principal }) {
 	entrada.datos.relaciones = [...relacionesDe(entrada), nuevaRelacion];
 }
 
+const TIPO_RELACION_VALIDO = /^[a-z]+(_[a-z]+)*$/;
+
+// Registra un tipo de relación nuevo en el `relaciones:` de materia.yaml.
+// A propósito NO usa parseDocument/toString (el patrón de escribirRelacion):
+// materia.yaml tiene bloques con formato a mano (comentarios, un `capitulos:`
+// con su propia indentación) que el serializador de `yaml` reformatea al
+// volcar el documento entero, aunque no se toque esa parte — se comprobó
+// haciendo un round-trip sin cambios y comparando el diff. Edición de texto
+// dirigida, como el resto de escritura de YAML en curar-obra.mjs.
+function registrarTipoRelacion({
+	tipo,
+	inversa,
+	simetrica,
+	pregunta,
+	preguntaInversa,
+}) {
+	const texto = readFileSync(FICHERO_MATERIA, "utf-8");
+	const lineas = texto.split("\n");
+	if (lineas.some((l) => l === `    ${tipo}:`))
+		throw new Error(`"${tipo}" ya existe en materia.yaml`);
+	const indiceFuentes = lineas.indexOf("  fuentes:");
+	if (indiceFuentes === -1)
+		throw new Error('no encuentro "  fuentes:" en materia.yaml; no se escribe');
+
+	const inversaReal = simetrica ? tipo : inversa;
+	const bloque = [`    ${tipo}:`, `      inversa: ${inversaReal}`];
+	if (simetrica) bloque.push("      simetrica: true");
+	if (pregunta) bloque.push(`      pregunta: "${pregunta}"`);
+	if (preguntaInversa)
+		bloque.push(`      pregunta_inversa: "${preguntaInversa}"`);
+	// La inversa se registra también, aunque sea solo con `inversa:` — mismo
+	// patrón "documentado por completitud" que devora_a/devorado_por: nadie la
+	// autoría a mano, pero conserva la simetría del registro.
+	if (!simetrica && !lineas.some((l) => l === `    ${inversa}:`)) {
+		bloque.push(`    ${inversa}:`, `      inversa: ${tipo}`);
+	}
+
+	lineas.splice(indiceFuentes, 0, ...bloque, "");
+	writeFileSync(FICHERO_MATERIA, lineas.join("\n"));
+}
+
+async function elegirOrigen(rl, idsCitados) {
+	console.log(
+		`  origen — ${idsCitados.map((id, i) => `${i + 1}) ${id}`).join(", ")}`,
+	);
+	const respuesta = (
+		await rl.question("  elige número o escribe el id: ")
+	).trim();
+	return idsCitados[Number(respuesta) - 1] ?? respuesta;
+}
+
+// Pide un nombre de relación nueva (ya se sabe que no está en `registro`),
+// pregunta lo mínimo que exige registroRelacionSchema (`inversa` es
+// obligatorio) y la escribe en materia.yaml. Devuelve el tipo tal cual
+// (registrado o no) para que confirmarYEscribir dé el mensaje de error
+// habitual si el usuario declina crearla.
+async function crearTipoRelacion(rl, registro, tipo) {
+	if (!TIPO_RELACION_VALIDO.test(tipo)) {
+		console.log(
+			`  "${tipo}" no sigue la convención (minúsculas y guion bajo); no se crea.`,
+		);
+		return tipo;
+	}
+	const simetricaResp = (
+		await rl.question(
+			`  ¿"${tipo}" es simétrica (mismo tipo en las dos direcciones, como "hermano_de")? (s/N) `,
+		)
+	)
+		.trim()
+		.toLowerCase();
+	const simetrica = simetricaResp === "s";
+	let inversa = tipo;
+	if (!simetrica) {
+		inversa = (
+			await rl.question(
+				`  nombre de su relación inversa (p. ej. "${tipo}_de"): `,
+			)
+		).trim();
+		if (!inversa) {
+			console.log("  falta la inversa; no se crea.");
+			return tipo;
+		}
+	}
+	const pregunta = (
+		await rl.question(
+			"  pregunta de práctica (opcional, usa {origen}/{destino}, enter para omitir): ",
+		)
+	).trim();
+	const preguntaInversa = pregunta
+		? (
+				await rl.question("  pregunta inversa (opcional, enter para omitir): ")
+			).trim()
+		: "";
+
+	registrarTipoRelacion({
+		tipo,
+		inversa,
+		simetrica,
+		pregunta,
+		preguntaInversa,
+	});
+	registro[tipo] = { inversa: simetrica ? tipo : inversa };
+	if (!simetrica && !(inversa in registro))
+		registro[inversa] = { inversa: tipo };
+	console.log(
+		`  Registrada "${tipo}" en materia.yaml (inversa: "${simetrica ? tipo : inversa}").`,
+	);
+	return tipo;
+}
+
+async function elegirTipoRelacion(rl, registro) {
+	const tipos = Object.keys(registro);
+	console.log(`  tipo — ${tipos.map((t, i) => `${i + 1}) ${t}`).join(", ")}`);
+	const respuesta = (
+		await rl.question(
+			'  elige número, escribe el tipo, o "nueva" para crear uno: ',
+		)
+	).trim();
+
+	const porNumero = tipos[Number(respuesta) - 1];
+	if (porNumero) return porNumero;
+	if (tipos.includes(respuesta)) return respuesta;
+	if (!respuesta) return respuesta;
+
+	if (respuesta.toLowerCase() === "nueva") {
+		const nombre = (
+			await rl.question("  nombre de la relación nueva: ")
+		).trim();
+		return nombre ? crearTipoRelacion(rl, registro, nombre) : respuesta;
+	}
+
+	const crear = (
+		await rl.question(
+			`  "${respuesta}" no está en materia.yaml. ¿Crearla? (S/n) `,
+		)
+	)
+		.trim()
+		.toLowerCase();
+	if (crear === "n") return respuesta;
+	return crearTipoRelacion(rl, registro, respuesta);
+}
+
 async function main() {
 	const id = process.argv[2];
 	if (!id) {
@@ -395,10 +537,8 @@ async function main() {
 			.toLowerCase();
 		if (seguir !== "s") break;
 
-		const origen = (
-			await rl.question(`  origen (${idsCitados.join(", ")}): `)
-		).trim();
-		const tipo = (await rl.question("  tipo (ver materia.yaml): ")).trim();
+		const origen = await elegirOrigen(rl, idsCitados);
+		const tipo = await elegirTipoRelacion(rl, registro);
 		const destino = (await rl.question("  destino: ")).trim();
 		const fuenteBruta = (
 			await rl.question("  fuente (opcional, enter para omitir): ")

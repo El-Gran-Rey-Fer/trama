@@ -95,6 +95,13 @@ pnpm relaciones-de-relato tifon-contra-zeus
 Es interactivo (alta de entidades, `s/N` por cada sugerencia y luego relaciones a
 mano). No lo lances en background: necesita tu respuesta en la terminal.
 
+Al añadir una relación a mano, tanto `origen` como `tipo` se eligen por número de una
+lista (entidades citadas / tipos ya registrados en `materia.yaml`), sin teclear el id
+a mano. Si el `tipo` que quieres no existe todavía, el script ofrece crearlo ahí mismo:
+pide su `inversa` (obligatoria — ver `registroRelacionSchema` en `content.config.ts`),
+si es simétrica, y opcionalmente sus plantillas de pregunta de práctica, y lo escribe en
+`materia.yaml` antes de aplicar la relación.
+
 ## `pnpm curar-relaciones`
 
 Levanta un servidor local (puerto **4323**) con una UI en el navegador

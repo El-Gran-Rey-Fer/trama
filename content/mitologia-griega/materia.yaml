@@ -190,6 +190,13 @@ mitologia-griega:
     representado_en:
       inversa: representa
 
+    se_convierte_en:
+      inversa: surge_de
+      pregunta: "¿En qué se convierte {origen}?"
+      pregunta_inversa: "¿Qué se convierte en {destino}?"
+    surge_de:
+      inversa: se_convierte_en
+
   fuentes:
     teogonia: { autor: "Hesíodo", obra: "Teogonía" }
     trabajos-y-dias: { autor: "Hesíodo", obra: "Trabajos y días", siglo: -8 }

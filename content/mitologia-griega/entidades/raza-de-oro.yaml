@@ -1,0 +1,10 @@
+id: raza-de-oro
+tipo: mortal
+nombre: Raza de oro
+resumen: Primera estirpe de mortales, aparecida bajo el reinado de Crono, que
+  vive sin trabajo, sin enfermedad y sin vejez, y desaparece sin dejar
+  descendencia.
+relaciones:
+  - tipo: se_convierte_en
+    destino: daimones
+    fuente: trabajos-y-dias
