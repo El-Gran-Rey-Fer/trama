@@ -19,12 +19,13 @@ const eras = materiaEntry?.data.eras ?? [];
 const capitulos = await cargarCapitulos(materiaId);
 const activos = capitulos.filter((c) => c.activo);
 const datosCapitulos = activos.map((c) => ({ id: c.id, relatos: c.relatos }));
-// era.posición entre los activos, no un índice global: así insertar un
-// capítulo o activar uno nuevo no corre la numeración de los demás.
+// era.posición sobre todos los capítulos, activos o no: la numeración ya
+// refleja su lugar real en el mapa desde el primer día, y activar uno no
+// corre la de los demás — el hueco ya estaba contado.
 const numeroPorCapitulo = new Map<string, string>();
 eras.forEach((era, indiceEra) => {
-	const activosDeEra = activos.filter((c) => c.era === era.id);
-	activosDeEra.forEach((c, indiceCapitulo) => {
+	const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
+	capitulosDeEra.forEach((c, indiceCapitulo) => {
 		numeroPorCapitulo.set(c.id, `${indiceEra + 1}.${indiceCapitulo + 1}`);
 	});
 });
@@ -39,43 +40,42 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     </div>
     {
       eras.map((era) => {
-        const activosDeEra = activos.filter((c) => c.era === era.id);
-        const pendientesDeEra = capitulos.filter((c) => c.era === era.id && !c.activo);
+        const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
         return (
           <div class="grupo-era">
             <h2 class="etiqueta-era">{era.nombre}</h2>
-            {activosDeEra.length === 0 ? (
+            {capitulosDeEra.length === 0 ? (
               <p class="sin-capitulos">Sin capítulos todavía.</p>
             ) : (
               <ol class="lista-capitulos">
-                {activosDeEra.map((c) => (
-                  <li data-capitulo={c.id} class="fila-capitulo">
-                    <a href={rutaCapitulo(materia, c.id)} class="enlace-capitulo">
-                      <span class="num-capitulo" aria-hidden="true">
+                {capitulosDeEra.map((c) =>
+                  c.activo ? (
+                    <li data-capitulo={c.id} class="fila-capitulo">
+                      <a href={rutaCapitulo(materia, c.id)} class="enlace-capitulo">
+                        <span class="num-capitulo" aria-hidden="true">
+                          {numeroPorCapitulo.get(c.id)}
+                        </span>
+                        <span class="texto-capitulo">
+                          <span class="titulo-capitulo">{c.nombre}</span>
+                          <span class="estado">Cerrado</span>
+                        </span>
+                        <span class="chevron-capitulo" aria-hidden="true">
+                          ›
+                        </span>
+                      </a>
+                    </li>
+                  ) : (
+                    <li class="fila-prevista">
+                      <span class="num-capitulo num-capitulo-previsto" aria-hidden="true">
                         {numeroPorCapitulo.get(c.id)}
                       </span>
                       <span class="texto-capitulo">
                         <span class="titulo-capitulo">{c.nombre}</span>
-                        <span class="estado">Cerrado</span>
+                        <span class="estado">Próximamente</span>
                       </span>
-                      <span class="chevron-capitulo" aria-hidden="true">
-                        ›
-                      </span>
-                    </a>
-                  </li>
-                ))}
-              </ol>
-            )}
-            {pendientesDeEra.length > 0 && (
-              <ol class="lista-capitulos lista-previstos">
-                {pendientesDeEra.map((c) => (
-                  <li class="fila-prevista">
-                    <span class="texto-capitulo">
-                      <span class="titulo-capitulo">{c.nombre}</span>
-                      <span class="estado">Próximamente</span>
-                    </span>
-                  </li>
-                ))}
+                    </li>
+                  ),
+                )}
               </ol>
             )}
           </div>
@@ -206,11 +206,18 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     color: var(--color-texto-muted);
   }
 
-  .lista-previstos .fila-prevista {
+  .fila-prevista {
     display: flex;
     align-items: center;
-    padding: 16px 20px 16px 62px;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 20px;
     border-bottom: 1px solid var(--color-tarjeta-borde);
+    box-sizing: border-box;
     opacity: 0.5;
+  }
+
+  .num-capitulo-previsto {
+    color: var(--color-texto-muted);
   }
 </style>
