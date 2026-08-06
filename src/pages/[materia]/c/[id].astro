@@ -13,10 +13,14 @@ export async function getStaticPaths() {
 	const porMateria = await Promise.all(
 		materias.map(async (m) => {
 			const capitulos = await cargarCapitulos(m.id);
-			return capitulos.map((c) => ({
-				params: { materia: m.data.slug, id: c.id },
-				props: { materiaId: m.id },
-			}));
+			// Un capítulo sin ningún relato escrito no tiene página propia — es
+			// solo un nombre en la lista de "Próximamente" de la portada.
+			return capitulos
+				.filter((c) => c.activo)
+				.map((c) => ({
+					params: { materia: m.data.slug, id: c.id },
+					props: { materiaId: m.id },
+				}));
 		}),
 	);
 	return porMateria.flat();
@@ -36,13 +40,21 @@ const relatosPorId = new Map(relatosCol.map((r) => [r.id, r.data]));
 // `resolverRetrato` ya funciona sobre él sin cambios: si alguna obra lo
 // `representa`, la fila muestra esa imagen en vez del número.
 const grafo = await construirGrafo(materiaId);
+// Sin nombre propio todavía: aproxima uno legible a partir del id previsto,
+// hasta que el relato exista y traiga el suyo.
+const humanizarId = (id: string) =>
+	id.charAt(0).toUpperCase() + id.slice(1).replaceAll("-", " ");
 const relatos = capitulo.relatos.map((rid) => {
-	const nodo = obtenerEntidad(grafo, rid);
+	const escrito = relatosPorId.has(rid);
+	const nodo = escrito ? obtenerEntidad(grafo, rid) : undefined;
 	return {
 		id: rid,
-		nombre: relatosPorId.get(rid)?.nombre ?? rid,
+		nombre: relatosPorId.get(rid)?.nombre ?? humanizarId(rid),
 		tipo: nodo?.tipo ?? "mito",
 		retrato: nodo ? resolverRetrato(grafo, nodo) : undefined,
+		// Un capítulo activo puede tener relatos previstos que aún no se han
+		// escrito — nunca enlazan a una página que no existe.
+		escrito,
 	};
 });
 
@@ -58,28 +70,37 @@ const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
 
     <ol class="lista-relatos">
       {
-        relatos.map((r, i) => (
-          <li data-relato={r.id} class="fila-relato">
-            <a href={rutaRelato(materia, r.id)} class="enlace-relato">
-              {r.retrato ? (
-                <span class="miniatura-relato">
-                  <Casilla nombre={r.nombre} tipo={r.tipo} retrato={r.retrato} />
+        relatos.map((r, i) =>
+          r.escrito ? (
+            <li data-relato={r.id} class="fila-relato">
+              <a href={rutaRelato(materia, r.id)} class="enlace-relato">
+                {r.retrato ? (
+                  <span class="miniatura-relato">
+                    <Casilla nombre={r.nombre} tipo={r.tipo} retrato={r.retrato} />
+                  </span>
+                ) : (
+                  <span class="num-relato" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                )}
+                <span class="texto-relato">
+                  <span class="titulo-relato">{r.nombre}</span>
+                  <span class="estado-relato" />
                 </span>
-              ) : (
-                <span class="num-relato" aria-hidden="true">
-                  {i + 1}
+                <span class="chevron-relato" aria-hidden="true">
+                  ›
                 </span>
-              )}
+              </a>
+            </li>
+          ) : (
+            <li class="fila-relato fila-relato-prevista">
               <span class="texto-relato">
                 <span class="titulo-relato">{r.nombre}</span>
-                <span class="estado-relato" />
+                <span class="estado-relato">Próximamente</span>
               </span>
-              <span class="chevron-relato" aria-hidden="true">
-                ›
-              </span>
-            </a>
-          </li>
-        ))
+            </li>
+          ),
+        )
       }
     </ol>
 
@@ -198,6 +219,14 @@ const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
   .chevron-relato {
     font-size: 20px;
     color: var(--color-texto-muted);
+  }
+
+  .fila-relato-prevista {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px 16px 62px;
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+    opacity: 0.5;
   }
 
   .tarjeta-info,

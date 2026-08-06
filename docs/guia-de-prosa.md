@@ -1,4 +1,4 @@
-# Guía de prosa para Trama · v3
+# Guía de prosa para Trama · v4
 
 Documento autocontenido. Quien lo lea puede escribir cualquier texto para el proyecto sin
 haber visto el resto de la documentación.
@@ -9,6 +9,10 @@ haber visto el resto de la documentación.
 **Qué cambia respecto de la v2:** absorbe el documento suelto de adición de prosa de
 entidad, que deja de existir por separado, y añade **§6, prosa de obra**. Las obras de arte
 son ahora entidades de pleno derecho y tienen su propio tipo de texto.
+
+**Qué cambia respecto de la v3:** en §11, la tabla de ids nuevos suma la columna **fuente**, y
+si lo entregado es un relato hay un **quinto punto obligatorio**: una tabla de las relaciones
+de acción y parentesco que va a hacer falta declarar, con origen/tipo/destino/fuente.
 
 ---
 
@@ -593,8 +597,9 @@ Siempre estas cuatro cosas, en este orden:
 
 1. **La ruta completa del fichero**, p. ej. `content/mitologia-griega/relatos/titanomaquia.mdx`
 2. **El MDX entero en un bloque de código**, frontmatter incluido, listo para pegar sin editar
-3. **Los ids nuevos que hacen falta**, en una tabla con id, nombre y tipo sugerido — para poder
-   crear las entidades antes de compilar
+3. **Los ids nuevos que hacen falta**, en una tabla con **id, nombre, tipo y fuente** — para
+   poder crear las entidades antes de compilar. La fuente es de dónde sale esa entidad (qué
+   obra, o "deducida del relato" si no hay una fuente antigua concreta detrás)
 4. **Notas**, si las hay: etiquetas nuevas, obras no registradas en `fuentes`, era ambigua o
    sin id, componentes que se echaron de menos, o cualquier sitio donde el esquema haya
    resultado incómodo
@@ -606,6 +611,16 @@ Si escribes prosa para varias entidades u obras de una vez, una ruta y un bloque
 
 En una obra, entrega además el **`alt`** propuesto, aunque vaya en el YAML: lo escribe quien
 escribe la prosa.
+
+**Si es un relato, hay un quinto punto obligatorio:**
+
+5. **Las relaciones que va a hacer falta declarar**, en una tabla con **origen, tipo, destino y
+   fuente**. Son las relaciones de acción y parentesco que el relato narra —`devora_a`,
+   `encierra_a`, `rapta_a`, `castiga_a`, `mata_a`, `mutila_a`, `forja`, `construye`, las de
+   parentesco— y que hay que añadir al YAML de la entidad de origen para que el grafo las
+   recoja; no hace falta listar `participa_en`/`tiene_participante` ni `ocurre_en`, que salen
+   solos de `participantes` y `lugar`. La fuente es la misma `fuente_principal` del relato salvo
+   que la relación concreta venga de otra versión, en cuyo caso se anota esa otra.
 
 ---
 
@@ -622,7 +637,7 @@ escribe la prosa.
 - [ ] Solo aparecen los componentes permitidos
 - [ ] Sin referencias al aspecto visual del sitio
 - [ ] Ningún dato inventado; las versiones alternativas van marcadas con `<Fuente />`
-- [ ] Está la lista de ids nuevos que hay que crear, y ninguno sobra
+- [ ] Está la tabla de ids nuevos (id, nombre, tipo, fuente) que hay que crear, y ninguno sobra
 
 **Si es un relato:**
 
@@ -636,6 +651,8 @@ escribe la prosa.
       entidad sujeto, no solo contada en la prosa. `participa_en`/`tiene_participante` y
       `ocurre_en` salen solos de `participantes`/`lugar`; esto es solo sobre las de acción y
       parentesco. Repásalo con `pnpm relaciones-de-relato <id>`
+- [ ] Está la tabla de relaciones a crear (origen, tipo, destino, fuente), y coincide con lo
+      que cuenta la prosa
 
 **Si es prosa de entidad:**
 
@@ -673,7 +690,8 @@ escribe la prosa.
 > Notas: **[obra que quiero seguir, extensión aproximada, algo que deba entrar o quedar
 > fuera]**.
 >
-> Entrega según la sección 11: ruta, MDX completo, ids nuevos necesarios y notas.
+> Entrega según la sección 11: ruta, MDX completo, ids nuevos necesarios (con fuente) y notas;
+> si es un relato, añade también la tabla de relaciones a crear.
 
 Para prosa de entidad, añadir: **adjunta el YAML completo de esas entidades.** El fallo más
 probable es reescribir el `resumen` en tres párrafos, y no se puede evitar sin ver los campos.

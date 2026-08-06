@@ -1,7 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { cargarCapitulos, cargarCapitulosPrevistos } from "../../lib/capitulos";
+import { cargarCapitulos } from "../../lib/capitulos";
 import { rutaCapitulo } from "../../lib/rutas";
 
 export async function getStaticPaths() {
@@ -17,14 +17,14 @@ const { materiaId } = Astro.props;
 const materiaEntry = await getEntry("materias", materiaId);
 const eras = materiaEntry?.data.eras ?? [];
 const capitulos = await cargarCapitulos(materiaId);
-const capitulosPrevistos = await cargarCapitulosPrevistos(materiaId);
-const datosCapitulos = capitulos.map((c) => ({ id: c.id, relatos: c.relatos }));
-// era.posición, no un índice global: así insertar un capítulo en una era no
-// corre la numeración de las demás.
+const activos = capitulos.filter((c) => c.activo);
+const datosCapitulos = activos.map((c) => ({ id: c.id, relatos: c.relatos }));
+// era.posición entre los activos, no un índice global: así insertar un
+// capítulo o activar uno nuevo no corre la numeración de los demás.
 const numeroPorCapitulo = new Map<string, string>();
 eras.forEach((era, indiceEra) => {
-	const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
-	capitulosDeEra.forEach((c, indiceCapitulo) => {
+	const activosDeEra = activos.filter((c) => c.era === era.id);
+	activosDeEra.forEach((c, indiceCapitulo) => {
 		numeroPorCapitulo.set(c.id, `${indiceEra + 1}.${indiceCapitulo + 1}`);
 	});
 });
@@ -39,16 +39,16 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     </div>
     {
       eras.map((era) => {
-        const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
-        const previstosDeEra = capitulosPrevistos.filter((c) => c.era === era.id);
+        const activosDeEra = activos.filter((c) => c.era === era.id);
+        const pendientesDeEra = capitulos.filter((c) => c.era === era.id && !c.activo);
         return (
           <div class="grupo-era">
             <h2 class="etiqueta-era">{era.nombre}</h2>
-            {capitulosDeEra.length === 0 ? (
+            {activosDeEra.length === 0 ? (
               <p class="sin-capitulos">Sin capítulos todavía.</p>
             ) : (
               <ol class="lista-capitulos">
-                {capitulosDeEra.map((c) => (
+                {activosDeEra.map((c) => (
                   <li data-capitulo={c.id} class="fila-capitulo">
                     <a href={rutaCapitulo(materia, c.id)} class="enlace-capitulo">
                       <span class="num-capitulo" aria-hidden="true">
@@ -66,9 +66,9 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
                 ))}
               </ol>
             )}
-            {previstosDeEra.length > 0 && (
+            {pendientesDeEra.length > 0 && (
               <ol class="lista-capitulos lista-previstos">
-                {previstosDeEra.map((c) => (
+                {pendientesDeEra.map((c) => (
                   <li class="fila-prevista">
                     <span class="texto-capitulo">
                       <span class="titulo-capitulo">{c.nombre}</span>

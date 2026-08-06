@@ -191,6 +191,41 @@
           <button class="primario" type="submit">Añadir relación</button>
         </form>
       </section>
+
+      <section id="seccion-nuevo-tipo">
+        <h2>Nuevo tipo de relación</h2>
+        <form id="form-nuevo-tipo">
+          <div class="fila">
+            <label for="t-tipo">tipo</label>
+            <input id="t-tipo" placeholder="ej. modela_a" autocomplete="off" required />
+          </div>
+          <div class="fila checkbox">
+            <label for="t-simetrica">simétrica</label>
+            <input id="t-simetrica" type="checkbox" style="flex:none;" />
+          </div>
+          <div class="fila" id="fila-inversa">
+            <label for="t-inversa">inversa</label>
+            <input id="t-inversa" placeholder="ej. modelado_por" autocomplete="off" />
+          </div>
+          <div class="fila">
+            <label for="t-pregunta">pregunta</label>
+            <input id="t-pregunta" placeholder="¿A quién modela {origen}? (opcional)" autocomplete="off" />
+          </div>
+          <div class="fila">
+            <label for="t-pregunta-inversa">pregunta_inversa</label>
+            <input id="t-pregunta-inversa" placeholder="¿Quién modela a {destino}? (opcional)" autocomplete="off" />
+          </div>
+          <div class="fila checkbox">
+            <label for="t-conjunto">conjunto</label>
+            <input id="t-conjunto" type="checkbox" style="flex:none;" />
+          </div>
+          <div class="fila checkbox">
+            <label for="t-conjunto-inversa">conjunto_inversa</label>
+            <input id="t-conjunto-inversa" type="checkbox" style="flex:none;" />
+          </div>
+          <button class="primario" type="submit">Registrar tipo</button>
+        </form>
+      </section>
     </div>
 
     <datalist id="datalist-ids"></datalist>
@@ -208,6 +243,10 @@
     const elListaSugerencias = document.getElementById("lista-sugerencias");
     const elSinSugerencias = document.getElementById("sin-sugerencias");
     const elFormManual = document.getElementById("form-manual");
+    const elFormNuevoTipo = document.getElementById("form-nuevo-tipo");
+    const elSimetrica = document.getElementById("t-simetrica");
+    const elFilaInversa = document.getElementById("fila-inversa");
+    const elInversa = document.getElementById("t-inversa");
     const elDatalistIds = document.getElementById("datalist-ids");
     const elDatalistTiposRelacion = document.getElementById("datalist-tipos-relacion");
     const elDatalistFuentes = document.getElementById("datalist-fuentes");
@@ -413,6 +452,46 @@
         elFormManual.reset();
         document.getElementById("m-principal").checked = true;
         await cargarRelato(relatoActual.id);
+      } catch (error) {
+        mostrarEstado(error.message, "error");
+      }
+    });
+
+    elSimetrica.addEventListener("change", () => {
+      elFilaInversa.hidden = elSimetrica.checked;
+      elInversa.required = !elSimetrica.checked;
+    });
+
+    elFormNuevoTipo.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const tipo = document.getElementById("t-tipo").value.trim();
+      const simetrica = elSimetrica.checked;
+      const inversa = elInversa.value.trim();
+      const pregunta = document.getElementById("t-pregunta").value.trim();
+      const preguntaInversa = document
+        .getElementById("t-pregunta-inversa")
+        .value.trim();
+      const conjunto = document.getElementById("t-conjunto").checked;
+      const conjuntoInversa = document.getElementById("t-conjunto-inversa").checked;
+      try {
+        await api("/api/tipo-relacion", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            tipo,
+            simetrica,
+            inversa: simetrica ? undefined : inversa,
+            pregunta: pregunta || undefined,
+            preguntaInversa: preguntaInversa || undefined,
+            conjunto,
+            conjuntoInversa,
+          }),
+        });
+        mostrarEstado(`Registrado tipo "${tipo}"`, "ok");
+        elFormNuevoTipo.reset();
+        elFilaInversa.hidden = false;
+        elInversa.required = true;
+        if (relatoActual) await cargarRelato(relatoActual.id);
       } catch (error) {
         mostrarEstado(error.message, "error");
       }

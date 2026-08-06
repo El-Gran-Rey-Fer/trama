@@ -6,12 +6,18 @@ export interface Capitulo {
 	nombre: string;
 	era: string;
 	orden: number;
-	resumen: string;
+	resumen?: string;
+	// Lista prevista del mapa, exista o no todavía cada relato.
 	relatos: string[];
 	entidadesExtra: string[];
 	examen: { aciertos: number; de: number };
-	// participantes + lugar de sus relatos, más entidades_extra. De aquí salen las
-	// tarjetas y el examen del capítulo — no se lista a mano lo que el grafo deriva.
+	// Se activa solo con que exista el primero de sus relatos previstos — no hay
+	// paso manual de "promoción". Mientras sea false, el capítulo no es más que
+	// un nombre en la lista de "Próximamente".
+	activo: boolean;
+	// participantes + lugar de los relatos ya escritos, más entidades_extra. De
+	// aquí salen las tarjetas y el examen del capítulo — no se lista a mano lo
+	// que el grafo deriva, y nunca incluye nada de un relato que no existe.
 	conjunto: Set<string>;
 }
 
@@ -24,7 +30,7 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 	const relatosPorId = new Map(relatos.map((r) => [r.id, r.data]));
 
 	const idsVistos = new Set<string>();
-	const relatosUsados = new Set<string>();
+	const relatosAsignados = new Set<string>();
 	for (const c of capitulosCrudos) {
 		if (idsVistos.has(c.id)) {
 			throw new Error(`capítulo duplicado en materia.yaml: ${c.id}`);
@@ -35,22 +41,23 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 				`el capítulo ${c.id} referencia una era inexistente: ${c.era}`,
 			);
 		}
+		// Un relato previsto en dos capítulos a la vez es casi siempre un
+		// copiar-pegar mal hecho en materia.yaml — vale la pena seguir
+		// cazándolo aunque el relato todavía no exista.
 		for (const relatoId of c.relatos) {
-			if (!relatosPorId.has(relatoId)) {
+			if (relatosAsignados.has(relatoId)) {
 				throw new Error(
-					`el capítulo ${c.id} referencia un relato inexistente: ${relatoId}`,
+					`el relato ${relatoId} está previsto en más de un capítulo`,
 				);
 			}
-			if (relatosUsados.has(relatoId)) {
-				throw new Error(`el relato ${relatoId} está en más de un capítulo`);
-			}
-			relatosUsados.add(relatoId);
+			relatosAsignados.add(relatoId);
 		}
 	}
 
 	const capitulos: Capitulo[] = capitulosCrudos.map((c) => {
+		const relatosEscritos = c.relatos.filter((id) => relatosPorId.has(id));
 		const conjunto = new Set<string>(c.entidades_extra ?? []);
-		for (const relatoId of c.relatos) {
+		for (const relatoId of relatosEscritos) {
 			const data = relatosPorId.get(relatoId);
 			if (!data) continue;
 			for (const p of conjuntoDeRelato(data)) conjunto.add(p);
@@ -64,6 +71,7 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 			relatos: c.relatos,
 			entidadesExtra: c.entidades_extra ?? [],
 			examen: c.examen,
+			activo: relatosEscritos.length > 0,
 			conjunto,
 		};
 	});
@@ -75,31 +83,4 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 	});
 
 	return capitulos;
-}
-
-export interface CapituloPrevisto {
-	nombre: string;
-	era: string;
-}
-
-// docs/mapa-de-contenido.md §11: vista previa de "próximamente" para el resto del
-// temario. A propósito mucho más pobre que Capitulo: sin id, sin relatos, sin
-// examen — no es un capítulo real y no se puede abrir.
-export async function cargarCapitulosPrevistos(
-	materiaId: string,
-): Promise<CapituloPrevisto[]> {
-	const materiaEntry = await getEntry("materias", materiaId);
-	const eras = materiaEntry?.data.eras ?? [];
-	const erasIds = new Set(eras.map((e) => e.id));
-	const previstos = materiaEntry?.data.capitulos_previstos ?? [];
-
-	for (const p of previstos) {
-		if (!erasIds.has(p.era)) {
-			throw new Error(
-				`el capítulo previsto "${p.nombre}" referencia una era inexistente: ${p.era}`,
-			);
-		}
-	}
-
-	return previstos;
 }

@@ -202,6 +202,17 @@ mitologia-griega:
       pregunta_inversa: "¿Qué se convierte en {destino}?"
     surge_de:
       inversa: se_convierte_en
+    prueba_temporal_a:
+      inversa: prueba_temporal_por
+      pregunta: ¿P {origen}?
+      pregunta_inversa: ¿Q {destino}?
+      conjunto: true
+    prueba_temporal_por:
+      inversa: prueba_temporal_a
+    prueba_simetrica:
+      inversa: prueba_simetrica
+      simetrica: true
+      pregunta: ¿Quién es X de {origen}?
 
   fuentes:
     teogonia: { autor: "Hesíodo", obra: "Teogonía" }
@@ -310,178 +321,691 @@ mitologia-griega:
   # el resto del temario (héroes, dioses, todo lo que falta). El conjunto de tarjetas de un
   # capítulo es `participantes de sus relatos ∪ entidades_extra`; no se lista a mano lo que el
   # grafo puede derivar. `orden` en múltiplos de 100 dentro de la era, igual que en relatos.
+  # docs/mapa-de-contenido.md entero, no solo lo escrito: `relatos` es la lista
+  # prevista, no una promesa de que ya existan. cargarCapitulos (src/lib/capitulos.ts)
+  # calcula cuántos de esos ids ya están en la colección `relatos` y de ahí sale
+  # `activo` — un capítulo pasa de "Próximamente" a real solo con que aparezca el
+  # primer relato de su lista, sin tocar este fichero. `orden` es la posición real
+  # dentro del mapa (§2-§6), no el orden de escritura, para que la numeración
+  # era.posición no se recoloque cuando un capítulo se activa.
   capitulos:
-  # ─── cosmogonía ────────────────────────────────────────────────
-  - id: del-caos-al-primer-rey
-    nombre: Del Caos al primer rey
-    era: cosmogonia
-    orden: 100
-    resumen: De dónde sale todo y por qué el primer rey del cosmos dura tan poco.
-    relatos: [nacimiento-del-cosmos, castracion-de-urano]
-    entidades_extra: []
-    examen: { aciertos: 8, de: 10 }
-    medalla: primeras-generaciones
+    # ─── cosmogonía ────────────────────────────────────────────────
+    - id: del-caos-al-primer-rey
+      nombre: Del Caos al primer rey
+      era: cosmogonia
+      orden: 100
+      resumen: De dónde sale todo y por qué el primer rey del cosmos dura tan poco.
+      relatos: [ nacimiento-del-cosmos, castracion-de-urano ]
+      examen: { aciertos: 8, de: 10 }
+      medalla: primeras-generaciones
 
-  # ─── edad de los titanes ───────────────────────────────────────
-  - id: el-rey-que-devora
-    nombre: El rey que devora
-    era: edad-de-los-titanes
-    orden: 100
-    resumen: Crono hereda el trono con una profecía encima y hace lo único que se le ocurre.
-    relatos: [crono-devora-a-sus-hijos]
-    entidades_extra: []
-    examen: { aciertos: 8, de: 10 }
+    # ─── edad de los titanes ───────────────────────────────────────
+    - id: el-rey-que-devora
+      nombre: El rey que devora
+      era: edad-de-los-titanes
+      orden: 100
+      resumen: Crono hereda el trono con una profecía encima y hace lo único que se le
+        ocurre.
+      relatos: [ crono-devora-a-sus-hijos ]
+      examen: { aciertos: 8, de: 10 }
 
-  - id: la-guerra-por-el-cosmos
-    nombre: La guerra por el cosmos
-    era: edad-de-los-titanes
-    orden: 200
-    resumen: Diez años de guerra entre titanes y olímpicos deciden quién gobierna el mundo.
-    relatos: [titanomaquia]
-    entidades_extra: [monte-otris]
-    examen: { aciertos: 8, de: 10 }
+    - id: la-guerra-por-el-cosmos
+      nombre: La guerra por el cosmos
+      era: edad-de-los-titanes
+      orden: 200
+      resumen: Diez años de guerra entre titanes y olímpicos deciden quién gobierna el
+        mundo.
+      relatos: [ titanomaquia ]
+      entidades_extra: [ monte-otris ]
+      examen: { aciertos: 8, de: 10 }
 
-  # ─── edad de los olímpicos ─────────────────────────────────────
-  - id: el-reparto-del-cosmos
-    nombre: El reparto del cosmos
-    era: edad-de-los-olimpicos
-    orden: 100
-    resumen: Zeus, Poseidón y Hades echan suertes tras la guerra contra los Titanes y se reparten el cosmos.
-    relatos: [el-reparto-del-cosmos]
-    entidades_extra: []
-    examen: { aciertos: 8, de: 10 }
-    # tifón entra aquí cuando su relato esté escrito
+    - id: la-creacion-de-los-mortales
+      nombre: La creación de los mortales
+      era: edad-de-los-titanes
+      orden: 300
+      resumen: La primera estirpe de mortales vive bajo Crono sin trabajo ni vejez, y
+        Prometeo la modela de barro en una tradición que no coincide con la
+        primera en el cuándo.
+      relatos: [ la-raza-de-oro, prometeo-modela-a-los-hombres ]
+      examen: { aciertos: 8, de: 10 }
 
-  - id: atenea-y-la-ciudad
-    nombre: Atenea y la ciudad
-    era: edad-de-los-olimpicos
-    orden: 200
-    resumen: Zeus se traga a su primera esposa para evitar una profecía, y de su cabeza nace una diosa armada.
-    relatos: [nacimiento-de-atenea]
-    entidades_extra: []
-    examen: { aciertos: 8, de: 10 }
+    # ─── edad de los olímpicos ─────────────────────────────────────
+    - id: el-reparto-del-cosmos
+      nombre: El reparto del cosmos
+      era: edad-de-los-olimpicos
+      orden: 100
+      resumen: Zeus, Poseidón y Hades echan suertes tras la guerra contra los Titanes
+        y se reparten el cosmos.
+      relatos: [ el-reparto-del-cosmos, tifon-contra-zeus ]
+      examen: { aciertos: 8, de: 10 }
 
-  # 300 reservado: Apolo y Ártemis (Delos, Pitón, Delfos)
-  - id: demeter-y-las-estaciones
-    nombre: Deméter y las estaciones
-    era: edad-de-los-olimpicos
-    orden: 400
-    resumen: Un rapto en el inframundo explica por qué la tierra deja de dar fruto una parte del año.
-    relatos: [rapto-de-persefone]
-    entidades_extra: []
-    examen: { aciertos: 8, de: 10 }
+    - id: zeus-y-hera
+      nombre: Zeus y Hera
+      era: edad-de-los-olimpicos
+      orden: 200
+      relatos: [ las-bodas-de-zeus-y-hera, la-conjura-del-olimpo ]
+      examen: { aciertos: 8, de: 10 }
 
-  # 500 Hermes · 600 Hefesto · 700 Dioniso
-  # 800 Prometeo y Pandora · 900 el diluvio · 1000 Zeus y los linajes
+    - id: la-soberbia-castigada
+      nombre: La soberbia castigada
+      era: edad-de-los-olimpicos
+      orden: 300
+      relatos: [ los-aloadas, salmoneo ]
+      examen: { aciertos: 8, de: 10 }
 
-  # ─── edad de los héroes ────────────────────────────────────────
-  # 100-300 reservado: Perseo (dos capítulos) y Belerofonte
-  # 400-700 reservado: Heracles
-  # 800 reservado: el camino a Atenas
-  - id: el-laberinto
-    nombre: El laberinto
-    era: edad-de-los-heroes
-    orden: 900
-    resumen: Atenas paga un tributo de sangre a Creta hasta que un héroe se interna en el laberinto.
-    relatos: [teseo-y-el-minotauro]
-    entidades_extra: []
-    examen: { aciertos: 8, de: 10 }
+    - id: el-reino-de-los-muertos
+      nombre: El reino de los muertos
+      era: edad-de-los-olimpicos
+      orden: 400
+      relatos: [ sisifo-engana-a-la-muerte, ixion-y-la-rueda ]
+      examen: { aciertos: 8, de: 10 }
 
-  # ─── guerra de troya ───────────────────────────────────────────
-  # sin capítulos todavía, cero relatos escritos
+    - id: los-castigos-eternos
+      nombre: Los castigos eternos
+      era: edad-de-los-olimpicos
+      orden: 500
+      relatos: [ tantalo, ticio, las-danaides ]
+      examen: { aciertos: 8, de: 10 }
 
-  # Resto del temario de docs/mapa-de-contenido.md §11: nombre y era nada más.
-  # Es la vista previa de "próximamente" en la portada de la materia, no un
-  # capítulo real — sin id, sin relatos, sin examen. Pasa a `capitulos` cuando
-  # se escriban sus relatos.
-  capitulos_previstos:
-    - { nombre: La creación de los mortales, era: edad-de-los-titanes }
+    - id: atenea-y-la-ciudad
+      nombre: Atenea y la ciudad
+      era: edad-de-los-olimpicos
+      orden: 600
+      resumen: Zeus se traga a su primera esposa para evitar una profecía, y de su
+        cabeza nace una diosa armada.
+      relatos: [ nacimiento-de-atenea, la-disputa-por-el-atica ]
+      examen: { aciertos: 8, de: 10 }
 
-    - { nombre: Zeus y Hera, era: edad-de-los-olimpicos }
-    - { nombre: La soberbia castigada, era: edad-de-los-olimpicos }
-    - { nombre: El reino de los muertos, era: edad-de-los-olimpicos }
-    - { nombre: Los castigos eternos, era: edad-de-los-olimpicos }
-    - { nombre: El señor del mar, era: edad-de-los-olimpicos }
-    - { nombre: Apolo y Ártemis, era: edad-de-los-olimpicos }
-    - { nombre: Los amores de Apolo, era: edad-de-los-olimpicos }
-    - { nombre: Asclepio, era: edad-de-los-olimpicos }
-    - { nombre: Los que desafiaron a Apolo, era: edad-de-los-olimpicos }
-    - { nombre: Ártemis y los cazadores, era: edad-de-los-olimpicos }
-    - { nombre: El ladrón recién nacido, era: edad-de-los-olimpicos }
-    - { nombre: Hefesto, el dios que cojea, era: edad-de-los-olimpicos }
-    - { nombre: La red, era: edad-de-los-olimpicos }
-    - { nombre: Afrodita, era: edad-de-los-olimpicos }
-    - { nombre: Dioniso, el que llega de fuera, era: edad-de-los-olimpicos }
-    - { nombre: Penteo y las bacantes, era: edad-de-los-olimpicos }
-    - { nombre: El fuego y la mujer, era: edad-de-los-olimpicos }
-    - { nombre: El diluvio, era: edad-de-los-olimpicos }
-    - { nombre: Zeus y los linajes, era: edad-de-los-olimpicos }
-    - { nombre: Leda y los Dioscuros, era: edad-de-los-olimpicos }
-    - { nombre: Faetón, era: edad-de-los-olimpicos }
-    - { nombre: Cuerpos que cambian, era: edad-de-los-olimpicos }
-    - { nombre: Amores desgraciados, era: edad-de-los-olimpicos }
-    - { nombre: La casa de Atenas, era: edad-de-los-olimpicos }
+    - id: el-senor-del-mar
+      nombre: El señor del mar
+      era: edad-de-los-olimpicos
+      orden: 700
+      relatos: [ poseidon-y-amimone, los-muros-de-troya ]
+      examen: { aciertos: 8, de: 10 }
 
-    - { nombre: Las Danaides, era: edad-de-los-heroes }
-    - { nombre: La lluvia de oro, era: edad-de-los-heroes }
-    - { nombre: La cabeza de la Gorgona, era: edad-de-los-heroes }
-    - { nombre: El monstruo del mar, era: edad-de-los-heroes }
-    - { nombre: El jinete que quiso subir, era: edad-de-los-heroes }
-    - { nombre: El rey de Creta, era: edad-de-los-heroes }
-    - { nombre: El artesano, era: edad-de-los-heroes }
-    - { nombre: El camino a Atenas, era: edad-de-los-heroes }
-    - { nombre: Las velas negras, era: edad-de-los-heroes }
-    - { nombre: Las amazonas, era: edad-de-los-heroes }
-    - { nombre: Fedra e Hipólito, era: edad-de-los-heroes }
-    - { nombre: Pirítoo, era: edad-de-los-heroes }
-    - { nombre: El niño que estranguló serpientes, era: edad-de-los-heroes }
-    - { nombre: La locura, era: edad-de-los-heroes }
-    - { nombre: Las primeras fieras, era: edad-de-los-heroes }
-    - { nombre: El Peloponeso limpio, era: edad-de-los-heroes }
-    - { nombre: Más allá del mar, era: edad-de-los-heroes }
-    - { nombre: Los confines del mundo, era: edad-de-los-heroes }
-    - { nombre: Por el camino, era: edad-de-los-heroes }
-    - { nombre: Alcestis, era: edad-de-los-heroes }
-    - { nombre: La Gigantomaquia, era: edad-de-los-heroes }
-    - { nombre: Ónfale, era: edad-de-los-heroes }
-    - { nombre: La túnica y la pira, era: edad-de-los-heroes }
-    - { nombre: Cadmo funda Tebas, era: edad-de-los-heroes }
-    - { nombre: Anfión y Zeto, era: edad-de-los-heroes }
-    - { nombre: Edipo y la esfinge, era: edad-de-los-heroes }
-    - { nombre: La verdad de Edipo, era: edad-de-los-heroes }
-    - { nombre: Los siete contra Tebas, era: edad-de-los-heroes }
-    - { nombre: Antígona, era: edad-de-los-heroes }
-    - { nombre: Los Epígonos, era: edad-de-los-heroes }
-    - { nombre: El carnero de oro, era: edad-de-los-heroes }
-    - { nombre: La nave Argo, era: edad-de-los-heroes }
-    - { nombre: Fineo y las rocas, era: edad-de-los-heroes }
-    - { nombre: La Cólquide, era: edad-de-los-heroes }
-    - { nombre: El regreso, era: edad-de-los-heroes }
-    - { nombre: Medea, era: edad-de-los-heroes }
-    - { nombre: La caza de Calidón, era: edad-de-los-heroes }
-    - { nombre: Atalanta, era: edad-de-los-heroes }
-    - { nombre: Orfeo, era: edad-de-los-heroes }
-    - { nombre: Pélope, era: edad-de-los-heroes }
-    - { nombre: Atreo y Tiestes, era: edad-de-los-heroes }
+    - id: demeter-y-las-estaciones
+      nombre: Deméter y las estaciones
+      era: edad-de-los-olimpicos
+      orden: 800
+      resumen: Un rapto en el inframundo explica por qué la tierra deja de dar fruto
+        una parte del año.
+      relatos: [ rapto-de-persefone, demeter-en-eleusis, triptolemo ]
+      examen: { aciertos: 8, de: 10 }
 
-    - { nombre: Las bodas de Peleo y Tetis, era: guerra-de-troya }
-    - { nombre: La manzana, era: guerra-de-troya }
-    - { nombre: El rapto de Helena, era: guerra-de-troya }
-    - { nombre: La flota en Áulide, era: guerra-de-troya }
-    - { nombre: La cólera de Aquiles, era: guerra-de-troya }
-    - { nombre: Héctor y Andrómaca, era: guerra-de-troya }
-    - { nombre: Patroclo, era: guerra-de-troya }
-    - { nombre: La muerte de Héctor, era: guerra-de-troya }
-    - { nombre: El rescate de Príamo, era: guerra-de-troya }
-    - { nombre: Pentesilea y Memnón, era: guerra-de-troya }
-    - { nombre: La muerte de Aquiles, era: guerra-de-troya }
-    - { nombre: La locura de Áyax, era: guerra-de-troya }
-    - { nombre: El caballo de madera, era: guerra-de-troya }
-    - { nombre: La caída de Troya, era: guerra-de-troya }
-    - { nombre: El regreso de Agamenón, era: guerra-de-troya }
-    - { nombre: Orestes, era: guerra-de-troya }
-    - { nombre: El cíclope, era: guerra-de-troya }
-    - { nombre: Circe y los muertos, era: guerra-de-troya }
-    - { nombre: El camino a casa, era: guerra-de-troya }
-    - { nombre: Ítaca, era: guerra-de-troya }
-    - { nombre: Los pretendientes, era: guerra-de-troya }
+    - id: apolo-y-artemis
+      nombre: Apolo y Ártemis
+      era: edad-de-los-olimpicos
+      orden: 900
+      relatos: [ nacimiento-en-delos, apolo-y-piton ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: los-amores-de-apolo
+      nombre: Los amores de Apolo
+      era: edad-de-los-olimpicos
+      orden: 1000
+      relatos: [ dafne, jacinto, coronis ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: asclepio
+      nombre: Asclepio
+      era: edad-de-los-olimpicos
+      orden: 1100
+      relatos: [ asclepio-y-los-muertos, apolo-al-servicio-de-admeto ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: los-que-desafiaron-a-apolo
+      nombre: Los que desafiaron a Apolo
+      era: edad-de-los-olimpicos
+      orden: 1200
+      relatos: [ marsias, niobe ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: artemis-y-los-cazadores
+      nombre: Ártemis y los cazadores
+      era: edad-de-los-olimpicos
+      orden: 1300
+      relatos: [ acteon, calisto, orion ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-ladron-recien-nacido
+      nombre: El ladrón recién nacido
+      era: edad-de-los-olimpicos
+      orden: 1400
+      relatos: [ nacimiento-de-hermes ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: hefesto-el-dios-que-cojea
+      nombre: Hefesto, el dios que cojea
+      era: edad-de-los-olimpicos
+      orden: 1500
+      relatos: [ caida-de-hefesto, el-trono-de-oro ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-red
+      nombre: La red
+      era: edad-de-los-olimpicos
+      orden: 1600
+      relatos: [ ares-y-afrodita, erictonio ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: afrodita
+      nombre: Afrodita
+      era: edad-de-los-olimpicos
+      orden: 1700
+      relatos: [ adonis, pigmalion ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: dioniso-el-que-llega-de-fuera
+      nombre: Dioniso, el que llega de fuera
+      era: edad-de-los-olimpicos
+      orden: 1800
+      relatos: [ nacimiento-de-dioniso, dioniso-y-los-piratas ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: penteo-y-las-bacantes
+      nombre: Penteo y las bacantes
+      era: edad-de-los-olimpicos
+      orden: 1900
+      relatos: [ penteo, licurgo-de-tracia, midas ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-fuego-y-la-mujer
+      nombre: El fuego y la mujer
+      era: edad-de-los-olimpicos
+      orden: 2000
+      relatos: [ prometeo-y-el-fuego, pandora ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-diluvio
+      nombre: El diluvio
+      era: edad-de-los-olimpicos
+      orden: 2100
+      relatos: [ licaon, deucalion-y-pirra ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: zeus-y-los-linajes
+      nombre: Zeus y los linajes
+      era: edad-de-los-olimpicos
+      orden: 2200
+      relatos: [ rapto-de-europa, io ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: leda-y-los-dioscuros
+      nombre: Leda y los Dioscuros
+      era: edad-de-los-olimpicos
+      orden: 2300
+      relatos: [ leda, castor-y-polux ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: faeton
+      nombre: Faetón
+      era: edad-de-los-olimpicos
+      orden: 2400
+      relatos: [ faeton ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: cuerpos-que-cambian
+      nombre: Cuerpos que cambian
+      era: edad-de-los-olimpicos
+      orden: 2500
+      relatos: [ narciso-y-eco, aracne, erisicton ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: amores-desgraciados
+      nombre: Amores desgraciados
+      era: edad-de-los-olimpicos
+      orden: 2600
+      relatos: [ piramo-y-tisbe, ceix-y-alcione, baucis-y-filemon ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-casa-de-atenas
+      nombre: La casa de Atenas
+      era: edad-de-los-olimpicos
+      orden: 2700
+      relatos: [ tereo-procne-y-filomela, cefalo-y-procris, boreas-y-oritia ]
+      examen: { aciertos: 8, de: 10 }
+
+    # ─── edad de los héroes ────────────────────────────────────────
+    - id: las-danaides
+      nombre: Las Danaides
+      era: edad-de-los-heroes
+      orden: 100
+      relatos: [ danao-y-egipto, hipermnestra ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-lluvia-de-oro
+      nombre: La lluvia de oro
+      era: edad-de-los-heroes
+      orden: 200
+      relatos: [ danae-y-acrisio ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-cabeza-de-la-gorgona
+      nombre: La cabeza de la Gorgona
+      era: edad-de-los-heroes
+      orden: 300
+      relatos: [ perseo-y-medusa ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-monstruo-del-mar
+      nombre: El monstruo del mar
+      era: edad-de-los-heroes
+      orden: 400
+      relatos: [ perseo-y-andromeda, la-muerte-de-acrisio ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-jinete-que-quiso-subir
+      nombre: El jinete que quiso subir
+      era: edad-de-los-heroes
+      orden: 500
+      relatos: [ belerofonte-y-la-quimera ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-rey-de-creta
+      nombre: El rey de Creta
+      era: edad-de-los-heroes
+      orden: 600
+      relatos: [ minos-y-el-toro, pasifae ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-artesano
+      nombre: El artesano
+      era: edad-de-los-heroes
+      orden: 700
+      relatos: [ dedalo-e-icaro, dedalo-y-cocalo ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-camino-a-atenas
+      nombre: El camino a Atenas
+      era: edad-de-los-heroes
+      orden: 800
+      relatos: [ teseo-camino-a-atenas, medea-en-atenas ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-laberinto
+      nombre: El laberinto
+      era: edad-de-los-heroes
+      orden: 900
+      resumen: Atenas paga un tributo de sangre a Creta hasta que un héroe se interna
+        en el laberinto.
+      relatos: [ teseo-y-el-minotauro ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: las-velas-negras
+      nombre: Las velas negras
+      era: edad-de-los-heroes
+      orden: 1000
+      relatos: [ ariadna-en-naxos, la-muerte-de-egeo ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: las-amazonas
+      nombre: Las amazonas
+      era: edad-de-los-heroes
+      orden: 1100
+      relatos: [ teseo-e-hipolita ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: fedra-e-hipolito
+      nombre: Fedra e Hipólito
+      era: edad-de-los-heroes
+      orden: 1200
+      relatos: [ fedra-e-hipolito ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: piritoo
+      nombre: Pirítoo
+      era: edad-de-los-heroes
+      orden: 1300
+      relatos: [ la-centauromaquia, el-descenso-al-hades ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-nino-que-estrangulo-serpientes
+      nombre: El niño que estranguló serpientes
+      era: edad-de-los-heroes
+      orden: 1400
+      relatos: [ nacimiento-de-heracles, las-serpientes-de-la-cuna ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-locura
+      nombre: La locura
+      era: edad-de-los-heroes
+      orden: 1500
+      relatos: [ heracles-y-megara, el-oraculo-de-delfos ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: las-primeras-fieras
+      nombre: Las primeras fieras
+      era: edad-de-los-heroes
+      orden: 1600
+      relatos: [ leon-de-nemea, hidra-de-lerna, cierva-de-cerinia ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-peloponeso-limpio
+      nombre: El Peloponeso limpio
+      era: edad-de-los-heroes
+      orden: 1700
+      relatos: [ jabali-de-erimanto, establos-de-augias, aves-del-estinfalo ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: mas-alla-del-mar
+      nombre: Más allá del mar
+      era: edad-de-los-heroes
+      orden: 1800
+      relatos: [ toro-de-creta, yeguas-de-diomedes, cinturon-de-hipolita ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: los-confines-del-mundo
+      nombre: Los confines del mundo
+      era: edad-de-los-heroes
+      orden: 1900
+      relatos: [ bueyes-de-gerion, manzanas-de-las-hesperides, cerbero ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: por-el-camino
+      nombre: Por el camino
+      era: edad-de-los-heroes
+      orden: 2000
+      relatos: [ anteo, la-liberacion-de-prometeo, hesione ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: alcestis
+      nombre: Alcestis
+      era: edad-de-los-heroes
+      orden: 2100
+      relatos: [ alcestis ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-gigantomaquia
+      nombre: La Gigantomaquia
+      era: edad-de-los-heroes
+      orden: 2200
+      relatos: [ la-gigantomaquia ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: onfale
+      nombre: Ónfale
+      era: edad-de-los-heroes
+      orden: 2300
+      relatos: [ ifito, onfale ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-tunica-y-la-pira
+      nombre: La túnica y la pira
+      era: edad-de-los-heroes
+      orden: 2400
+      relatos: [ deyanira-y-neso, la-muerte-de-heracles ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: cadmo-funda-tebas
+      nombre: Cadmo funda Tebas
+      era: edad-de-los-heroes
+      orden: 2500
+      relatos: [ cadmo-y-el-dragon, las-bodas-de-harmonia ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: anfion-y-zeto
+      nombre: Anfión y Zeto
+      era: edad-de-los-heroes
+      orden: 2600
+      relatos: [ los-muros-de-tebas ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: edipo-y-la-esfinge
+      nombre: Edipo y la esfinge
+      era: edad-de-los-heroes
+      orden: 2700
+      relatos: [ edipo-y-la-esfinge ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-verdad-de-edipo
+      nombre: La verdad de Edipo
+      era: edad-de-los-heroes
+      orden: 2800
+      relatos: [ la-verdad-de-edipo ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: los-siete-contra-tebas
+      nombre: Los siete contra Tebas
+      era: edad-de-los-heroes
+      orden: 2900
+      relatos: [ los-siete, anfiarao ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: antigona
+      nombre: Antígona
+      era: edad-de-los-heroes
+      orden: 3000
+      relatos: [ antigona ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: los-epigonos
+      nombre: Los Epígonos
+      era: edad-de-los-heroes
+      orden: 3100
+      relatos: [ alcmeon-y-el-collar ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-carnero-de-oro
+      nombre: El carnero de oro
+      era: edad-de-los-heroes
+      orden: 3200
+      relatos: [ frixo-y-hele, atamante-e-ino ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-nave-argo
+      nombre: La nave Argo
+      era: edad-de-los-heroes
+      orden: 3300
+      relatos: [ pelias-y-jason, hilas ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: fineo-y-las-rocas
+      nombre: Fineo y las rocas
+      era: edad-de-los-heroes
+      orden: 3400
+      relatos: [ las-harpias, las-simplegades ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-colquide
+      nombre: La Cólquide
+      era: edad-de-los-heroes
+      orden: 3500
+      relatos: [ los-toros-de-bronce, el-dragon-y-el-vellocino ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-regreso
+      nombre: El regreso
+      era: edad-de-los-heroes
+      orden: 3600
+      relatos: [ apsirto, talos, las-sirenas-y-orfeo ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: medea
+      nombre: Medea
+      era: edad-de-los-heroes
+      orden: 3700
+      relatos: [ la-muerte-de-pelias, medea-en-corinto ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-caza-de-calidon
+      nombre: La caza de Calidón
+      era: edad-de-los-heroes
+      orden: 3800
+      relatos: [ el-jabali-de-calidon, el-tizon-de-altea ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: atalanta
+      nombre: Atalanta
+      era: edad-de-los-heroes
+      orden: 3900
+      relatos: [ la-carrera-de-atalanta ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: orfeo
+      nombre: Orfeo
+      era: edad-de-los-heroes
+      orden: 4000
+      relatos: [ orfeo-y-euridice, la-muerte-de-orfeo ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: pelope
+      nombre: Pélope
+      era: edad-de-los-heroes
+      orden: 4100
+      relatos: [ pelope-y-enomao ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: atreo-y-tiestes
+      nombre: Atreo y Tiestes
+      era: edad-de-los-heroes
+      orden: 4200
+      relatos: [ el-banquete-de-tiestes ]
+      examen: { aciertos: 8, de: 10 }
+
+    # ─── guerra de troya ───────────────────────────────────────────
+    - id: las-bodas-de-peleo-y-tetis
+      nombre: Las bodas de Peleo y Tetis
+      era: guerra-de-troya
+      orden: 100
+      relatos: [ peleo-y-tetis, el-bano-de-aquiles ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-manzana
+      nombre: La manzana
+      era: guerra-de-troya
+      orden: 200
+      relatos: [ eris-y-la-manzana, el-juicio-de-paris ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-rapto-de-helena
+      nombre: El rapto de Helena
+      era: guerra-de-troya
+      orden: 300
+      relatos: [ el-juramento-de-tindaro, paris-y-helena ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-flota-en-aulide
+      nombre: La flota en Áulide
+      era: guerra-de-troya
+      orden: 400
+      relatos: [ la-locura-de-odiseo, aquiles-en-esciros, ifigenia ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-colera-de-aquiles
+      nombre: La cólera de Aquiles
+      era: guerra-de-troya
+      orden: 500
+      relatos: [ crises-y-briseida, la-embajada ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: hector-y-andromaca
+      nombre: Héctor y Andrómaca
+      era: guerra-de-troya
+      orden: 600
+      relatos: [ la-aristia-de-diomedes, hector-y-andromaca ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: patroclo
+      nombre: Patroclo
+      era: guerra-de-troya
+      orden: 700
+      relatos: [ la-muerte-de-patroclo, la-armadura-de-aquiles ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-muerte-de-hector
+      nombre: La muerte de Héctor
+      era: guerra-de-troya
+      orden: 800
+      relatos: [ aquiles-y-hector ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-rescate-de-priamo
+      nombre: El rescate de Príamo
+      era: guerra-de-troya
+      orden: 900
+      relatos: [ priamo-en-la-tienda ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: pentesilea-y-memnon
+      nombre: Pentesilea y Memnón
+      era: guerra-de-troya
+      orden: 1000
+      relatos: [ pentesilea, memnon ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-muerte-de-aquiles
+      nombre: La muerte de Aquiles
+      era: guerra-de-troya
+      orden: 1100
+      relatos: [ paris-y-el-talon ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-locura-de-ayax
+      nombre: La locura de Áyax
+      era: guerra-de-troya
+      orden: 1200
+      relatos: [ las-armas-de-aquiles, la-muerte-de-ayax ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-caballo-de-madera
+      nombre: El caballo de madera
+      era: guerra-de-troya
+      orden: 1300
+      relatos: [ filoctetes, el-paladio, el-caballo ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: la-caida-de-troya
+      nombre: La caída de Troya
+      era: guerra-de-troya
+      orden: 1400
+      relatos: [ laocoonte, el-saqueo, hecuba-y-polixena ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-regreso-de-agamenon
+      nombre: El regreso de Agamenón
+      era: guerra-de-troya
+      orden: 1500
+      relatos: [ clitemnestra-y-egisto ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: orestes
+      nombre: Orestes
+      era: guerra-de-troya
+      orden: 1600
+      relatos: [ orestes-y-electra, el-juicio-del-areopago ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-ciclope
+      nombre: El cíclope
+      era: guerra-de-troya
+      orden: 1700
+      relatos: [ los-ciconos-y-los-lotofagos, polifemo ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: circe-y-los-muertos
+      nombre: Circe y los muertos
+      era: guerra-de-troya
+      orden: 1800
+      relatos: [ eolo-y-los-lestrigones, circe, la-nekyia ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: el-camino-a-casa
+      nombre: El camino a casa
+      era: guerra-de-troya
+      orden: 1900
+      relatos: [ las-sirenas, escila-y-caribdis, las-vacas-del-sol, calipso ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: itaca
+      nombre: Ítaca
+      era: guerra-de-troya
+      orden: 2000
+      relatos: [ los-feacios, eumeo-y-telemaco ]
+      examen: { aciertos: 8, de: 10 }
+
+    - id: los-pretendientes
+      nombre: Los pretendientes
+      era: guerra-de-troya
+      orden: 2100
+      relatos: [ la-prueba-del-arco, penelope ]
+      examen: { aciertos: 8, de: 10 }

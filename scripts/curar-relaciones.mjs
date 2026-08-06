@@ -179,6 +179,36 @@ function escribirRelacion(entrada, { tipo, destino, fuente, principal }) {
 	writeFileSync(entrada.ruta, doc.toString());
 }
 
+// Registra un tipo de relación nuevo en materia.yaml. Simétrica escribe una
+// sola entrada (inversa: el propio tipo); asimétrica escribe dos, la directa
+// con las plantillas y la inversa como puro puntero — mismo patrón que ya usa
+// el resto del registro (ver padre_de/hijo_de vs. hermano_de).
+function escribirTipoRelacion({
+	tipo,
+	inversa,
+	simetrica,
+	pregunta,
+	preguntaInversa,
+	conjunto,
+	conjuntoInversa,
+}) {
+	const texto = readFileSync(FICHERO_MATERIA, "utf-8");
+	const doc = parseDocument(texto);
+	const relaciones = doc.getIn(["mitologia-griega", "relaciones"], true);
+
+	const definicionDirecta = { inversa };
+	if (simetrica) definicionDirecta.simetrica = true;
+	if (pregunta) definicionDirecta.pregunta = pregunta;
+	if (preguntaInversa) definicionDirecta.pregunta_inversa = preguntaInversa;
+	if (conjunto) definicionDirecta.conjunto = true;
+	if (conjuntoInversa) definicionDirecta.conjunto_inversa = true;
+	relaciones.set(tipo, doc.createNode(definicionDirecta));
+
+	if (!simetrica) relaciones.set(inversa, doc.createNode({ inversa: tipo }));
+
+	writeFileSync(FICHERO_MATERIA, doc.toString());
+}
+
 // --- lectura del estado de un relato para la UI ---
 
 function analizarRelato(id) {
@@ -320,6 +350,50 @@ async function manejarRelacion(req, res) {
 	responderJson(res, 200, { ok: true, ruta: relativa(entrada.ruta) });
 }
 
+async function manejarTipoRelacion(req, res) {
+	const cuerpo = await leerCuerpoJson(req);
+	const tipo = String(cuerpo.tipo || "").trim();
+	const simetrica = cuerpo.simetrica === true;
+	const inversa = simetrica ? tipo : String(cuerpo.inversa || "").trim();
+	const pregunta = String(cuerpo.pregunta || "").trim() || undefined;
+	const preguntaInversa =
+		String(cuerpo.preguntaInversa || "").trim() || undefined;
+	const conjunto = cuerpo.conjunto === true;
+	const conjuntoInversa = cuerpo.conjuntoInversa === true;
+
+	if (!TIPO_RELACION_VALIDO.test(tipo))
+		return responderJson(res, 400, {
+			error: "tipo inválido: minúsculas, números y guiones bajos",
+		});
+	if (!simetrica) {
+		if (!TIPO_RELACION_VALIDO.test(inversa))
+			return responderJson(res, 400, {
+				error: "inversa inválida: minúsculas, números y guiones bajos",
+			});
+		if (inversa === tipo)
+			return responderJson(res, 400, {
+				error: "si tipo e inversa son iguales, marca «simétrica»",
+			});
+	}
+
+	const registro = cargarMateria().relaciones ?? {};
+	if (tipo in registro)
+		return responderJson(res, 409, { error: `"${tipo}" ya existe` });
+	if (!simetrica && inversa in registro)
+		return responderJson(res, 409, { error: `"${inversa}" ya existe` });
+
+	escribirTipoRelacion({
+		tipo,
+		inversa,
+		simetrica,
+		pregunta,
+		preguntaInversa,
+		conjunto,
+		conjuntoInversa,
+	});
+	responderJson(res, 200, { ok: true, tipo, inversa });
+}
+
 const servidor = http.createServer(async (req, res) => {
 	const url = new URL(req.url, `http://${req.headers.host}`);
 	try {
@@ -352,6 +426,9 @@ const servidor = http.createServer(async (req, res) => {
 		}
 		if (req.method === "POST" && url.pathname === "/api/relacion") {
 			return await manejarRelacion(req, res);
+		}
+		if (req.method === "POST" && url.pathname === "/api/tipo-relacion") {
+			return await manejarTipoRelacion(req, res);
 		}
 		res.writeHead(404);
 		res.end("no encontrado");
