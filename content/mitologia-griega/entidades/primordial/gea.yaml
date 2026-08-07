@@ -21,3 +21,6 @@ relaciones:
   - tipo: madre_de
     destino: tifon
     fuente: teogonia
+  - tipo: madre_de
+    destino: tartaro
+    fuente: teogonia
