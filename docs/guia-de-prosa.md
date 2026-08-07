@@ -1,4 +1,4 @@
-# Guía de prosa para Trama · v4
+# Guía de prosa para Trama · v5
 
 Documento autocontenido. Quien lo lea puede escribir cualquier texto para el proyecto sin
 haber visto el resto de la documentación.
@@ -13,6 +13,10 @@ son ahora entidades de pleno derecho y tienen su propio tipo de texto.
 **Qué cambia respecto de la v3:** en §11, la tabla de ids nuevos suma la columna **fuente**, y
 si lo entregado es un relato hay un **quinto punto obligatorio**: una tabla de las relaciones
 de acción y parentesco que va a hacer falta declarar, con origen/tipo/destino/fuente.
+
+**Qué cambia respecto de la v4:** §10 añade dos reglas de formato del YAML — nunca usar `:`
+dentro de un valor, y toda entidad femenina lleva `genero: femenino` para que el inverso de
+`padre_de`/`madre_de` salga bien (`hija_de` en vez de `hijo_de`).
 
 ---
 
@@ -106,7 +110,9 @@ anótalo en la entrega.
 **`resumen`** — obligatorio, y es el campo que más se subestima. Aparece en listados, en los
 índices y en la mini-ficha que sale al pulsar un enlace. **Una sola frase, 15-30 palabras, que
 se entienda sola**, sin haber leído el relato ni saber quién es nadie. Escríbelo en presente.
-No es un gancho ni un titular: es información.
+No es un gancho ni un titular: es información. **Nunca lleva el carácter `:`** — ni aquí ni en
+ningún otro campo del YAML: rompe el parseo. Si la frase lo pide, usa una coma, un punto y
+coma o reescribe la frase.
 
 **`participantes`** — lista de ids de entidades que intervienen. Es lo que hace que el relato
 aparezca en la ficha de cada uno de ellos. Incluye a quien actúa o le pasa algo; **no**
@@ -589,6 +595,19 @@ destino de ningún `<E />` ni de ningún campo no debe crearse; nace huérfano y
 Convención de ids de entidad: minúsculas, sin tildes, con guiones, en singular y en español.
 `hidra-de-lerna`, `monte-olimpo`, `egida`. Para obras, ver §6.
 
+### Dos reglas de formato del YAML
+
+**Nunca uses el carácter `:` dentro de un valor**, en ningún campo — `resumen`, `nombre`,
+`alt`, lo que sea. Un `:` dentro de una cadena sin comillas rompe el parseo de YAML. Si la
+frase lo necesita, usa una coma, un punto y coma, o reescríbela sin él.
+
+**Toda entidad femenina lleva `genero: femenino`** en su YAML. Sin ese campo, el sistema no
+puede derivar bien el inverso de las relaciones de parentesco: `padre_de`/`madre_de` se
+resuelven como `hijo_de` por defecto, y una entidad femenina sin `genero: femenino` sale como
+"hijo de" en vez de "hija de", o como madre en vez de padre si la relación va en ese sentido.
+Cuando propongas una entidad nueva que sea femenina, inclúyelo en la tabla de ids nuevos o
+anótalo en las notas de la entrega.
+
 ---
 
 ## 11. Qué se entrega
@@ -631,6 +650,8 @@ escribe la prosa.
 - [ ] El id del campo coincide con el nombre del fichero
 - [ ] Están los campos obligatorios: `id`, `tipo`, `nombre`, y `resumen` salvo en `tipo: obra`
 - [ ] El `resumen` (si aplica) es una frase, en presente, comprensible sin contexto
+- [ ] Ningún campo del YAML contiene el carácter `:`
+- [ ] Si la entidad es femenina, lleva `genero: femenino`
 - [ ] Ningún `<E />` en el frontmatter
 - [ ] Ninguna entidad enlazada más de una vez
 - [ ] Ningún párrafo con más de tres enlaces
