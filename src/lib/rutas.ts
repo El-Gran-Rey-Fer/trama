@@ -59,6 +59,12 @@ export function rutaAjustes(materiaSlug: string): string {
 	return `${base()}${materiaSlug}/ajustes/`;
 }
 
+// Medallas de personaje (bloque Y): índice del progreso hacia cada medalla,
+// no solo su reflejo en la casilla del álbum.
+export function rutaMedallas(materiaSlug: string): string {
+	return `${base()}${materiaSlug}/medallas/`;
+}
+
 // Los ficheros de `public/` (imágenes, etc.) se referencian en el contenido con
 // ruta absoluta desde la raíz del sitio (p. ej. `/img/<materia>/<entidad>.jpg`),
 // pero el despliegue vive bajo `base`: hay que anteponerla igual que en las

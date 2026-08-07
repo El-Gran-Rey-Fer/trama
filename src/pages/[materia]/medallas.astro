@@ -1,0 +1,293 @@
+---
+import { getCollection, getEntry } from "astro:content";
+import Casilla from "../../components/Casilla.astro";
+import Base from "../../layouts/Base.astro";
+import { relatosDeMateria } from "../../lib/contenidoPorMateria";
+import { conjuntoDeRelato } from "../../lib/desbloqueo";
+import { construirGrafo } from "../../lib/grafo";
+import { resolverRetrato } from "../../lib/retrato";
+import { rutaEntidad } from "../../lib/rutas";
+import { tarjetasPropiasColeccionables } from "../../lib/tarjetas";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	return materias.map((m) => ({
+		params: { materia: m.data.slug },
+		props: { materiaId: m.id },
+	}));
+}
+
+const { materia } = Astro.params;
+const { materiaId } = Astro.props;
+const materiaEntry = await getEntry("materias", materiaId);
+const nombreMateria = materiaEntry?.data.nombre ?? materia;
+
+const relatos = await relatosDeMateria(materiaId);
+const relatoConjuntos = Object.fromEntries(
+	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
+);
+
+const grafo = await construirGrafo(materiaId);
+const tiposColeccionables = new Set(
+	materiaEntry?.data.tipos_coleccionables ?? [],
+);
+// Solo entidades de un tipo coleccionable: son las únicas que pueden llegar
+// a tener medalla (bloque Y, plan de gamificación §8). Una entidad de un tipo
+// no coleccionable no entra aquí aunque tenga tarjetas propias.
+const entidades = [...grafo.entidades.values()].filter(
+	(e) => e.kind === "entidad" && tiposColeccionables.has(e.tipo),
+);
+
+function datosParticipante(e: (typeof entidades)[number]) {
+	return {
+		id: e.id,
+		nombre: e.nombre,
+		tipo: e.tipo,
+		retrato: resolverRetrato(grafo, e),
+	};
+}
+
+// Mismo agrupado y orden que el álbum (por `tipo`, orden del registro en
+// materia.yaml; dentro de cada tipo, primarias antes que menores, alfabético
+// dentro de cada peso) — misma lista de entidades, solo que aquí acotada a
+// las coleccionables.
+function peso(e: (typeof entidades)[number]): number {
+	return e.prosa ? 0 : 1;
+}
+const ordenTipos = materiaEntry?.data.tipos ?? [];
+const tiposPresentes = [...new Set(entidades.map((e) => e.tipo))];
+tiposPresentes.sort((a, b) => {
+	const ia = ordenTipos.indexOf(a);
+	const ib = ordenTipos.indexOf(b);
+	if (ia === -1 && ib === -1) return a.localeCompare(b, "es");
+	if (ia === -1) return 1;
+	if (ib === -1) return -1;
+	return ia - ib;
+});
+const gruposPorTipo = tiposPresentes.map((tipo) => ({
+	tipo,
+	entidades: entidades
+		.filter((e) => e.tipo === tipo)
+		.sort((a, b) => {
+			const dPeso = peso(a) - peso(b);
+			if (dPeso !== 0) return dPeso;
+			return a.nombre.localeCompare(b.nombre, "es");
+		})
+		.map(datosParticipante),
+}));
+
+const tarjetasPropias = await tarjetasPropiasColeccionables(materiaId);
+---
+
+<Base titulo={`Medallas — ${nombreMateria}`} materiaSlug={materia}>
+  <div class="cabecera-lista">
+    <h1 class="titulo-lista">Medallas</h1>
+    <p id="progreso-medallas" class="subtitulo-lista"></p>
+  </div>
+
+  {
+    gruposPorTipo.map((g) => (
+      <div class="grupo-medallas">
+        <h3 class="etiqueta-grupo-medallas">{g.tipo}</h3>
+        <ul class="lista-medallas">
+          {g.entidades.map((e) => (
+            <li data-entidad-id={e.id}>
+              <a href={rutaEntidad(materia, e.id)} class="fila-medalla">
+                <Casilla nombre={e.nombre} tipo={e.tipo} retrato={e.retrato} />
+                <span class="texto-medalla">
+                  <span class="nombre-medalla">{e.nombre}</span>
+                  <span class="progreso-medalla" />
+                  <span class="barra-medalla">
+                    <span class="barra-medalla-relleno" />
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+
+  <script
+    is:inline
+    type="application/json"
+    id="datos-medallas"
+    set:html={JSON.stringify({
+      entidadIds: entidades.map((e) => e.id),
+      relatoConjuntos,
+      tarjetasPropias,
+    })}
+  />
+
+  <script>
+    import {
+      calcularEstadosCasillas,
+      calcularMedallasPersonaje,
+      leerEstado,
+    } from "../../lib/estado";
+
+    const datosEl = document.getElementById("datos-medallas");
+    const datos = datosEl
+      ? (JSON.parse(datosEl.textContent ?? "{}") as {
+          entidadIds: string[];
+          relatoConjuntos: Record<string, string[]>;
+          tarjetasPropias: Record<string, string[]>;
+        })
+      : null;
+
+    if (datos) {
+      const estadoActual = leerEstado();
+      // Sandbox no oculta nada (mismo criterio que el índice del álbum): la
+      // gracia del modo es precisamente no depender de qué se ha leído.
+      const sandbox = estadoActual.modo === "sandbox";
+      const medallas = calcularMedallasPersonaje(
+        datos.tarjetasPropias,
+        estadoActual,
+      );
+      const estadosCasillas = calcularEstadosCasillas(
+        datos.entidadIds,
+        datos.relatoConjuntos,
+        medallas,
+        estadoActual,
+      );
+
+      let conseguidas = 0;
+      for (const id of datos.entidadIds) {
+        const medalla = medallas[id];
+        const oculta = !sandbox && estadosCasillas[id] === "sin-encontrar";
+        const li = document.querySelector(`[data-entidad-id="${id}"]`);
+        const casilla = li?.querySelector<HTMLElement>(".casilla");
+        const nombre = li?.querySelector<HTMLElement>(".nombre-medalla");
+        const progreso = li?.querySelector<HTMLElement>(".progreso-medalla");
+        const relleno = li?.querySelector<HTMLElement>(".barra-medalla-relleno");
+        if (medalla?.ganada) conseguidas += 1;
+
+        if (oculta) {
+          if (casilla) casilla.dataset.estado = "sin-encontrar";
+          if (nombre) nombre.textContent = "";
+          if (progreso) progreso.textContent = "";
+          if (relleno) relleno.style.width = "0%";
+          continue;
+        }
+
+        if (casilla) casilla.dataset.estado = medalla?.ganada ? "dominado" : "encontrado";
+        if (progreso) {
+          progreso.textContent = medalla?.ganada
+            ? "Conseguida — 80% de sus tarjetas propias"
+            : !medalla || medalla.total === 0
+              ? "Sin tarjetas propias todavía"
+              : `${medalla.aciertos} / ${medalla.total} tarjetas propias`;
+        }
+        if (relleno && medalla && medalla.total > 0) {
+          const porcentaje = Math.min(
+            100,
+            Math.round((medalla.aciertos / medalla.total) * 100),
+          );
+          relleno.style.width = `${porcentaje}%`;
+        }
+      }
+
+      const elProgreso = document.getElementById("progreso-medallas");
+      if (elProgreso) {
+        elProgreso.textContent = `${conseguidas} / ${datos.entidadIds.length} conseguidas`;
+      }
+    }
+  </script>
+</Base>
+
+<style>
+  .cabecera-lista {
+    padding: 20px 20px 4px;
+  }
+
+  .titulo-lista {
+    margin: 0;
+    font-size: 26px;
+    font-weight: var(--peso-titulo-grande);
+    font-family: var(--fuente-titulo);
+  }
+
+  .subtitulo-lista {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--color-texto-muted);
+  }
+
+  .grupo-medallas {
+    margin-bottom: 4px;
+  }
+
+  .etiqueta-grupo-medallas {
+    margin: 18px 20px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-acento);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--fuente-titulo);
+  }
+
+  .lista-medallas {
+    margin: 0;
+    padding: 0 20px;
+    list-style: none;
+  }
+
+  .lista-medallas li {
+    border-bottom: 1px solid var(--color-tarjeta-borde);
+  }
+
+  .lista-medallas li:last-child {
+    border-bottom: none;
+  }
+
+  .fila-medalla {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    text-decoration: none;
+    color: var(--color-texto);
+  }
+
+  .fila-medalla :global(.casilla) {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 auto;
+  }
+
+  .texto-medalla {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .nombre-medalla {
+    font-size: 14px;
+    font-weight: 700;
+    font-family: var(--fuente-titulo);
+  }
+
+  .progreso-medalla {
+    font-size: 12px;
+    color: var(--color-texto-muted);
+  }
+
+  .barra-medalla {
+    display: block;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-tarjeta-borde);
+    overflow: hidden;
+  }
+
+  .barra-medalla-relleno {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--color-acento);
+  }
+</style>

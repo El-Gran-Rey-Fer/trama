@@ -8,6 +8,7 @@ import {
 	rutaGrafo,
 	rutaJugarMenu,
 	rutaMateria,
+	rutaMedallas,
 } from "../lib/rutas";
 
 interface Props {
@@ -56,6 +57,12 @@ const pestanas = materiaSlug
 				etiqueta: "Álbum",
 				icono: "🗂",
 				href: rutaAlbum(materiaSlug),
+			},
+			{
+				id: "medallas",
+				etiqueta: "Medallas",
+				icono: "🏅",
+				href: rutaMedallas(materiaSlug),
 			},
 			{
 				id: "arbol",
