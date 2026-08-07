@@ -13,7 +13,10 @@ import {
 	rutaPracticarCapitulo,
 	rutaRelato,
 } from "../../../lib/rutas";
-import { generarTarjetas } from "../../../lib/tarjetas";
+import {
+	generarTarjetas,
+	tarjetasPropiasPorRelato,
+} from "../../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -66,6 +69,19 @@ const relatos = capitulo.relatos.map((rid) => {
 });
 
 const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
+
+// Tres estados de relato (bloque X, plan de gamificación §7.1): "practicado"
+// hace falta saber qué tarjetas son propias de cada relato, aparte de las
+// nombres que ya trae `relatosResumen`. Acotado a los relatos de ESTE
+// capítulo — `tarjetasPropiasPorRelato` cubre toda la materia y no hace
+// falta mandar al cliente lo que no se va a mostrar en esta página.
+const tarjetasPropiasMateria = await tarjetasPropiasPorRelato(materiaId);
+const tarjetasPropiasRelato = Object.fromEntries(
+	capitulo.relatosResumen.map((r) => [
+		r.id,
+		tarjetasPropiasMateria[r.id] ?? [],
+	]),
+);
 
 // Muro de aventura (bloque W): esta página solo enseña ESTE capítulo, así
 // que solo su propio id puede desbloquearla.
@@ -157,7 +173,10 @@ const cadena = construirCadena(capitulos);
     is:inline
     type="application/json"
     id="datos-relatos"
-    set:html={JSON.stringify(capitulo.relatosResumen)}
+    set:html={JSON.stringify({
+      relatos: capitulo.relatosResumen,
+      tarjetasPropias: tarjetasPropiasRelato,
+    })}
   />
 
   <script>
@@ -171,17 +190,26 @@ const cadena = construirCadena(capitulos);
 
     const materiaSlug = document.documentElement.dataset.materia ?? "";
     const datosEl = document.getElementById("datos-relatos");
-    const relatosCapitulo: RelatoDatos[] = datosEl
-      ? JSON.parse(datosEl.textContent ?? "[]")
-      : [];
+    const datos: { relatos: RelatoDatos[]; tarjetasPropias: Record<string, string[]> } =
+      datosEl
+        ? JSON.parse(datosEl.textContent ?? "{}")
+        : { relatos: [], tarjetasPropias: {} };
+    const relatosCapitulo = datos.relatos;
     const estado = leerEstado();
 
+    // Tres estados de relato (§7.1): "sin leer" no dice nada, "leído" solo
+    // dice que se pasó por ahí, "practicado" añade que alguna de sus tarjetas
+    // propias ya se acertó — no puede distinguirse solo por color, así que
+    // cada uno lleva su propio texto.
     for (const relato of relatosCapitulo) {
       const fila = document.querySelector(`[data-relato="${relato.id}"]`);
       const el = fila?.querySelector(".estado-relato");
       const leido = estado.leidos.includes(relato.id);
-      if (el) el.textContent = leido ? "Leído" : "";
-      if (fila instanceof HTMLElement) fila.dataset.leido = String(leido);
+      const propias = datos.tarjetasPropias[relato.id] ?? [];
+      const practicado = propias.some((id) => estado.tarjetasAcertadas.includes(id));
+      const nombreEstado = practicado ? "practicado" : leido ? "leido" : "sin-leer";
+      if (el) el.textContent = practicado ? "Practicado" : leido ? "Leído" : "";
+      if (fila instanceof HTMLElement) fila.dataset.estado = nombreEstado;
     }
 
     // Examen deshabilitado sin lectura completa (§4.4): visible siempre,
@@ -245,8 +273,13 @@ const cadena = construirCadena(capitulos);
     list-style: none;
   }
 
-  .fila-relato[data-leido="true"] {
+  .fila-relato[data-estado="leido"] {
     opacity: 0.75;
+  }
+
+  .fila-relato[data-estado="practicado"] .estado-relato {
+    color: var(--color-acento);
+    font-weight: 700;
   }
 
   .enlace-relato {

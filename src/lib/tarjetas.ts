@@ -1,4 +1,6 @@
 import { getEntry } from "astro:content";
+import { relatosDeMateria } from "./contenidoPorMateria";
+import { conjuntoDeRelato } from "./desbloqueo";
 import { construirGrafo, type Entidad, type Grafo } from "./grafo";
 
 export interface Tarjeta {
@@ -300,6 +302,34 @@ export async function tarjetasPropiasColeccionables(
 	for (const [entidadId, ids] of Object.entries(propias)) {
 		const tipo = grafo.entidades.get(entidadId)?.tipo;
 		if (tipo && tiposColeccionables.has(tipo)) resultado[entidadId] = ids;
+	}
+	return resultado;
+}
+
+// Tarjetas propias de un relato (bloque X, plan de gamificación §7.1, estado
+// "practicado"): unión de las tarjetas propias de toda entidad en su
+// `conjuntoDeRelato` (participantes + lugar) — mismas dos piezas que ya
+// componen `capitulosQueDesbloquean`/`conjunto` en capitulos.ts, aquí
+// recombinadas por tarjeta en vez de por capítulo. Una entidad que reaparece
+// en varios relatos cuenta en todos ellos: no hay noción de "relato dueño" en
+// el modelo de datos, así que practicar una tarjeta suya practica el relato
+// que se esté mirando, sea o no el que la introdujo.
+export async function tarjetasPropiasPorRelato(
+	materiaId: string,
+): Promise<Record<string, string[]>> {
+	const relatos = await relatosDeMateria(materiaId);
+	const propiasPorEntidad = tarjetasPropiasPorEntidad(
+		await generarTarjetas(materiaId),
+	);
+	const resultado: Record<string, string[]> = {};
+	for (const relato of relatos) {
+		const ids = new Set<string>();
+		for (const entidadId of conjuntoDeRelato(relato.data)) {
+			for (const tarjetaId of propiasPorEntidad[entidadId] ?? []) {
+				ids.add(tarjetaId);
+			}
+		}
+		resultado[relato.id] = [...ids];
 	}
 	return resultado;
 }

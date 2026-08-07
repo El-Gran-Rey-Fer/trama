@@ -72,6 +72,7 @@ const relatosCapitulo =
 
     <div class="cuerpo">
       <slot />
+      <div id="centinela-fin-relato" aria-hidden="true" />
     </div>
 
     {
@@ -86,6 +87,10 @@ const relatosCapitulo =
       <button type="button" class="marcar-leido" data-relato-id={id}>
         Marcar relato como leído
       </button>
+      <p id="acuse-leido" class="acuse-leido" hidden>
+        Marcado como leído automáticamente.
+        <button type="button" id="deshacer-leido">Deshacer</button>
+      </p>
       {
         capituloId && (
           <>
@@ -176,6 +181,10 @@ const relatosCapitulo =
     line-height: 1.65;
   }
 
+  #centinela-fin-relato {
+    height: 1px;
+  }
+
   .lugar,
   .participantes {
     padding: 0 20px;
@@ -210,6 +219,31 @@ const relatosCapitulo =
   .marcar-leido.leido {
     background: var(--color-tarjeta-fondo);
     color: var(--color-texto-muted);
+  }
+
+  .acuse-leido {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0 0;
+    padding: 12px 16px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: var(--color-tarjeta-fondo);
+    color: var(--color-texto);
+    font-size: 14px;
+  }
+
+  #deshacer-leido {
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-acento);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   .examen-cta {
@@ -274,7 +308,7 @@ const relatosCapitulo =
 }
 
 <script>
-  import { leerEstado, guardarEstado } from "../lib/estado";
+  import { desmarcarLeido, leerEstado, marcarLeido } from "../lib/estado";
   import { rutaRelato } from "../lib/rutas";
 
   interface RelatoDatos {
@@ -283,25 +317,88 @@ const relatosCapitulo =
   }
 
   const boton = document.querySelector<HTMLButtonElement>(".marcar-leido");
+  const acuse = document.getElementById("acuse-leido");
+  const botonDeshacer = document.getElementById("deshacer-leido");
+  const centinela = document.getElementById("centinela-fin-relato");
+
   if (boton) {
     const relatoId = boton.dataset.relatoId ?? "";
+    let temporizadorAcuse: ReturnType<typeof setTimeout> | undefined;
 
     const aplicar = (leido: boolean) => {
       boton.textContent = leido ? "✓ Marcado como leído" : "Marcar relato como leído";
       boton.classList.toggle("leido", leido);
     };
 
+    const ocultarAcuse = () => {
+      acuse?.setAttribute("hidden", "");
+      if (temporizadorAcuse) clearTimeout(temporizadorAcuse);
+    };
+
+    const mostrarAcuse = () => {
+      if (!acuse) return;
+      acuse.removeAttribute("hidden");
+      temporizadorAcuse = setTimeout(ocultarAcuse, 8000);
+    };
+
     aplicar(leerEstado().leidos.includes(relatoId));
 
     boton.addEventListener("click", () => {
-      const estado = leerEstado();
-      if (!estado.leidos.includes(relatoId)) {
-        estado.leidos.push(relatoId);
-        guardarEstado(estado);
-      }
+      marcarLeido(relatoId);
+      ocultarAcuse();
       aplicar(true);
       actualizarExamenCta();
     });
+
+    botonDeshacer?.addEventListener("click", () => {
+      desmarcarLeido(relatoId);
+      ocultarAcuse();
+      aplicar(false);
+      actualizarExamenCta();
+    });
+
+    // Automarcado de lectura (bloque X, plan de gamificación §7): centinela al
+    // final de la prosa, no cálculo de scroll — eso es lo que falla. Dos
+    // salvaguardas contra el fallo silencioso que hundió el intento anterior
+    // (`plan-modo-aventura.md` §3.4): el guard de scroll real y el acuse con
+    // deshacer. Sin soporte de `IntersectionObserver` no se intenta nada de
+    // esto — el botón manual, que no depende de él, sigue siendo el único
+    // camino (degradación segura).
+    if (centinela && "IntersectionObserver" in window) {
+      let huboScroll = false;
+
+      const marcarAutomatico = () => {
+        if (leerEstado().leidos.includes(relatoId)) return;
+        marcarLeido(relatoId);
+        aplicar(true);
+        mostrarAcuse();
+        actualizarExamenCta();
+      };
+
+      const enViewport = () => {
+        const r = centinela.getBoundingClientRect();
+        return r.top < window.innerHeight && r.bottom > 0;
+      };
+
+      window.addEventListener(
+        "scroll",
+        () => {
+          huboScroll = true;
+          // Un relato corto puede tener el centinela ya en vista cuando llega
+          // el primer scroll: el observer no dispara una intersección nueva
+          // porque no hubo transición, así que se comprueba también aquí.
+          if (enViewport()) marcarAutomatico();
+        },
+        { once: true, passive: true },
+      );
+
+      const observador = new IntersectionObserver((entradas) => {
+        for (const entrada of entradas) {
+          if (entrada.isIntersecting && huboScroll) marcarAutomatico();
+        }
+      });
+      observador.observe(centinela);
+    }
   }
 
   // Gating del CTA de examen (§4.4, extendido a esta página por consistencia

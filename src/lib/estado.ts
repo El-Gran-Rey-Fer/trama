@@ -132,6 +132,29 @@ export function marcarTarjetaAcertada(tarjetaId: string): void {
 	guardarEstado(estado);
 }
 
+// Comparten esta ruta de escritura el botón manual y el centinela automático
+// (bloque X, plan de gamificación §7): el primero llama a `marcarLeido`
+// directamente en el click, el segundo cuando el `IntersectionObserver` dispara
+// con el guard de scroll real cumplido. Idempotente, mismo criterio que
+// `marcarTarjetaAcertada`.
+export function marcarLeido(relatoId: string): void {
+	const estado = leerEstado();
+	if (estado.leidos.includes(relatoId)) return;
+	estado.leidos.push(relatoId);
+	guardarEstado(estado);
+}
+
+// El "deshacer" del acuse del centinela (bloque X, §7): revierte exactamente
+// lo que `marcarLeido` hizo. No distingue si el relato se marcó a mano o
+// solo — deshacer siempre vuelve a "sin leer".
+export function desmarcarLeido(relatoId: string): void {
+	const estado = leerEstado();
+	const indice = estado.leidos.indexOf(relatoId);
+	if (indice === -1) return;
+	estado.leidos.splice(indice, 1);
+	guardarEstado(estado);
+}
+
 export function exportarEstado(): void {
 	const estado = leerEstado();
 	const blob = new Blob([JSON.stringify(estado, null, 2)], {
