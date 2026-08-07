@@ -1,14 +1,15 @@
-// Módulo de cliente: motor de examen mixto, compartido por el examen de
-// capítulo y el examen de personaje. Sustituye a examenCliente.ts (que solo
-// hacía opción múltiple sobre `Tarjeta`): mezcla los cuatro tipos de ronda
-// que ya existen como juegos de practicar y son pregunta-y-respuesta de una
-// sola ronda —opción múltiple, pertenencia, completar el árbol, identificar—
-// y los presenta todos con el mismo patrón de feedback + "Siguiente", en vez
-// del autoavance por timeout que tenía el examen de solo-opción-múltiple.
-// Emparejar y ordenar no entran: son juegos de tablero completo, no rondas
-// de una sola pregunta con acierto/fallo inmediato.
+// Módulo de cliente: motor de examen mixto del examen de capítulo. Sustituye
+// a examenCliente.ts (que solo hacía opción múltiple sobre `Tarjeta`): mezcla
+// los cuatro tipos de ronda que ya existen como juegos de practicar y son
+// pregunta-y-respuesta de una sola ronda —opción múltiple, pertenencia,
+// completar el árbol, identificar— y los presenta todos con el mismo patrón
+// de feedback + "Siguiente", en vez del autoavance por timeout que tenía el
+// examen de solo-opción-múltiple. Emparejar y ordenar no entran: son juegos
+// de tablero completo, no rondas de una sola pregunta con acierto/fallo
+// inmediato.
 
 import { crearCasilla } from "./casillaCliente";
+import { marcarTarjetaAcertada } from "./estado";
 import type { RondaIdentificar } from "./identificar";
 import type { RondaArbol } from "./juegoArbol";
 import type { TarjetaPertenencia } from "./pertenencia";
@@ -101,6 +102,7 @@ function renderOpcionMultiple(
 		boton.append(spanTexto, spanMarca);
 		boton.addEventListener("click", () => {
 			const correcta = opcion === tarjeta.respuesta;
+			if (correcta) marcarTarjetaAcertada(tarjeta.id);
 			for (const otro of lista.querySelectorAll<HTMLButtonElement>("button")) {
 				otro.disabled = true;
 				if (otro.dataset.valor === tarjeta.respuesta)

@@ -1,3 +1,4 @@
+import { getEntry } from "astro:content";
 import { construirGrafo, type Entidad, type Grafo } from "./grafo";
 
 export interface Tarjeta {
@@ -259,4 +260,46 @@ export async function generarTarjetas(
 	}
 
 	return tarjetas;
+}
+
+// Tarjetas de una entidad alcanzables por algún juego de acierto/fallo por id
+// individual — hoy solo opción múltiple marca una Tarjeta.id concreta como
+// acertada. Mismo filtro que ya usan c/[id]/examen.astro y jugar/[juego].astro
+// para decidir qué tarjeta entra en ese juego: una de conjunto (agrupa varias
+// aristas) o sin distractores nunca podría marcarse acertada por ningún
+// mecanismo existente, así que no cuenta como "tarjeta propia" a efectos de
+// la medalla del bloque Y — si contara, el 80% sería inalcanzable de raíz.
+export function tarjetasPropiasPorEntidad(
+	tarjetas: Tarjeta[],
+): Record<string, string[]> {
+	const resultado: Record<string, string[]> = {};
+	for (const tarjeta of tarjetas) {
+		if (tarjeta.conjunto || tarjeta.distractores.length === 0) continue;
+		const entidadId = tarjeta.id.slice(0, tarjeta.id.indexOf(":"));
+		if (!resultado[entidadId]) resultado[entidadId] = [];
+		resultado[entidadId].push(tarjeta.id);
+	}
+	return resultado;
+}
+
+// Compone lo anterior con el filtro de materia (bloque Y, plan de
+// gamificación §8): `tipos_coleccionables` decide qué TIPOS de entidad
+// pueden llegar a tener medalla. El umbral de 3 tarjetas mínimas y el 80% de
+// aciertos son derivación de cliente (estado.ts, depende de localStorage) —
+// aquí solo se filtra por tipo, que es dato de build.
+export async function tarjetasPropiasColeccionables(
+	materiaId: string,
+): Promise<Record<string, string[]>> {
+	const grafo = await construirGrafo(materiaId);
+	const materiaEntry = await getEntry("materias", materiaId);
+	const tiposColeccionables = new Set(
+		materiaEntry?.data.tipos_coleccionables ?? [],
+	);
+	const propias = tarjetasPropiasPorEntidad(await generarTarjetas(materiaId));
+	const resultado: Record<string, string[]> = {};
+	for (const [entidadId, ids] of Object.entries(propias)) {
+		const tipo = grafo.entidades.get(entidadId)?.tipo;
+		if (tipo && tiposColeccionables.has(tipo)) resultado[entidadId] = ids;
+	}
+	return resultado;
 }

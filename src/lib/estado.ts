@@ -19,11 +19,12 @@ export interface EstadoV1 {
 	leidos: string[];
 	capitulos: Record<string, EstadoCapitulo>;
 	medallas: string[];
-	// Modo aventura, plan de imágenes y álbum, paso A4: ids de entidad que
-	// superaron su examen de personaje. Es el estado "dominado" del álbum
-	// (§3.4) — se consigue aprobando ese examen, no acumulando en segundo
-	// plano si cada tarjeta se acertó alguna vez.
-	dominados: string[];
+	// Bloque Y (medallas de personaje, plan de gamificación §8): ids de
+	// tarjeta acertados alguna vez, sin importar si siguen "vigentes" (no hay
+	// repetición espaciada real todavía). Es un conjunto que solo crece — la
+	// medalla de personaje ("dominado" del álbum) se deriva de esto en cada
+	// render, no se declara aquí; ver calcularMedallasPersonaje.
+	tarjetasAcertadas: string[];
 	modo: "aventura" | "sandbox";
 }
 
@@ -57,7 +58,7 @@ export function estadoPorDefecto(): EstadoV1 {
 		leidos: [],
 		capitulos: {},
 		medallas: [],
-		dominados: [],
+		tarjetasAcertadas: [],
 		modo: "aventura",
 	};
 }
@@ -70,12 +71,14 @@ function esEstadoV1(valor: unknown): valor is EstadoV1 {
 	);
 }
 
-// `dominados` se añadió después de que `v: 1` empezara a persistirse: un
-// estado guardado antes de este paso no lo lleva. Normalizar aquí, en vez de
-// subir a `v: 2`, porque no cambia la forma de nada que ya existiera (mismo
-// criterio que ya se aplicó al no versionar por cada campo nuevo).
+// `tarjetasAcertadas` se añadió después de que `v: 1` empezara a
+// persistirse: un estado guardado antes de este paso no lo lleva.
+// Normalizar aquí, en vez de subir a `v: 2`, porque no cambia la forma de
+// nada que ya existiera (mismo criterio que ya se aplicó a `dominados`, que
+// este mismo cambio retira — un estado viejo puede traerlo como propiedad
+// huérfana; no está en el tipo, así que nada vuelve a leerlo).
 function normalizar(estado: EstadoV1): EstadoV1 {
-	estado.dominados ??= [];
+	estado.tarjetasAcertadas ??= [];
 	return estado;
 }
 
@@ -114,6 +117,19 @@ export function leerEstado(): EstadoV1 {
 
 export function guardarEstado(estado: EstadoV1): void {
 	localStorage.setItem(claveEstado(materiaActual()), JSON.stringify(estado));
+}
+
+// Punto de instrumentación compartido por los dos únicos sitios donde se
+// sabe, en el momento del click, que una Tarjeta.id concreta se acertó
+// (examenMixtoCliente.ts y el juego de opción múltiple de jugar/[juego].astro
+// — el resto de juegos no producen una Tarjeta.id individual, o son
+// flashcards sin acierto/fallo). Idempotente: acertar la misma tarjeta otra
+// vez no hace nada, `tarjetasAcertadas` solo crece.
+export function marcarTarjetaAcertada(tarjetaId: string): void {
+	const estado = leerEstado();
+	if (estado.tarjetasAcertadas.includes(tarjetaId)) return;
+	estado.tarjetasAcertadas.push(tarjetaId);
+	guardarEstado(estado);
 }
 
 export function exportarEstado(): void {
@@ -249,15 +265,54 @@ export async function importarEstado(
 	return { ok: true };
 }
 
+export interface MedallaPersonaje {
+	ganada: boolean;
+	aciertos: number;
+	total: number;
+}
+
+const UMBRAL_MEDALLA_PERSONAJE = 0.8;
+const MINIMO_TARJETAS_PROPIAS = 3;
+
+// Bloque Y (medallas de personaje, plan de gamificación §8): "se derivan, no
+// se declaran". `tarjetasPropiasPorEntidad` ya viene filtrada por
+// `tipos_coleccionables` (ver lib/tarjetas.ts) — aquí solo se compara contra
+// lo acertado alguna vez. Umbral de fracción exacta, sin redondear: con 3
+// tarjetas propias hacen falta las 3 (2/3 no llega al 80%); con 5 bastan 4.
+// Una vez ganada se queda ganada porque `tarjetasAcertadas` solo crece, no
+// hace falta guardar la medalla aparte.
+export function calcularMedallasPersonaje(
+	tarjetasPropiasPorEntidad: Record<string, string[]>,
+	estado: EstadoV1,
+): Record<string, MedallaPersonaje> {
+	const acertadas = new Set(estado.tarjetasAcertadas);
+	const resultado: Record<string, MedallaPersonaje> = {};
+	for (const [entidadId, propias] of Object.entries(
+		tarjetasPropiasPorEntidad,
+	)) {
+		const aciertos = propias.filter((id) => acertadas.has(id)).length;
+		resultado[entidadId] = {
+			aciertos,
+			total: propias.length,
+			ganada:
+				propias.length >= MINIMO_TARJETAS_PROPIAS &&
+				aciertos / propias.length >= UMBRAL_MEDALLA_PERSONAJE,
+		};
+	}
+	return resultado;
+}
+
 export type EstadoCasilla = "sin-encontrar" | "encontrado" | "dominado";
 
 // "Encontrado": la entidad aparece en algún relato marcado como leído.
-// "Dominado": superó su examen de personaje (A4). Recibe el mismo
-// `relatoConjuntos` (relato -> ids que desbloquea) que ya usa
-// `tarjetasDisponibles`, para no recalcular esa relación dos veces.
+// "Dominado": tiene la medalla de personaje del bloque Y (ver
+// calcularMedallasPersonaje). Recibe el mismo `relatoConjuntos` (relato ->
+// ids que desbloquea) que ya usa `tarjetasDisponibles`, para no recalcular
+// esa relación dos veces.
 export function calcularEstadosCasillas(
 	entidadIds: string[],
 	relatoConjuntos: Record<string, string[]>,
+	medallas: Record<string, MedallaPersonaje>,
 	estado: EstadoV1,
 ): Record<string, EstadoCasilla> {
 	const encontradas = new Set<string>();
@@ -266,7 +321,7 @@ export function calcularEstadosCasillas(
 	}
 	const resultado: Record<string, EstadoCasilla> = {};
 	for (const id of entidadIds) {
-		if (estado.dominados.includes(id)) resultado[id] = "dominado";
+		if (medallas[id]?.ganada) resultado[id] = "dominado";
 		else if (encontradas.has(id)) resultado[id] = "encontrado";
 		else resultado[id] = "sin-encontrar";
 	}
@@ -286,6 +341,7 @@ export function calcularNivel(
 	niveles: NivelCosmetico[],
 	totalEntidades: number,
 	totalCapitulos: number,
+	personajesDominados: number,
 	estado: EstadoV1,
 ): NivelCosmetico | undefined {
 	const total = totalEntidades + totalCapitulos;
@@ -293,7 +349,7 @@ export function calcularNivel(
 	const capitulosCerrados = Object.values(estado.capitulos).filter(
 		(c) => c.estado === "cerrado",
 	).length;
-	const cobertura = (estado.dominados.length + capitulosCerrados) / total;
+	const cobertura = (personajesDominados + capitulosCerrados) / total;
 	let elegido = niveles[0];
 	for (const nivel of niveles) {
 		if (cobertura >= nivel.umbral) elegido = nivel;

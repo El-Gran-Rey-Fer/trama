@@ -7,6 +7,7 @@ import { relatosDeMateria } from "../../lib/contenidoPorMateria";
 import { conjuntoDeRelato } from "../../lib/desbloqueo";
 import { construirGrafo } from "../../lib/grafo";
 import { resolverRetrato } from "../../lib/retrato";
+import { tarjetasPropiasColeccionables } from "../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -84,6 +85,12 @@ const niveles = materiaEntry?.data.niveles ?? [];
 const totalCapitulos = capitulos.length;
 const totalEntidades = entidades.length;
 const nombreMateria = materiaEntry?.data.nombre ?? materia;
+
+// Bloque Y (medallas de personaje): tarjetas propias puntuables por entidad,
+// ya filtradas por `tipos_coleccionables` — el cliente solo cruza esto
+// contra `tarjetasAcertadas` (localStorage) para decidir la medalla.
+const tarjetasPropias = await tarjetasPropiasColeccionables(materiaId);
+const nombresPorId = Object.fromEntries(entidades.map((e) => [e.id, e.nombre]));
 ---
 
 <Base titulo={`Álbum — ${nombreMateria}`} materiaSlug={materia}>
@@ -126,12 +133,15 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
       niveles,
       totalCapitulos,
       totalEntidades,
+      tarjetasPropias,
+      nombresPorId,
     })}
   />
 
   <script>
     import {
       calcularEstadosCasillas,
+      calcularMedallasPersonaje,
       calcularNivel,
       leerEstado,
       type NivelCosmetico,
@@ -145,6 +155,8 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
           niveles: NivelCosmetico[];
           totalCapitulos: number;
           totalEntidades: number;
+          tarjetasPropias: Record<string, string[]>;
+          nombresPorId: Record<string, string>;
         })
       : null;
 
@@ -160,9 +172,14 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     }
 
     if (datosAlbum) {
+      const medallas = calcularMedallasPersonaje(
+        datosAlbum.tarjetasPropias,
+        estadoActual,
+      );
       const estadosCasillas = calcularEstadosCasillas(
         datosAlbum.entidadIds,
         datosAlbum.relatoConjuntos,
+        medallas,
         estadoActual,
       );
       for (const [id, estado] of Object.entries(estadosCasillas)) {
@@ -172,13 +189,27 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
         if (estado === "sin-encontrar") {
           const nombre = li?.querySelector(".participante-nombre");
           if (nombre) nombre.textContent = "";
+        } else if (estado === "dominado") {
+          // Riesgo señalado en el plan de gamificación §8: la medalla debe
+          // decir "80% de sus preguntas propias", no solo el nombre bonito.
+          // Sin pantalla nueva, el título nativo del enlace es donde vive.
+          const medalla = medallas[id];
+          const enlace = li?.querySelector("a");
+          if (enlace && medalla) {
+            const nombre = datosAlbum.nombresPorId[id] ?? "";
+            enlace.title = `Conoces a ${nombre} — ${medalla.aciertos}/${medalla.total} tarjetas propias (80% necesario)`;
+          }
         }
       }
 
+      const dominadosCount = Object.values(medallas).filter(
+        (m) => m.ganada,
+      ).length;
       const nivel = calcularNivel(
         datosAlbum.niveles,
         datosAlbum.totalEntidades,
         datosAlbum.totalCapitulos,
+        dominadosCount,
         estadoActual,
       );
       const elNivel = document.getElementById("nivel-cosmetico");

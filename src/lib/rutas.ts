@@ -37,12 +37,6 @@ export function rutaPracticarCapitulo(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/c/${id}/practicar/`;
 }
 
-// Examen de personaje (plan de imágenes y álbum, paso A4): superarlo es lo
-// que marca una entidad como "dominada" en el álbum.
-export function rutaExamenPersonaje(materiaSlug: string, id: string): string {
-	return `${base()}${materiaSlug}/e/${id}/examen/`;
-}
-
 // Árbol genealógico (plan de imágenes y álbum, paso A7).
 export function rutaArbol(materiaSlug: string, id: string): string {
 	return `${base()}${materiaSlug}/e/${id}/arbol/`;

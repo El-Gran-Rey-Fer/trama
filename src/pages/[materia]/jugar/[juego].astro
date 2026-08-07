@@ -143,7 +143,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
   <script>
     import { crearCasilla } from "../../../lib/casillaCliente";
     import { tarjetasDisponibles } from "../../../lib/disponibilidad";
-    import { leerEstado } from "../../../lib/estado";
+    import { leerEstado, marcarTarjetaAcertada } from "../../../lib/estado";
     import type { RondaIdentificar } from "../../../lib/identificar";
     import type { RondaArbol } from "../../../lib/juegoArbol";
     import type { TarjetaPertenencia } from "../../../lib/pertenencia";
@@ -806,7 +806,10 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
           boton.append(spanTexto, spanMarca);
           boton.addEventListener("click", () => {
             const correcta = opcion === pregunta.respuesta;
-            if (correcta) aciertos += 1;
+            if (correcta) {
+              aciertos += 1;
+              marcarTarjetaAcertada(pregunta.id);
+            }
             for (const otro of opciones.querySelectorAll<HTMLButtonElement>("button")) {
               otro.disabled = true;
               if (otro.dataset.valor === pregunta.respuesta) marcarOpcion(otro, "acierto");
