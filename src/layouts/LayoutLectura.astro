@@ -26,6 +26,11 @@ interface Props {
 	// el (como mucho uno) capítulo que desbloquea este relato.
 	cadenaCapitulos: CapituloResumen[];
 	capitulosQueDesbloquean: string[];
+	// Silueta de participante bloqueado (propuesta de Design): para cada
+	// participante, los capítulos que lo desbloquean — ver
+	// ParticipantesRelato.astro. Opcional por el mismo motivo que en
+	// FichaEntidad.astro: sin esto, la lista de participantes no filtra nada.
+	destinosParticipantes?: Record<string, string[]>;
 }
 const {
 	id,
@@ -39,6 +44,7 @@ const {
 	capituloNombre,
 	cadenaCapitulos,
 	capitulosQueDesbloquean,
+	destinosParticipantes,
 } = Astro.props;
 
 // Gating del CTA de examen (§4.4, extendido por consistencia a esta página):
@@ -113,7 +119,12 @@ const relatosCapitulo =
       participantes.length > 0 && (
         <section class="participantes">
           <h2 class="etiqueta-seccion">Participantes</h2>
-          <ParticipantesRelato participantes={participantes} materiaSlug={materiaSlug} />
+          <ParticipantesRelato
+        participantes={participantes}
+        materiaSlug={materiaSlug}
+        destinos={destinosParticipantes}
+        cadena={cadenaCapitulos}
+      />
         </section>
       )
     }

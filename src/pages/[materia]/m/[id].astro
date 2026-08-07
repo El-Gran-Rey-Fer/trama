@@ -3,7 +3,11 @@ import { getCollection, getEntry, render } from "astro:content";
 import E from "../../../components/E.astro";
 import Fuente from "../../../components/Fuente.astro";
 import LayoutLectura from "../../../layouts/LayoutLectura.astro";
-import { cargarCapitulos, construirCadena } from "../../../lib/capitulos";
+import {
+	capitulosQueDesbloquean,
+	cargarCapitulos,
+	construirCadena,
+} from "../../../lib/capitulos";
 import { relatosDeMateria } from "../../../lib/contenidoPorMateria";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
 import { resolverRetrato } from "../../../lib/retrato";
@@ -65,6 +69,18 @@ const capituloPadre = capitulos.find((c) => c.relatos.includes(id));
 // capítulo que lo declara.
 const cadena = construirCadena(capitulos);
 const desbloqueadoPor = capituloPadre ? [capituloPadre.id] : [];
+
+// Silueta de participante bloqueado (propuesta de Design, mismo patrón que
+// e/[id].astro): para cada participante, los capítulos que lo desbloquean —
+// nunca el `conjunto` completo, solo lo que hace falta para esta lista.
+const destinosParticipantes: Record<string, string[]> = {};
+for (const p of participantes) {
+	destinosParticipantes[p.id] = capitulosQueDesbloquean(
+		capitulos,
+		p.id,
+		obtenerEntidad(grafo, p.id)?.kind === "relato" ? "relato" : "entidad",
+	);
+}
 ---
 
 <LayoutLectura
@@ -79,6 +95,7 @@ const desbloqueadoPor = capituloPadre ? [capituloPadre.id] : [];
   capituloNombre={capituloPadre?.nombre}
   cadenaCapitulos={cadena}
   capitulosQueDesbloquean={desbloqueadoPor}
+  destinosParticipantes={destinosParticipantes}
 >
   <Content components={{ E, Fuente }} />
 </LayoutLectura>

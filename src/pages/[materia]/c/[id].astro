@@ -148,7 +148,7 @@ const cadena = construirCadena(capitulos);
         aria-disabled="true"
         tabindex="-1"
       >
-        Empezar el examen
+        Examen de este capítulo
       </a>
       <p id="examen-pendiente-texto" class="examen-pendiente-texto" hidden>
         Lee lo que falta para desbloquear el examen:
@@ -200,7 +200,8 @@ const cadena = construirCadena(capitulos);
     // Tres estados de relato (§7.1): "sin leer" no dice nada, "leído" solo
     // dice que se pasó por ahí, "practicado" añade que alguna de sus tarjetas
     // propias ya se acertó — no puede distinguirse solo por color, así que
-    // cada uno lleva su propio texto.
+    // cada uno lleva su propio texto. El prefijo ✓/✓✓ (propuesta de Design)
+    // es el mismo lenguaje que un acuse de recibo doble en un chat.
     for (const relato of relatosCapitulo) {
       const fila = document.querySelector(`[data-relato="${relato.id}"]`);
       const el = fila?.querySelector(".estado-relato");
@@ -208,7 +209,9 @@ const cadena = construirCadena(capitulos);
       const propias = datos.tarjetasPropias[relato.id] ?? [];
       const practicado = propias.some((id) => estado.tarjetasAcertadas.includes(id));
       const nombreEstado = practicado ? "practicado" : leido ? "leido" : "sin-leer";
-      if (el) el.textContent = practicado ? "Practicado" : leido ? "Leído" : "";
+      if (el) {
+        el.textContent = practicado ? "✓✓ Practicado" : leido ? "✓ Leído" : "Sin leer";
+      }
       if (fila instanceof HTMLElement) fila.dataset.estado = nombreEstado;
     }
 

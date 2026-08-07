@@ -543,6 +543,14 @@ function activa(id: string, href: string): boolean {
     opacity: 0.45;
   }
 
+  /* Silueta de participante bloqueado (modo aventura, propuesta de Design):
+     patrón rayado en vez de escala de grises, para no confundirse con
+     "sin-encontrar" — son dos ejes distintos (descubrimiento de álbum vs.
+     bloqueo de capítulo). Reutiliza el token ya declarado en tokens.css. */
+  .casilla.silueta-avatar {
+    background: var(--imagen-fondo-vacio);
+  }
+
   /* "Dominado" (medalla de personaje, bloque Y): borde de acento + marca en
      la esquina. Sin icono nuevo por tipo — decisión explícita: la
      inicial-sobre-color no cambia. */

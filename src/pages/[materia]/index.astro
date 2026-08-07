@@ -39,6 +39,7 @@ const datosCapitulos = await Promise.all(
 		id: c.id,
 		nombre: c.nombre,
 		numero: numeroPorCapitulo.get(c.id) ?? "",
+		era: c.era,
 		relatos: c.relatosResumen,
 		recuento: {
 			relatos: c.relatosEscritos.length,
@@ -47,6 +48,14 @@ const datosCapitulos = await Promise.all(
 		},
 	})),
 );
+
+function pluralizarBuild(
+	cantidad: number,
+	singular: string,
+	plural: string,
+): string {
+	return `${cantidad} ${cantidad === 1 ? singular : plural}`;
+}
 
 const nombreMateria = materiaEntry?.data.nombre ?? materia;
 ---
@@ -84,51 +93,111 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     <div class="cabecera-lista">
       <h1 class="titulo-lista">{nombreMateria}</h1>
     </div>
-    {
-      eras.map((era) => {
-        const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
-        return (
-          <div class="grupo-era">
-            <h2 class="etiqueta-era">{era.nombre}</h2>
-            {capitulosDeEra.length === 0 ? (
-              <p class="sin-capitulos">Sin capítulos todavía.</p>
-            ) : (
-              <ol class="lista-capitulos">
-                {capitulosDeEra.map((c) =>
-                  c.activo ? (
-                    <li data-capitulo={c.id} class="fila-capitulo">
-                      <a href={rutaCapitulo(materia, c.id)} class="enlace-capitulo">
-                        <span class="num-capitulo" aria-hidden="true">
+
+    <div class="mapa-materia">
+      <!--
+        Maestro-detalle (propuesta de Design, plan de gamificación §11): en
+        escritorio, columna de eras a la izquierda + panel de la era activa a
+        la derecha. En móvil, el propio encabezado de cada panel hace de
+        acordeón — mismo botón, mismo `mostrarEra`, el CSS decide qué se ve.
+        Las 5 eras y sus capítulos están siempre en el DOM (solo `hidden`):
+        ningún enlace deja de existir por no ser la era seleccionada.
+      -->
+      <nav class="rail-eras" aria-label="Eras">
+        {
+          eras.map((era) => {
+            const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
+            return (
+              <button type="button" class="boton-era" data-era-boton={era.id}>
+                <span class="era-punto" aria-hidden="true" />
+                <span class="era-texto">
+                  <span class="era-nombre">{era.nombre}</span>
+                  {capitulosDeEra.length > 0 && (
+                    <span class="era-fraccion" data-era-fraccion={era.id}>
+                      {pluralizarBuild(capitulosDeEra.length, "capítulo", "capítulos")}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })
+        }
+      </nav>
+
+      {
+        eras.map((era) => {
+          const capitulosDeEra = capitulos.filter((c) => c.era === era.id);
+          return (
+            <div class="panel-era" data-era-panel={era.id} hidden>
+              <button type="button" class="panel-era-cabecera" data-era-boton={era.id}>
+                <span class="etiqueta-era">{era.nombre}</span>
+                {capitulosDeEra.length > 0 && (
+                  <span class="era-fraccion" data-era-fraccion={era.id}>
+                    {pluralizarBuild(capitulosDeEra.length, "capítulo", "capítulos")}
+                  </span>
+                )}
+              </button>
+              {capitulosDeEra.length === 0 ? (
+                <p class="sin-capitulos">Sin capítulos todavía.</p>
+              ) : (
+                <ol class="lista-capitulos">
+                  {capitulosDeEra.map((c) =>
+                    c.activo ? (
+                      <li data-capitulo={c.id} class="fila-capitulo">
+                        <a href={rutaCapitulo(materia, c.id)} class="enlace-capitulo">
+                          <span class="num-capitulo" aria-hidden="true">
+                            {numeroPorCapitulo.get(c.id)}
+                          </span>
+                          <span class="texto-capitulo">
+                            <span class="titulo-capitulo">{c.nombre}</span>
+                            <span class="estado">Bloqueado</span>
+                          </span>
+                          <span class="chevron-texto" />
+                          <span class="chevron-capitulo" aria-hidden="true">
+                            ›
+                          </span>
+                        </a>
+                      </li>
+                    ) : (
+                      <li class="fila-prevista">
+                        <span class="num-capitulo num-capitulo-previsto" aria-hidden="true">
                           {numeroPorCapitulo.get(c.id)}
                         </span>
                         <span class="texto-capitulo">
                           <span class="titulo-capitulo">{c.nombre}</span>
-                          <span class="estado">Bloqueado</span>
+                          <span class="estado">Próximamente</span>
                         </span>
-                        <span class="chevron-capitulo" aria-hidden="true">
-                          ›
-                        </span>
-                      </a>
-                    </li>
-                  ) : (
-                    <li class="fila-prevista">
-                      <span class="num-capitulo num-capitulo-previsto" aria-hidden="true">
-                        {numeroPorCapitulo.get(c.id)}
-                      </span>
-                      <span class="texto-capitulo">
-                        <span class="titulo-capitulo">{c.nombre}</span>
-                        <span class="estado">Próximamente</span>
-                      </span>
-                    </li>
-                  ),
-                )}
-              </ol>
-            )}
-          </div>
-        );
-      })
-    }
+                      </li>
+                    ),
+                  )}
+                </ol>
+              )}
+            </div>
+          );
+        })
+      }
+    </div>
   </section>
+
+  <div
+    id="muro-modal"
+    class="muro-modal"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="muro-modal-mensaje"
+  >
+    <div class="muro-modal-fondo" data-cerrar-modal />
+    <div class="muro-modal-panel">
+      <p class="muro-modal-mensaje" id="muro-modal-mensaje" />
+      <a class="muro-modal-boton" id="muro-modal-boton" href="#">
+        Seguir &rarr;
+      </a>
+      <button type="button" class="muro-modal-sandbox" id="muro-modal-sandbox">
+        Verlo en sandbox
+      </button>
+    </div>
+  </div>
 
   <script
     is:inline
@@ -142,15 +211,9 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
       calcularEstadosCapitulos,
       leerEstado,
       type CapituloResumen,
+      type EstadoVisualCapitulo,
     } from "../../lib/estado";
-    import { calcularPasoAccionable } from "../../lib/muroCliente";
-
-    const ETIQUETA = {
-      bloqueado: "Bloqueado",
-      abierto: "Abierto",
-      "en-curso": "En curso",
-      superado: "Superado",
-    } as const;
+    import { calcularPasoAccionable, verEnSandboxYRecargar } from "../../lib/muroCliente";
 
     interface RecuentoCapitulo {
       relatos: number;
@@ -159,6 +222,7 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     }
     interface DatosCapitulo extends CapituloResumen {
       numero: string;
+      era: string;
       recuento: RecuentoCapitulo;
     }
 
@@ -177,8 +241,26 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
       ].join(" · ");
     }
 
+    // "En curso" cubre dos valores reales del enum ("abierto" = nada leído,
+    // "en-curso" = algo leído) — el plan de gamificación §3 los funde en una
+    // sola palabra y con eso pierde la distinción. En vez de una tercera
+    // palabra (reabriría la colisión de "cerrado" que el bloque V ya cerró),
+    // la fracción de relatos leídos hace el trabajo: mismo enum, mismo texto
+    // base, número distinto.
+    function etiquetaCapitulo(
+      c: DatosCapitulo,
+      estadoVisual: EstadoVisualCapitulo,
+      estado: ReturnType<typeof leerEstado>,
+    ): string {
+      if (estadoVisual === "bloqueado") return "Bloqueado";
+      if (estadoVisual === "superado") return "Superado";
+      const total = c.relatos.length;
+      const leidos = c.relatos.filter((r) => estado.leidos.includes(r.id)).length;
+      return `En curso · ${leidos}/${total} ${total === 1 ? "relato" : "relatos"}`;
+    }
+
     const datosCapitulosEl = document.getElementById("datos-capitulos");
-    const capitulos: DatosCapitulo[] = datosCapitulosEl
+    const datosCapitulos: DatosCapitulo[] = datosCapitulosEl
       ? JSON.parse(datosCapitulosEl.textContent ?? "[]")
       : [];
     const estado = leerEstado();
@@ -193,29 +275,114 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
           : `Cinco preguntas rápidas con lo que ya tienes. Llevas ${estado.retos.completados}.`;
     }
 
+    // Mapa de eras (propuesta de Design, plan de gamificación §11):
+    // maestro-detalle en escritorio (rail + panel), acordeón en móvil (el
+    // encabezado del panel es el mismo botón que el de la rail) — un único
+    // `mostrarEra` para las dos formas, el CSS decide cuál se ve.
+    function mostrarEra(id: string): void {
+      for (const panel of document.querySelectorAll<HTMLElement>("[data-era-panel]")) {
+        panel.hidden = panel.dataset.eraPanel !== id;
+      }
+      for (const boton of document.querySelectorAll<HTMLElement>("[data-era-boton]")) {
+        boton.classList.toggle("activa", boton.dataset.eraBoton === id);
+      }
+    }
+    for (const boton of document.querySelectorAll<HTMLElement>("[data-era-boton]")) {
+      boton.addEventListener("click", () => {
+        if (boton.dataset.eraBoton) mostrarEra(boton.dataset.eraBoton);
+      });
+    }
+
+    const idsEraEnOrden = [
+      ...document.querySelectorAll<HTMLElement>("[data-era-panel]"),
+    ].map((p) => p.dataset.eraPanel ?? "");
+
+    // Muro instantáneo (propuesta de Design): al clicar una tarjeta
+    // bloqueada, en vez de navegar y toparse con el aviso de página completa
+    // de Muro.astro, se muestra el mismo mensaje al momento. El aviso real
+    // de Muro.astro sigue siendo el camino de verdad para URL directa o JS
+    // desactivado — esto es solo un atajo, reutiliza `calcularPasoAccionable`
+    // tal cual (§4.3: el mensaje siempre habla del capítulo activo, nunca del
+    // que se clicó).
+    function mensajeMuro(paso: ReturnType<typeof calcularPasoAccionable>): string {
+      if (!paso) return "Este contenido todavía no está a tu alcance en el modo aventura.";
+      return `Sigues en ${paso.capituloNombre}. ${paso.detalle.charAt(0).toUpperCase()}${paso.detalle.slice(1)}.`;
+    }
+
+    function abrirModalMuro(paso: ReturnType<typeof calcularPasoAccionable>): void {
+      const modal = document.getElementById("muro-modal");
+      const boton = document.getElementById("muro-modal-boton");
+      document.getElementById("muro-modal-mensaje")!.textContent = mensajeMuro(paso);
+      if (boton instanceof HTMLAnchorElement) {
+        if (paso) {
+          boton.href = paso.hrefAccion;
+          boton.hidden = false;
+        } else {
+          boton.hidden = true;
+        }
+      }
+      modal?.removeAttribute("hidden");
+    }
+    function cerrarModalMuro(): void {
+      document.getElementById("muro-modal")?.setAttribute("hidden", "");
+    }
+    document.querySelector("[data-cerrar-modal]")?.addEventListener("click", cerrarModalMuro);
+    document.getElementById("muro-modal-sandbox")?.addEventListener("click", verEnSandboxYRecargar);
+    document.addEventListener("keydown", (evento) => {
+      if (evento.key === "Escape") cerrarModalMuro();
+    });
+
     if (estado.modo === "sandbox") {
-      for (const c of capitulos) {
+      for (const c of datosCapitulos) {
         const fila = document.querySelector(`[data-capitulo="${c.id}"]`);
         const el = fila?.querySelector(".estado");
         if (el) el.textContent = textoRecuento(c.recuento);
+        const chevronTexto = fila?.querySelector(".chevron-texto");
+        if (chevronTexto) chevronTexto.textContent = "Practicar ";
       }
+      mostrarEra(idsEraEnOrden.find((id) => datosCapitulos.some((c) => c.era === id)) ?? idsEraEnOrden[0]);
     } else {
-      const estadosCapitulos = calcularEstadosCapitulos(capitulos, estado);
-      for (const [id, estadoCapitulo] of Object.entries(estadosCapitulos)) {
-        const fila = document.querySelector(`[data-capitulo="${id}"]`);
+      const estadosCapitulos = calcularEstadosCapitulos(datosCapitulos, estado);
+      for (const c of datosCapitulos) {
+        const estadoCapitulo = estadosCapitulos[c.id];
+        const fila = document.querySelector(`[data-capitulo="${c.id}"]`);
         const el = fila?.querySelector(".estado");
-        if (el) el.textContent = ETIQUETA[estadoCapitulo];
+        if (el) el.textContent = etiquetaCapitulo(c, estadoCapitulo, estado);
         if (fila instanceof HTMLElement) {
           fila.dataset.estadoCapitulo = estadoCapitulo;
+        }
+        const numEl = fila?.querySelector(".num-capitulo");
+        if (numEl instanceof HTMLElement) {
+          if (estadoCapitulo === "superado") numEl.setAttribute("data-superado", "");
+          else numEl.removeAttribute("data-superado");
+        }
+        if (estadoCapitulo === "bloqueado") {
+          const enlace = fila?.querySelector<HTMLAnchorElement>(".enlace-capitulo");
+          enlace?.addEventListener("click", (evento) => {
+            evento.preventDefault();
+            abrirModalMuro(calcularPasoAccionable(datosCapitulos, estado, materiaSlug));
+          });
+        }
+      }
+
+      // Fracción por era, excluyendo "Próximamente" del denominador — esos
+      // capítulos no cuentan en la cadena de desbloqueo (§3 del plan), así
+      // que tampoco cuentan aquí.
+      for (const eraId of idsEraEnOrden) {
+        const capsEra = datosCapitulos.filter((c) => c.era === eraId);
+        if (capsEra.length === 0) continue;
+        const superados = capsEra.filter((c) => estadosCapitulos[c.id] === "superado").length;
+        for (const el of document.querySelectorAll(`[data-era-fraccion="${eraId}"]`)) {
+          el.textContent = `${superados}/${capsEra.length}`;
         }
       }
 
       // Módulo de continuación (§6): solo en aventura, y solo si queda algún
       // paso pendiente — reutiliza el mismo cálculo que el muro (§4.3), cero
       // lógica duplicada.
-      const paso = calcularPasoAccionable(capitulos, estado, materiaSlug);
+      const paso = calcularPasoAccionable(datosCapitulos, estado, materiaSlug);
       if (paso) {
-        const numero = capitulos.find((c) => c.id === paso.capituloId)?.numero ?? "";
+        const numero = datosCapitulos.find((c) => c.id === paso.capituloId)?.numero ?? "";
         document.getElementById("continua-numero")!.textContent = numero ? `${numero} · ` : "";
         document.getElementById("continua-nombre")!.textContent = paso.capituloNombre;
         document.getElementById("continua-detalle")!.textContent = ` — ${paso.detalle}`;
@@ -223,6 +390,19 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
         if (enlace instanceof HTMLAnchorElement) enlace.href = paso.hrefAccion;
         document.getElementById("continua")?.removeAttribute("hidden");
       }
+
+      // Era por defecto abierta: la del capítulo activo (abierto/en-curso);
+      // si no hay ninguno (todo superado, o nada empezado sin capítulo
+      // activo posible), la primera era con algún capítulo activo.
+      const activoId = Object.entries(estadosCapitulos).find(
+        ([, v]) => v === "abierto" || v === "en-curso",
+      )?.[0];
+      const eraActivo = activoId ? datosCapitulos.find((c) => c.id === activoId)?.era : undefined;
+      mostrarEra(
+        eraActivo ??
+          idsEraEnOrden.find((id) => datosCapitulos.some((c) => c.era === id)) ??
+          idsEraEnOrden[0],
+      );
     }
   </script>
 </Base>
@@ -329,18 +509,44 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     text-transform: capitalize;
   }
 
-  .grupo-era {
-    margin-bottom: 4px;
+  /*
+   * Maestro-detalle (propuesta de Design, plan de gamificación §11): en
+   * escritorio, `.rail-eras` (columna de botones) + `.panel-era` (el
+   * seleccionado, visible) usan flexbox lado a lado. En móvil, `.rail-eras`
+   * se oculta y el propio `.panel-era-cabecera` de cada panel hace de
+   * acordeón — un solo `mostrarEra` en el script sirve para las dos formas.
+   */
+  .rail-eras {
+    display: none;
+  }
+
+  .panel-era-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    margin: 18px 0 8px;
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
   }
 
   .etiqueta-era {
-    margin: 18px 20px 8px;
     font-size: 12px;
     font-weight: 700;
     color: var(--color-acento);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-family: var(--fuente-titulo);
+  }
+
+  .era-fraccion {
+    font-size: 12px;
+    color: var(--color-texto-muted);
   }
 
   .sin-capitulos {
@@ -372,12 +578,29 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
   }
 
   .num-capitulo {
+    position: relative;
     flex: 0 0 auto;
     min-width: 28px;
     font-size: 17px;
     font-weight: 700;
     color: var(--color-acento);
     font-family: var(--fuente-titulo);
+  }
+
+  /* Insignia de "superado" (mismo lenguaje que .casilla[data-estado="dominado"]
+     de Base.astro: marca de acento en la esquina, no un icono nuevo). */
+  .num-capitulo[data-superado]::after {
+    content: "✓";
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    color: var(--color-acento-contraste);
+    background: var(--color-acento);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    border-radius: 999px;
+    padding: 2px 4px;
   }
 
   .texto-capitulo {
@@ -398,6 +621,14 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     color: var(--color-texto-muted);
   }
 
+  .chevron-texto {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-acento);
+    font-family: var(--fuente-titulo);
+  }
+
   .chevron-capitulo {
     font-size: 20px;
     color: var(--color-texto-muted);
@@ -416,5 +647,160 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
 
   .num-capitulo-previsto {
     color: var(--color-texto-muted);
+  }
+
+  /* Modal instantáneo del muro (propuesta de Design): solo se activa desde
+     una tarjeta bloqueada de esta página — el aviso de página completa de
+     Muro.astro sigue siendo el camino real para URL directa o JS
+     desactivado. */
+  .muro-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .muro-modal-fondo {
+    position: absolute;
+    inset: 0;
+    background: oklch(0% 0 0 / 0.45);
+  }
+
+  .muro-modal-panel {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 20px;
+    padding: 24px 20px;
+    border-radius: var(--radio);
+    background: var(--color-fondo-pantalla);
+    text-align: center;
+  }
+
+  .muro-modal-mensaje {
+    margin: 0 0 20px;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .muro-modal-boton {
+    display: block;
+    padding: 14px;
+    border-radius: var(--radio);
+    background: var(--color-acento);
+    color: var(--color-acento-contraste);
+    font-family: var(--fuente-titulo);
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    margin: 0 0 14px;
+  }
+
+  .muro-modal-sandbox {
+    border: none;
+    background: none;
+    color: var(--color-texto-muted);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 6px;
+  }
+
+  @media (min-width: 860px) {
+    .mapa-materia {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+      padding: 0 20px;
+    }
+
+    .rail-eras {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 0 0 200px;
+      padding-top: 4px;
+    }
+
+    .boton-era {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-left: 3px solid transparent;
+      background: none;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+      border-radius: 0 var(--radio) var(--radio) 0;
+    }
+
+    .boton-era.activa {
+      border-left-color: var(--color-acento);
+      background: var(--color-tarjeta-fondo);
+    }
+
+    .era-punto {
+      flex: 0 0 auto;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--color-tarjeta-borde);
+    }
+
+    .boton-era.activa .era-punto {
+      background: var(--color-acento);
+    }
+
+    .era-texto {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .era-nombre {
+      font-family: var(--fuente-titulo);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    /* El panel de la era seleccionada ya está siempre visible junto al rail
+       (mismo <button> que en móvil, aquí simplemente no hace falta clicarlo
+       para verlo) — se le quita la pinta de botón sin quitarle el
+       comportamiento. */
+    .panel-era {
+      flex: 1 1 auto;
+      min-width: 0;
+      max-height: 640px;
+      overflow-y: auto;
+    }
+
+    .panel-era-cabecera {
+      cursor: default;
+      margin-top: 4px;
+    }
+
+    .lista-capitulos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      padding: 0 20px 4px;
+    }
+
+    .fila-capitulo,
+    .fila-prevista {
+      border: 1px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+    }
+
+    .enlace-capitulo,
+    .fila-prevista {
+      border-bottom: none;
+    }
   }
 </style>

@@ -1,4 +1,5 @@
 ---
+import type { CapituloResumen } from "../lib/estado";
 import type { RetratoResuelto } from "../lib/retrato";
 import { rutaEntidad } from "../lib/rutas";
 import Casilla from "./Casilla.astro";
@@ -13,22 +14,72 @@ export interface Participante {
 interface Props {
 	participantes: Participante[];
 	materiaSlug: string;
+	// Modo aventura, bloque W (mismo patrón que FichaEntidad.astro): para cada
+	// participante, los capítulos que lo desbloquean. Sin estas dos props (p.
+	// ej. el álbum, que no gatea por capítulo — plan de gamificación §2.1
+	// "ya funciona así por diseño") no se aplica ningún filtro.
+	destinos?: Record<string, string[]>;
+	cadena?: CapituloResumen[];
 }
-const { participantes, materiaSlug } = Astro.props;
+const { participantes, materiaSlug, destinos, cadena } = Astro.props;
 ---
 
 <ul class="participantes-grid">
   {
     participantes.map((p) => (
-      <li data-entidad-id={p.id}>
-        <a href={rutaEntidad(materiaSlug, p.id)} class="participante">
+      <li data-participante={p.id}>
+        <a href={rutaEntidad(materiaSlug, p.id)} class="participante" data-participante-enlace>
           <Casilla nombre={p.nombre} tipo={p.tipo} retrato={p.retrato} />
           <span class="participante-nombre">{p.nombre}</span>
         </a>
+        <span class="participante silueta" hidden aria-label="Sin desbloquear" data-participante-silueta>
+          <span class="casilla silueta-avatar" aria-hidden="true" />
+        </span>
       </li>
     ))
   }
 </ul>
+
+{
+  destinos && cadena && (
+    <script
+      is:inline
+      type="application/json"
+      id="datos-silueta-participantes"
+      set:html={JSON.stringify({ destinos, cadena })}
+    />
+  )
+}
+
+<script>
+  import { entidadAccesible, leerEstado, type CapituloResumen } from "../lib/estado";
+
+  interface DatosSilueta {
+    destinos: Record<string, string[]>;
+    cadena: CapituloResumen[];
+  }
+
+  // Silueta de participante bloqueado (modo aventura, bloque W + propuesta de
+  // Design): a diferencia de la lista de "Relaciones" de FichaEntidad.astro
+  // (texto puro, sin retrato que atenuar), aquí sí hay un avatar — se
+  // sustituye por una caja rayada (--imagen-fondo-vacio), no por escala de
+  // grises, para no confundirlo con el "sin-encontrar" del álbum (otro eje:
+  // descubrimiento, no bloqueo de capítulo).
+  const datosEl = document.getElementById("datos-silueta-participantes");
+  const datos: DatosSilueta | null = datosEl
+    ? JSON.parse(datosEl.textContent ?? "{}")
+    : null;
+  const estado = leerEstado();
+
+  if (datos && estado.modo === "aventura") {
+    for (const [participanteId, capitulosQueDesbloquean] of Object.entries(datos.destinos)) {
+      if (entidadAccesible(datos.cadena, capitulosQueDesbloquean, estado)) continue;
+      const fila = document.querySelector(`[data-participante="${participanteId}"]`);
+      fila?.querySelector("[data-participante-enlace]")?.setAttribute("hidden", "");
+      fila?.querySelector("[data-participante-silueta]")?.removeAttribute("hidden");
+    }
+  }
+</script>
 
 <style>
   .participantes-grid {
@@ -53,5 +104,15 @@ const { participantes, materiaSlug } = Astro.props;
     font-size: 12px;
     text-align: center;
     line-height: 1.2;
+  }
+
+  /* Silueta: la misma forma que .participante, sin nombre y no clicable —
+     "el hueco es gancho" (plan de gamificación §2.1). */
+  .silueta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: default;
   }
 </style>
