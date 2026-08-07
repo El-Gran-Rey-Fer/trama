@@ -1,5 +1,5 @@
 ---
-import { getEntry } from "astro:content";
+import { getCollection } from "astro:content";
 
 interface Props {
 	id: string;
@@ -7,7 +7,14 @@ interface Props {
 }
 const { id, obra = false } = Astro.props;
 
-const materiaEntry = await getEntry("materias", "mitologia-griega");
+// Mismo mecanismo que <E /> (bloque V): `<Fuente />` vive en la prosa MDX de
+// un relato, sin prop de materia — se resuelve del slug de la ruta actual.
+const materiaSlugRuta = Astro.params.materia;
+const materiaEntry = materiaSlugRuta
+	? (await getCollection("materias")).find(
+			(m) => m.data.slug === materiaSlugRuta,
+		)
+	: undefined;
 const fuente = materiaEntry?.data.fuentes?.[id];
 ---
 

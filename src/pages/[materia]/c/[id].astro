@@ -3,9 +3,15 @@ import { getCollection } from "astro:content";
 import Casilla from "../../../components/Casilla.astro";
 import Base from "../../../layouts/Base.astro";
 import { cargarCapitulos } from "../../../lib/capitulos";
+import { relatosDeMateria } from "../../../lib/contenidoPorMateria";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
 import { resolverRetrato } from "../../../lib/retrato";
-import { rutaExamen, rutaMateria, rutaRelato } from "../../../lib/rutas";
+import {
+	rutaExamen,
+	rutaMateria,
+	rutaPracticarCapitulo,
+	rutaRelato,
+} from "../../../lib/rutas";
 import { generarTarjetas } from "../../../lib/tarjetas";
 
 export async function getStaticPaths() {
@@ -33,7 +39,7 @@ const capitulos = await cargarCapitulos(materiaId);
 const capitulo = capitulos.find((c) => c.id === id);
 if (!capitulo) throw new Error(`Capítulo no encontrado: ${id}`);
 
-const relatosCol = await getCollection("relatos");
+const relatosCol = await relatosDeMateria(materiaId);
 const relatosPorId = new Map(relatosCol.map((r) => [r.id, r.data]));
 
 // Un relato es un nodo del grafo con pleno derecho (`kind: "relato"`), así que
@@ -50,7 +56,7 @@ const relatos = capitulo.relatos.map((rid) => {
 	return {
 		id: rid,
 		nombre: relatosPorId.get(rid)?.nombre ?? humanizarId(rid),
-		tipo: nodo?.tipo ?? "mito",
+		tipo: nodo?.tipo ?? "desconocido",
 		retrato: nodo ? resolverRetrato(grafo, nodo) : undefined,
 		// Un capítulo activo puede tener relatos previstos que aún no se han
 		// escrito — nunca enlazan a una página que no existe.
@@ -109,11 +115,20 @@ const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
       <span class="info-etiqueta">tarjetas en este capítulo</span>
     </div>
 
-    <div class="tarjeta-examen">
+    <div id="bloque-examen" class="tarjeta-examen">
       <p class="examen-umbral">
         Aprueba con {capitulo.examen.aciertos} de {capitulo.examen.de}.
       </p>
       <a class="boton-examen" href={rutaExamen(materia, capitulo.id)}>Empezar el examen</a>
+    </div>
+
+    <div id="bloque-practicar" class="tarjeta-examen" hidden>
+      <p class="examen-umbral">
+        En sandbox no hay examen: practica las tarjetas de este capítulo sueltas.
+      </p>
+      <a class="boton-examen" href={rutaPracticarCapitulo(materia, capitulo.id)}>
+        Practicar este capítulo
+      </a>
     </div>
 
     <p class="salir"><a href={rutaMateria(materia)}>&larr; Volver</a></p>
@@ -139,6 +154,15 @@ const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
       const leido = estado.leidos.includes(relatoId);
       if (el) el.textContent = leido ? "Leído" : "";
       if (fila instanceof HTMLElement) fila.dataset.leido = String(leido);
+    }
+
+    // Sandbox diferencial (plan de gamificación §5): el examen no existe en
+    // sandbox, la acción del capítulo pasa a "Practicar este capítulo". Un
+    // solo componente de capítulo con dos modos de render, no dos pantallas
+    // — mismo patrón que ya usa album.astro con #indice-sandbox/#album.
+    if (estado.modo === "sandbox") {
+      document.getElementById("bloque-examen")?.setAttribute("hidden", "");
+      document.getElementById("bloque-practicar")?.removeAttribute("hidden");
     }
   </script>
 </Base>

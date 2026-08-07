@@ -105,9 +105,9 @@ export async function generarPertenencia(
 
 		// Los negativos salen del mismo criterio que los distractores de opción
 		// múltiple (mismo `tipo`, no conectado por esta relación bajo ninguna
-		// fuente), pero como un grupo de hijos puede mezclar tipos (Crono es
-		// "titan", Melias es "estirpe"), se calcula por cada tipo presente en
-		// el grupo, no solo el del primer miembro.
+		// fuente), pero como un grupo de hijos puede mezclar tipos (un miembro
+		// puede ser de un tipo y otro de un tipo distinto), se calcula por cada
+		// tipo presente en el grupo, no solo el del primer miembro.
 		const tiposMiembros = new Set(miembros.map((m) => m.tipo));
 		const vistos = new Set<string>();
 		const pool: Entidad[] = [];

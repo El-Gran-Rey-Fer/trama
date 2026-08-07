@@ -1,4 +1,5 @@
 ---
+import { getCollection } from "astro:content";
 import "../styles/tokens.css";
 import {
 	rutaAjustes,
@@ -15,6 +16,24 @@ interface Props {
 	materiaSlug?: string;
 }
 const { titulo, materiaSlug } = Astro.props;
+
+// `estado.ts` namespacea localStorage por materia leyendo este atributo del
+// DOM (bloque V) — así su API (`leerEstado()`, etc.) no necesita recibir la
+// materia como parámetro en ninguno de los ~12 ficheros que ya la llaman.
+//
+// De paso, resuelve la entrada de `materias` para inyectar sus
+// `colores_tipo` como custom properties (ver <style> más abajo): Base.astro
+// solo recibe el slug público, no el materiaId, así que busca por `data.slug`
+// en vez de hacer `getEntry` directo.
+const materiaEntry = materiaSlug
+	? (await getCollection("materias")).find((m) => m.data.slug === materiaSlug)
+	: undefined;
+const coloresTipo = materiaEntry?.data.colores_tipo ?? {};
+const reglaColoresTipo = materiaSlug
+	? `html[data-materia="${materiaSlug}"] { ${Object.entries(coloresTipo)
+			.map(([tipo, color]) => `--color-tipo-${tipo}: ${color};`)
+			.join(" ")} }`
+	: "";
 
 const pestanas = materiaSlug
 	? [
@@ -63,7 +82,7 @@ function activa(id: string, href: string): boolean {
 }
 ---
 
-<html lang="es">
+<html lang="es" data-materia={materiaSlug}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -74,6 +93,7 @@ function activa(id: string, href: string): boolean {
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
+    {reglaColoresTipo && <style is:global set:html={reglaColoresTipo} />}
   </head>
   <body class:list={{ "con-tabs": pestanas.length > 0 }}>
     {

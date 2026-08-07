@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import { cargarCapitulos } from "../../lib/capitulos";
 import { rutaCapitulo } from "../../lib/rutas";
+import { generarTarjetas } from "../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
@@ -18,7 +19,21 @@ const materiaEntry = await getEntry("materias", materiaId);
 const eras = materiaEntry?.data.eras ?? [];
 const capitulos = await cargarCapitulos(materiaId);
 const activos = capitulos.filter((c) => c.activo);
-const datosCapitulos = activos.map((c) => ({ id: c.id, relatos: c.relatos }));
+// El recuento de contenido (sandbox, plan de gamificación §5) se calcula aquí
+// —en build, no en cliente— y viaja en el mismo JSON que ya usaba el
+// vocabulario de aventura: mismo patrón que examen.astro:37 con
+// `generarTarjetas`.
+const datosCapitulos = await Promise.all(
+	activos.map(async (c) => ({
+		id: c.id,
+		relatos: c.relatos,
+		recuento: {
+			relatos: c.relatosEscritos.length,
+			entidades: c.conjunto.size,
+			tarjetas: (await generarTarjetas(materiaId, c.conjunto)).length,
+		},
+	})),
+);
 // era.posición sobre todos los capítulos, activos o no: la numeración ya
 // refleja su lugar real en el mapa desde el primer día, y activar uno no
 // corre la de los demás — el hueco ya estaba contado.
@@ -57,7 +72,7 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
                         </span>
                         <span class="texto-capitulo">
                           <span class="titulo-capitulo">{c.nombre}</span>
-                          <span class="estado">Cerrado</span>
+                          <span class="estado">Bloqueado</span>
                         </span>
                         <span class="chevron-capitulo" aria-hidden="true">
                           ›
@@ -99,22 +114,58 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     } from "../../lib/estado";
 
     const ETIQUETA = {
+      bloqueado: "Bloqueado",
       abierto: "Abierto",
       "en-curso": "En curso",
-      cerrado: "Cerrado",
+      superado: "Superado",
     } as const;
 
+    interface RecuentoCapitulo {
+      relatos: number;
+      entidades: number;
+      tarjetas: number;
+    }
+    interface DatosCapitulo extends CapituloResumen {
+      recuento: RecuentoCapitulo;
+    }
+
+    function pluralizar(cantidad: number, singular: string, plural: string): string {
+      return `${cantidad} ${cantidad === 1 ? singular : plural}`;
+    }
+
+    // Sandbox no tiene progresión (plan de gamificación §5): donde aventura
+    // muestra estado, sandbox muestra peso de contenido — es lo que un lector
+    // de enciclopedia quiere antes de entrar.
+    function textoRecuento(r: RecuentoCapitulo): string {
+      return [
+        pluralizar(r.relatos, "relato", "relatos"),
+        pluralizar(r.entidades, "entidad", "entidades"),
+        pluralizar(r.tarjetas, "tarjeta", "tarjetas"),
+      ].join(" · ");
+    }
+
     const datosCapitulosEl = document.getElementById("datos-capitulos");
-    const capitulos: CapituloResumen[] = datosCapitulosEl
+    const capitulos: DatosCapitulo[] = datosCapitulosEl
       ? JSON.parse(datosCapitulosEl.textContent ?? "[]")
       : [];
-    const estadosCapitulos = calcularEstadosCapitulos(capitulos, leerEstado());
+    const estado = leerEstado();
 
-    for (const [id, estado] of Object.entries(estadosCapitulos)) {
-      const fila = document.querySelector(`[data-capitulo="${id}"]`);
-      const el = fila?.querySelector(".estado");
-      if (el) el.textContent = ETIQUETA[estado];
-      if (fila instanceof HTMLElement) fila.dataset.estadoCapitulo = estado;
+    if (estado.modo === "sandbox") {
+      for (const c of capitulos) {
+        const fila = document.querySelector(`[data-capitulo="${c.id}"]`);
+        const el = fila?.querySelector(".estado");
+        if (el) el.textContent = textoRecuento(c.recuento);
+      }
+    } else {
+      const estadosCapitulos = calcularEstadosCapitulos(capitulos, estado);
+      for (const [id, estadoCapitulo] of Object.entries(estadosCapitulos)) {
+        const fila = document.querySelector(`[data-capitulo="${id}"]`);
+        const el = fila?.querySelector(".estado");
+        if (el) el.textContent = ETIQUETA[estadoCapitulo];
+        if (fila instanceof HTMLElement) {
+          fila.dataset.estadoCapitulo = estadoCapitulo;
+        }
+      }
     }
   </script>
 </Base>
@@ -158,7 +209,7 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     list-style: none;
   }
 
-  .fila-capitulo[data-estado-capitulo="cerrado"] {
+  .fila-capitulo[data-estado-capitulo="bloqueado"] {
     opacity: 0.6;
   }
 

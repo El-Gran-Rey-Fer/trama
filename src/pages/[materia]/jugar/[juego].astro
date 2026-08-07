@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content";
 import Base from "../../../layouts/Base.astro";
+import { relatosDeMateria } from "../../../lib/contenidoPorMateria";
 import { conjuntoDeRelato } from "../../../lib/desbloqueo";
 import { construirGrafo } from "../../../lib/grafo";
 import { generarRondasIdentificar } from "../../../lib/identificar";
@@ -40,7 +41,7 @@ const tarjetas = await generarTarjetas(materiaId);
 const pertenencia = await generarPertenencia(materiaId);
 const rondasArbol = await generarRondasArbol(materiaId);
 const rondasIdentificar = await generarRondasIdentificar(materiaId);
-const relatos = await getCollection("relatos");
+const relatos = await relatosDeMateria(materiaId);
 const relatoConjuntos = Object.fromEntries(
 	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
 );

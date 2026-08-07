@@ -5,10 +5,10 @@ import { candidatosNoConectados } from "./tarjetas";
 // `representa`/`representado_en`, plan de imágenes y álbum §3.1, bloque S de
 // capa-de-progresion.md): sale la imagen de una obra y hay que elegir a quién
 // o qué representa, con distractores falsos. Una ronda por cada arista
-// `representa` (obra -> entidad o mito), igual que juegoArbol.ts genera una
+// `representa` (obra -> entidad o relato), igual que juegoArbol.ts genera una
 // ronda por hueco del árbol.
 export interface RondaIdentificar {
-	// Solo la entidad/mito representado, no la obra: una obra nunca es
+	// Solo la entidad/relato representado, no la obra: una obra nunca es
 	// `participante` de un relato (desbloqueo.ts), así que si `ids` incluyera
 	// su id el juego se quedaría sin rondas disponibles en modo aventura.
 	ids: string[];

@@ -12,12 +12,7 @@ import { fileURLToPath } from "node:url";
 import { LineCounter, parse, parseDocument } from "yaml";
 
 const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const CARPETA_ENTIDADES = path.join(RAIZ, "content/mitologia-griega/entidades");
-const CARPETA_RELATOS = path.join(RAIZ, "content/mitologia-griega/relatos");
-const FICHERO_MATERIA = path.join(
-	RAIZ,
-	"content/mitologia-griega/materia.yaml",
-);
+const CARPETA_CONTENT = path.join(RAIZ, "content");
 
 const ID_VALIDO = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -56,13 +51,26 @@ function parsearConLinea(texto, offsetLineas = 0) {
 	};
 }
 
-function cargarMateria() {
-	const texto = readFileSync(FICHERO_MATERIA, "utf-8");
-	const datos = parse(texto);
-	const materia = datos["mitologia-griega"];
+// Una materia por carpeta bajo content/ (mismo id que usa content.config.ts
+// para entidades/entidadesProsa/relatos: content/<materiaId>/...).
+function listarMaterias() {
+	return readdirSync(CARPETA_CONTENT, { withFileTypes: true })
+		.filter((entrada) => entrada.isDirectory())
+		.map((entrada) => entrada.name);
+}
+
+function cargarMateria(materiaId) {
+	const ficheroMateria = path.join(CARPETA_CONTENT, materiaId, "materia.yaml");
+	const materia = parse(readFileSync(ficheroMateria, "utf-8"));
 	return {
 		etiquetas: new Set(materia.etiquetas ?? []),
 		fuentes: new Set(Object.keys(materia.fuentes ?? {})),
+		// Unión de `relatos` de todos los capítulos declarados (activos o no):
+		// un relato que exista pero no esté previsto en ningún capítulo es
+		// prosa que nadie leerá en el modo principal (bloque V).
+		idsRelatosPrevistos: new Set(
+			(materia.capitulos ?? []).flatMap((c) => c.relatos ?? []),
+		),
 	};
 }
 
@@ -175,11 +183,18 @@ function validarResumen(doc, rutaAbsoluta) {
 	}
 }
 
-function main() {
-	const registro = cargarMateria();
+// Valida cada materia contra su propio registro (etiquetas, fuentes, ids):
+// mismo alcance que src/lib/grafo.ts, que desde el bloque V solo carga el
+// contenido de una materia a la vez. Un `destino` o `participante` que
+// apunte a otra materia no resuelve en runtime, así que tampoco puede
+// validar aquí como si resolviera.
+function validarMateria(materiaId) {
+	const registro = cargarMateria(materiaId);
+	const carpetaEntidades = path.join(CARPETA_CONTENT, materiaId, "entidades");
+	const carpetaRelatos = path.join(CARPETA_CONTENT, materiaId, "relatos");
 
-	const rutasEntidades = listarYaml(CARPETA_ENTIDADES);
-	const rutasRelatos = listarMdx(CARPETA_RELATOS);
+	const rutasEntidades = listarYaml(carpetaEntidades);
+	const rutasRelatos = listarMdx(carpetaRelatos);
 
 	const documentosEntidades = rutasEntidades.map((ruta) => ({
 		ruta,
@@ -212,6 +227,34 @@ function main() {
 	}
 	for (const { ruta, doc } of documentosRelatos) {
 		validarNodo(doc, ruta, registro, idsConocidos);
+		// Bloque V: un relato que existe pero no está previsto en ningún
+		// capítulo de materia.yaml es prosa que nadie leerá en el modo
+		// principal — antes era una válvula de escape permitida.
+		const id = doc.datos.id;
+		if (typeof id === "string" && !registro.idsRelatosPrevistos.has(id)) {
+			error(
+				ruta,
+				doc.linea(["id"]),
+				`relato "${id}" no está en ningún capítulo`,
+			);
+		}
+	}
+
+	return {
+		entidades: documentosEntidades.length,
+		relatos: documentosRelatos.length,
+	};
+}
+
+function main() {
+	const materias = listarMaterias();
+	let totalEntidades = 0;
+	let totalRelatos = 0;
+
+	for (const materiaId of materias) {
+		const { entidades, relatos } = validarMateria(materiaId);
+		totalEntidades += entidades;
+		totalRelatos += relatos;
 	}
 
 	if (errores.length > 0) {
@@ -224,7 +267,7 @@ function main() {
 	}
 
 	console.log(
-		`Contenido validado: ${documentosEntidades.length} entidades, ${documentosRelatos.length} relatos.`,
+		`Contenido validado: ${totalEntidades} entidades, ${totalRelatos} relatos en ${materias.length} materia(s).`,
 	);
 }
 

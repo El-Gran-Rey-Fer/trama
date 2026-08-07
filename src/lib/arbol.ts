@@ -41,11 +41,11 @@ const ESPACIO_HERMANOS = 90;
 const ESPACIO_GENERACION = 130;
 const MARGEN = 45;
 
-// Antepasados compartidos (p. ej. Urano y Gea vistos desde Zeus vía Crono y
-// vía Rea) se duplican como hojas separadas en vez de fusionarse en un nodo
-// pareja: es más simple y es lo estándar en un diagrama de abanico
-// genealógico. Por eso cada instancia lleva su propia `clave`, distinta del
-// `id` de la entidad que representa.
+// Antepasados compartidos (p. ej. un mismo abuelo visto desde un nieto por
+// dos hijos distintos) se duplican como hojas separadas en vez de
+// fusionarse en un nodo pareja: es más simple y es lo estándar en un
+// diagrama de abanico genealógico. Por eso cada instancia lleva su propia
+// `clave`, distinta del `id` de la entidad que representa.
 function construirSubarbol(
 	grafo: Grafo,
 	idRaiz: string,

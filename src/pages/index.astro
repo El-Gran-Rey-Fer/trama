@@ -1,9 +1,20 @@
 ---
+import { getCollection } from "astro:content";
 import Base from "../layouts/Base.astro";
 import { rutaMateria } from "../lib/rutas";
+
+const materias = await getCollection("materias");
 ---
 
 <Base titulo="trama">
   <h1>trama</h1>
-  <p><a href={rutaMateria("gr")}>Mitología griega</a></p>
+  <ul>
+    {
+      materias.map((m) => (
+        <li>
+          <a href={rutaMateria(m.data.slug)}>{m.data.nombre}</a>
+        </li>
+      ))
+    }
+  </ul>
 </Base>

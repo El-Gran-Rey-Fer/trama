@@ -27,7 +27,28 @@ export interface EstadoV1 {
 	modo: "aventura" | "sandbox";
 }
 
-const CLAVE = "trama:estado";
+const CLAVE_VIEJA = "trama:estado";
+
+// Namespacing por materia (bloque V, plan de gamificación §10): sin esto, la
+// segunda materia (historiadeespana) pisaría el progreso de la primera. Se
+// lee del DOM en vez de recibir la materia como parámetro para no cambiar la
+// firma de ninguna función pública de este módulo — Base.astro estampa
+// `data-materia` en `<html>` (bloque V), y todo lo que importa estado.ts vive
+// bajo `[materia]/`, así que faltar el atributo es un error de programación,
+// no un caso a degradar en silencio.
+function materiaActual(): string {
+	const materia = document.documentElement.dataset.materia;
+	if (!materia) {
+		throw new Error(
+			"estado.ts requiere data-materia en <html> (lo estampa Base.astro)",
+		);
+	}
+	return materia;
+}
+
+function claveEstado(materiaSlug: string): string {
+	return `trama:estado:${materiaSlug}`;
+}
 
 export function estadoPorDefecto(): EstadoV1 {
 	return {
@@ -58,8 +79,29 @@ function normalizar(estado: EstadoV1): EstadoV1 {
 	return estado;
 }
 
+// Migración de la clave global vieja a la namespaceada (bloque V): de una
+// sola vez, la primera vez que se lee estado tras el cambio. En cuanto se
+// ejecuta, `guardarEstado` nunca vuelve a escribir en `CLAVE_VIEJA` — se
+// borra aquí mismo para que no quede una copia obsoleta rondando.
+function migrarSiHaceFalta(clave: string): void {
+	if (localStorage.getItem(clave)) return;
+	const bruto = localStorage.getItem(CLAVE_VIEJA);
+	if (!bruto) return;
+	try {
+		const valor: unknown = JSON.parse(bruto);
+		if (esEstadoV1(valor)) {
+			localStorage.setItem(clave, JSON.stringify(normalizar(valor)));
+		}
+	} catch {
+		// Clave vieja corrupta: no hay nada que migrar, se borra igual abajo.
+	}
+	localStorage.removeItem(CLAVE_VIEJA);
+}
+
 export function leerEstado(): EstadoV1 {
-	const bruto = localStorage.getItem(CLAVE);
+	const clave = claveEstado(materiaActual());
+	migrarSiHaceFalta(clave);
+	const bruto = localStorage.getItem(clave);
 	if (!bruto) return estadoPorDefecto();
 	try {
 		const valor: unknown = JSON.parse(bruto);
@@ -71,7 +113,7 @@ export function leerEstado(): EstadoV1 {
 }
 
 export function guardarEstado(estado: EstadoV1): void {
-	localStorage.setItem(CLAVE, JSON.stringify(estado));
+	localStorage.setItem(claveEstado(materiaActual()), JSON.stringify(estado));
 }
 
 export function exportarEstado(): void {
@@ -92,11 +134,21 @@ export interface CapituloResumen {
 	relatos: string[];
 }
 
-export type EstadoVisualCapitulo = "abierto" | "en-curso" | "cerrado";
+// "Cerrado" desaparece del vocabulario visible (bloque V, plan de
+// gamificación §3): colisionaba consigo mismo, examen aprobado en los
+// documentos, no accesible todavía en la portada. En código sigue siendo un
+// enum; lo que cambia es la palabra. `EstadoCapitulo.estado` (el tipo
+// persistido, arriba) no cambia — sigue siendo el que ya usa examen.astro.
+export type EstadoVisualCapitulo =
+	| "bloqueado"
+	| "abierto"
+	| "en-curso"
+	| "superado";
 
-// Los capítulos ya completados salen "cerrado". El primero sin completar es el
-// activo de la vía guiada ("abierto", o "en-curso" si ya se leyó algún relato
-// suyo); todos los que vienen después están "cerrado" porque aún no se llega.
+// Los capítulos ya completados salen "superado" (antes "cerrado", colisión
+// con "no alcanzado" — ver arriba). El primero sin completar es el activo de
+// la vía guiada ("abierto", o "en-curso" si ya se leyó algún relato suyo);
+// todos los que vienen después están "bloqueado" porque aún no se llega.
 // Recibe la lista YA ordenada (era, luego orden dentro de la era).
 export function calcularEstadosCapitulos(
 	capitulosOrdenados: CapituloResumen[],
@@ -107,11 +159,11 @@ export function calcularEstadosCapitulos(
 	for (const capitulo of capitulosOrdenados) {
 		const completado = estado.capitulos[capitulo.id]?.estado === "cerrado";
 		if (completado) {
-			resultado[capitulo.id] = "cerrado";
+			resultado[capitulo.id] = "superado";
 			continue;
 		}
 		if (activoAsignado) {
-			resultado[capitulo.id] = "cerrado";
+			resultado[capitulo.id] = "bloqueado";
 			continue;
 		}
 		const algoLeido = capitulo.relatos.some((r) => estado.leidos.includes(r));

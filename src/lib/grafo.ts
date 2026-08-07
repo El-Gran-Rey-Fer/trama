@@ -1,4 +1,9 @@
-import { getCollection, getEntry, render } from "astro:content";
+import { getEntry, render } from "astro:content";
+import {
+	entidadesDeMateria,
+	entidadesProsaDeMateria,
+	relatosDeMateria,
+} from "./contenidoPorMateria";
 
 type ContenidoRenderizado = Awaited<ReturnType<typeof render>>["Content"];
 
@@ -92,9 +97,9 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 		entradasRelatos,
 		materiaEntry,
 	] = await Promise.all([
-		getCollection("entidades"),
-		getCollection("entidadesProsa"),
-		getCollection("relatos"),
+		entidadesDeMateria(materiaId),
+		entidadesProsaDeMateria(materiaId),
+		relatosDeMateria(materiaId),
 		getEntry("materias", materiaId),
 	]);
 
@@ -161,7 +166,7 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 	for (const entrada of entradasRelatos) {
 		// `lugar` es azúcar sintáctico sobre el mismo mecanismo de relaciones: se
 		// convierte aquí en una arista `ocurre_en` más (el relato es el origen:
-		// "la Titanomaquia ocurre_en el Monte Olimpo"), para no tener dos formas
+		// "este relato ocurre_en aquel lugar"), para no tener dos formas
 		// distintas de declarar lo mismo. `participantes` se trata aparte, más
 		// abajo, porque su arista va en sentido contrario (ver ese bloque).
 		const relacionesDerivadas: RelacionCruda[] = entrada.data.lugar
@@ -177,8 +182,8 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 	}
 
 	// `participantes` vive en el frontmatter del relato, pero la arista se autoría
-	// desde la entidad hacia el relato ("Zeus participa_en la Titanomaquia"), no
-	// al revés: es la entidad la que hace algo, el relato es donde lo hace. Por
+	// desde la entidad hacia el relato ("esta entidad participa_en aquel relato"),
+	// no al revés: es la entidad la que hace algo, el relato es donde lo hace. Por
 	// eso se añade sobre el nodo del participante, no sobre el del relato, y solo
 	// puede hacerse aquí, después de que todos los nodos ya existan en el mapa.
 	for (const entrada of entradasRelatos) {

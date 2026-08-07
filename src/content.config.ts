@@ -1,6 +1,6 @@
 import { defineCollection } from "astro:content";
 import path from "node:path";
-import { file, glob } from "astro/loaders";
+import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
 const relacionSchema = z.object({
@@ -75,12 +75,15 @@ const entidadSchema = z
 
 const entidades = defineCollection({
 	loader: glob({
-		// Recursivo: cada entidad vive en entidades/<tipo>/ (las obras en
-		// entidades/obra/, mismo criterio que public/img/gr/obras/), pero todas
-		// siguen siendo la misma colección — el id sale del YAML, no de la ruta,
-		// así que `destino: <id>` en cualquier relación las resuelve igual.
-		pattern: "**/*.yaml",
-		base: "./content/mitologia-griega/entidades",
+		// Recursivo y por materia: cada entidad vive en
+		// <materia>/entidades/<tipo>/ (las obras en entidades/obra/, mismo
+		// criterio que public/img/gr/obras/), pero todas siguen siendo la misma
+		// colección — el id sale del YAML, no de la ruta, así que
+		// `destino: <id>` en cualquier relación las resuelve igual. Distinguir
+		// de qué materia es cada una se hace por `filePath` (ver
+		// lib/contenidoPorMateria.ts), no por el id.
+		pattern: "*/entidades/**/*.yaml",
+		base: "./content",
 		generateId: ({ data }) => (data as { id: string }).id,
 	}),
 	schema: entidadSchema,
@@ -88,13 +91,14 @@ const entidades = defineCollection({
 
 const entidadesProsa = defineCollection({
 	loader: glob({
-		// Recursivo: la prosa vive junto a su YAML hermano, en entidades/<tipo>/.
-		pattern: "**/*.mdx",
-		base: "./content/mitologia-griega/entidades",
+		// Recursivo y por materia: la prosa vive junto a su YAML hermano, en
+		// <materia>/entidades/<tipo>/.
+		pattern: "*/entidades/**/*.mdx",
+		base: "./content",
 		// Sin frontmatter: el id sale del nombre del fichero, no de la ruta —
 		// si tomara la ruta completa (comportamiento por defecto del loader),
-		// el id incluiría la subcarpeta de tipo y dejaría de coincidir con el
-		// id del YAML hermano.
+		// el id incluiría la materia y la subcarpeta de tipo y dejaría de
+		// coincidir con el id del YAML hermano.
 		generateId: ({ entry }) => path.basename(entry, ".mdx"),
 	}),
 	schema: z.object({}),
@@ -117,10 +121,11 @@ const relatoSchema = z.object({
 
 const relatos = defineCollection({
 	loader: glob({
-		// Recursivo: los relatos viven en subcarpetas por era (relatos/<era>/), mismo
-		// criterio que entidades/<tipo>/ — el id sale del YAML, no de la ruta.
-		pattern: "**/*.mdx",
-		base: "./content/mitologia-griega/relatos",
+		// Recursivo y por materia: los relatos viven en subcarpetas por era
+		// (<materia>/relatos/<era>/), mismo criterio que entidades/<tipo>/ — el
+		// id sale del YAML, no de la ruta.
+		pattern: "*/relatos/**/*.mdx",
+		base: "./content",
 		generateId: ({ data }) => (data as { id: string }).id,
 	}),
 	schema: relatoSchema,
@@ -207,6 +212,23 @@ const materiaSchema = z.object({
 	niveles: z
 		.array(z.object({ id: z.string(), nombre: z.string(), umbral: z.number() }))
 		.optional(),
+	// Contrato multi-materia (bloque V). No se consumen todavía: entran aquí
+	// porque son la base sobre la que se apoyan los bloques W-Z y la interfaz
+	// de Design, y declararlos tarde obliga a tocar materia.yaml otra vez.
+	//
+	// Tipos cuya entidad genera medalla de personaje automática al reunir
+	// suficientes tarjetas propias (bloque Y). El valor concreto lo declara
+	// cada materia en su materia.yaml, no src/.
+	tipos_coleccionables: z.array(z.string()).optional(),
+	// Etiqueta visible del eje temporal de `eras` ("Eras" en Grecia,
+	// "Periodos" o "Siglos" en otra materia). Puramente de rótulo.
+	etiqueta_eje_temporal: z.string().optional(),
+	// Color por tipo de entidad (fondo de la casilla sin retrato, patrón
+	// Gmail). Sustituye a las variables --color-tipo-* que antes vivían fijas
+	// en src/styles/tokens.css — Base.astro las inyecta por materia como
+	// custom properties. Sin entrada para un tipo, Casilla.astro cae a
+	// --color-tarjeta-borde (fallback ya existente, sin cambios).
+	colores_tipo: z.record(z.string(), z.string()).optional(),
 	// --- huecos reservados: legales en el esquema, sin uso funcional en Hito 1 ---
 	idiomas: z
 		.object({
@@ -229,7 +251,16 @@ const materiaSchema = z.object({
 });
 
 const materias = defineCollection({
-	loader: file("./content/mitologia-griega/materia.yaml"),
+	// Un materia.yaml por materia, en content/<materia>/materia.yaml. El id de
+	// la entrada sale del nombre de la carpeta (mismo id que se usa en
+	// content/<materia>/entidades y content/<materia>/relatos), no de un campo
+	// dentro del YAML: así materiaId y la ruta a su contenido son siempre la
+	// misma cosa.
+	loader: glob({
+		pattern: "*/materia.yaml",
+		base: "./content",
+		generateId: ({ entry }) => path.dirname(entry),
+	}),
 	schema: materiaSchema,
 });
 

@@ -4,23 +4,27 @@ import E from "../../../components/E.astro";
 import Fuente from "../../../components/Fuente.astro";
 import LayoutLectura from "../../../layouts/LayoutLectura.astro";
 import { cargarCapitulos } from "../../../lib/capitulos";
+import { relatosDeMateria } from "../../../lib/contenidoPorMateria";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
 import { resolverRetrato } from "../../../lib/retrato";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
-	const relatos = await getCollection("relatos");
-	return materias.flatMap((m) =>
-		relatos.map((r) => ({
-			params: { materia: m.data.slug, id: r.id },
-			props: { materiaId: m.id },
-		})),
+	const porMateria = await Promise.all(
+		materias.map(async (m) => {
+			const relatos = await relatosDeMateria(m.id);
+			return relatos.map((r) => ({
+				params: { materia: m.data.slug, id: r.id },
+				props: { materiaId: m.id },
+			}));
+		}),
 	);
+	return porMateria.flat();
 }
 
 const { materia, id } = Astro.params;
 const { materiaId } = Astro.props;
-const relatos = await getCollection("relatos");
+const relatos = await relatosDeMateria(materiaId);
 const entrada = relatos.find((r) => r.id === id);
 if (!entrada) throw new Error(`Relato no encontrado: ${id}`);
 

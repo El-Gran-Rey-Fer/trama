@@ -1,4 +1,5 @@
-import { getCollection, getEntry } from "astro:content";
+import { getEntry } from "astro:content";
+import { relatosDeMateria } from "./contenidoPorMateria";
 import { conjuntoDeRelato } from "./desbloqueo";
 
 export interface Capitulo {
@@ -9,6 +10,9 @@ export interface Capitulo {
 	resumen?: string;
 	// Lista prevista del mapa, exista o no todavía cada relato.
 	relatos: string[];
+	// Subconjunto de `relatos` que ya existe como entrada en la colección
+	// `relatos` — recuento de contenido de sandbox (bloque V, §5 del plan).
+	relatosEscritos: string[];
 	entidadesExtra: string[];
 	examen: { aciertos: number; de: number };
 	// Se activa solo con que exista el primero de sus relatos previstos — no hay
@@ -26,7 +30,7 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 	const eras = materiaEntry?.data.eras ?? [];
 	const erasIds = new Set(eras.map((e) => e.id));
 	const capitulosCrudos = materiaEntry?.data.capitulos ?? [];
-	const relatos = await getCollection("relatos");
+	const relatos = await relatosDeMateria(materiaId);
 	const relatosPorId = new Map(relatos.map((r) => [r.id, r.data]));
 
 	const idsVistos = new Set<string>();
@@ -69,6 +73,7 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 			orden: c.orden,
 			resumen: c.resumen,
 			relatos: c.relatos,
+			relatosEscritos,
 			entidadesExtra: c.entidades_extra ?? [],
 			examen: c.examen,
 			activo: relatosEscritos.length > 0,

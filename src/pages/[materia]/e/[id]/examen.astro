@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../../../../layouts/Base.astro";
+import { entidadesDeMateria } from "../../../../lib/contenidoPorMateria";
 import type { PreguntaMixta } from "../../../../lib/examenMixtoCliente";
 import { construirGrafo, obtenerEntidad } from "../../../../lib/grafo";
 import { generarRondasIdentificar } from "../../../../lib/identificar";
@@ -11,13 +12,16 @@ import { generarTarjetas } from "../../../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
-	const entidades = await getCollection("entidades");
-	return materias.flatMap((m) =>
-		entidades.map((e) => ({
-			params: { materia: m.data.slug, id: e.id },
-			props: { materiaId: m.id },
-		})),
+	const porMateria = await Promise.all(
+		materias.map(async (m) => {
+			const entidades = await entidadesDeMateria(m.id);
+			return entidades.map((e) => ({
+				params: { materia: m.data.slug, id: e.id },
+				props: { materiaId: m.id },
+			}));
+		}),
 	);
+	return porMateria.flat();
 }
 
 const { materia, id } = Astro.params;

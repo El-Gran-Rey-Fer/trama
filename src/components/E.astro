@@ -1,4 +1,5 @@
 ---
+import { getCollection } from "astro:content";
 import { construirGrafo, obtenerEntidad } from "../lib/grafo";
 import { resolverRetrato } from "../lib/retrato";
 import { rutaEntidad, rutaRelato } from "../lib/rutas";
@@ -8,7 +9,26 @@ interface Props {
 }
 const { id } = Astro.props;
 
-const grafo = await construirGrafo("mitologia-griega");
+// `<E />` se usa dentro de la prosa MDX de un relato, así que no recibe la
+// materia como prop — se resuelve del slug de la ruta actual (bloque V):
+// `Astro.params` está disponible en cualquier componente del árbol de una
+// misma request/generación, no solo en la página que la declaró. El slug
+// público de la ruta no es el materiaId que `construirGrafo` necesita (uno
+// es cosmético, el otro es el nombre de la carpeta de contenido), así que se
+// busca la entrada de `materias` cuyo `data.slug` coincida.
+const materiaSlugRuta = Astro.params.materia;
+const materiaEntry = materiaSlugRuta
+	? (await getCollection("materias")).find(
+			(m) => m.data.slug === materiaSlugRuta,
+		)
+	: undefined;
+if (!materiaEntry) {
+	throw new Error(
+		`<E id="${id}" /> no puede resolver la materia de la ruta actual (${materiaSlugRuta})`,
+	);
+}
+
+const grafo = await construirGrafo(materiaEntry.id);
 const nodo = obtenerEntidad(grafo, id);
 if (!nodo)
 	throw new Error(`<E id="${id}" /> no encuentra esa entidad en el grafo`);

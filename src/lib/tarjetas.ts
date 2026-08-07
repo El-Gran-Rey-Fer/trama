@@ -92,7 +92,8 @@ function distractoresDeRelacion(
 }
 
 // Distractores de una tarjeta de atributo: el mismo campo en otras entidades
-// del mismo tipo (p.ej. el símbolo de otros dioses, no de Zeus).
+// del mismo tipo (p.ej. el símbolo de otras entidades del mismo tipo, no de
+// la entidad de la propia tarjeta).
 function distractoresDeAtributo(
 	grafo: Grafo,
 	sujeto: Entidad,

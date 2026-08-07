@@ -1,33 +1,51 @@
 ---
 import { getCollection } from "astro:content";
-import Base from "../../layouts/Base.astro";
-import { relatosDeMateria } from "../../lib/contenidoPorMateria";
-import { conjuntoDeRelato } from "../../lib/desbloqueo";
-import { generarTarjetas } from "../../lib/tarjetas";
+import Base from "../../../../layouts/Base.astro";
+import { cargarCapitulos } from "../../../../lib/capitulos";
+import { relatosDeMateria } from "../../../../lib/contenidoPorMateria";
+import { conjuntoDeRelato } from "../../../../lib/desbloqueo";
+import { rutaCapitulo } from "../../../../lib/rutas";
+import { generarTarjetas } from "../../../../lib/tarjetas";
 
 export async function getStaticPaths() {
 	const materias = await getCollection("materias");
-	return materias.map((m) => ({
-		params: { materia: m.data.slug },
-		props: { materiaId: m.id },
-	}));
+	const porMateria = await Promise.all(
+		materias.map(async (m) => {
+			const capitulos = await cargarCapitulos(m.id);
+			return capitulos
+				.filter((c) => c.activo)
+				.map((c) => ({
+					params: { materia: m.data.slug, id: c.id },
+					props: { materiaId: m.id },
+				}));
+		}),
+	);
+	return porMateria.flat();
 }
 
-const { materia } = Astro.params;
+const { materia, id } = Astro.params;
 const { materiaId } = Astro.props;
-const tarjetas = await generarTarjetas(materiaId);
+
+const capitulos = await cargarCapitulos(materiaId);
+const capitulo = capitulos.find((c) => c.id === id);
+if (!capitulo) throw new Error(`Capítulo no encontrado: ${id}`);
+
+// Sandbox diferencial (plan de gamificación §5): mismo mazo de tarjeta-flip
+// que /practicar (mazo suelto de materia), acotado al conjunto de este
+// capítulo — mismo patrón que examen.astro:37 con `generarTarjetas`.
+const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
 const relatos = await relatosDeMateria(materiaId);
 const relatoConjuntos = Object.fromEntries(
 	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
 );
 ---
 
-<Base titulo={`Tarjetas sueltas — ${materia}`} materiaSlug={materia}>
+<Base titulo={`Practicar — ${capitulo.nombre}`} materiaSlug={materia}>
   <article class="juego">
     <header class="cabecera-juego">
-      <button type="button" id="reiniciar" class="reiniciar">↻ Reiniciar</button>
+      <a class="salir" href={rutaCapitulo(materia, capitulo.id)}>&lsaquo; Salir</a>
       <div class="titulo-wrap">
-        <h1>Tarjetas sueltas</h1>
+        <h1>{capitulo.nombre}</h1>
       </div>
       <p id="progreso" class="progreso"></p>
     </header>
@@ -43,8 +61,7 @@ const relatoConjuntos = Object.fromEntries(
     </div>
 
     <p id="vacio" class="vacio" hidden>
-      No hay tarjetas disponibles todavía. Lee un relato para desbloquearlas, o
-      cambia a modo sandbox para verlas todas.
+      No hay tarjetas disponibles todavía en este capítulo.
     </p>
   </article>
 
@@ -56,7 +73,7 @@ const relatoConjuntos = Object.fromEntries(
   />
 
   <script>
-    import { montarPracticar } from "../../lib/practicarCliente";
+    import { montarPracticar } from "../../../../lib/practicarCliente";
     montarPracticar();
   </script>
 
@@ -69,16 +86,13 @@ const relatoConjuntos = Object.fromEntries(
       padding: 12px 20px 6px;
     }
 
-    .reiniciar {
+    .salir {
       flex: 0 0 auto;
-      border: none;
-      background: none;
       color: var(--color-acento);
       font-family: var(--fuente-titulo);
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
-      padding: 6px 0;
-      cursor: pointer;
+      text-decoration: none;
     }
 
     .titulo-wrap {

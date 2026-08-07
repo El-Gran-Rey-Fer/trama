@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content";
 import ParticipantesRelato from "../../components/ParticipantesRelato.astro";
 import Base from "../../layouts/Base.astro";
 import { cargarCapitulos } from "../../lib/capitulos";
+import { relatosDeMateria } from "../../lib/contenidoPorMateria";
 import { conjuntoDeRelato } from "../../lib/desbloqueo";
 import { construirGrafo } from "../../lib/grafo";
 import { resolverRetrato } from "../../lib/retrato";
@@ -20,7 +21,7 @@ const { materiaId } = Astro.props;
 const materiaEntry = await getEntry("materias", materiaId);
 const capitulos = await cargarCapitulos(materiaId);
 
-const relatos = await getCollection("relatos");
+const relatos = await relatosDeMateria(materiaId);
 const relatoConjuntos = Object.fromEntries(
 	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
 );
@@ -28,7 +29,7 @@ const relatoConjuntos = Object.fromEntries(
 const grafo = await construirGrafo(materiaId);
 // Las obras son entidades del grafo (`kind: "entidad"`) igual que un
 // personaje, pero no son coleccionables: decoran a otras entidades y a los
-// mitos, no se "encuentran" ni se "dominan". Sin este filtro caerían como
+// relatos, no se "encuentran" ni se "dominan". Sin este filtro caerían como
 // casilla huérfana (sin retrato propio, solo su inicial) — decisión
 // explícita: fuera del álbum y del índice sandbox.
 const entidades = [...grafo.entidades.values()].filter(
