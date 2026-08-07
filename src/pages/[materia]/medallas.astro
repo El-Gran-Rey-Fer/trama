@@ -85,6 +85,35 @@ const tarjetasPropias = await tarjetasPropiasColeccionables(materiaId);
     <p id="progreso-medallas" class="subtitulo-lista"></p>
   </div>
 
+  <!--
+    Reto del día (bloque Z, §9): las únicas medallas "de recorrido" del
+    sitio hasta ahora — en total acumulado, nunca por racha. Van antes de las
+    de personaje porque no dependen de ningún tipo coleccionable.
+  -->
+  <div class="grupo-medallas">
+    <h3 class="etiqueta-grupo-medallas">Reto del día</h3>
+    <ul class="lista-medallas" id="lista-medallas-reto">
+      <li data-umbral="10">
+        <span class="fila-medalla">
+          <span class="casilla-reto">🏅</span>
+          <span class="texto-medalla">
+            <span class="nombre-medalla">10 retos</span>
+            <span class="progreso-medalla" />
+          </span>
+        </span>
+      </li>
+      <li data-umbral="50">
+        <span class="fila-medalla">
+          <span class="casilla-reto">🏅</span>
+          <span class="texto-medalla">
+            <span class="nombre-medalla">50 retos</span>
+            <span class="progreso-medalla" />
+          </span>
+        </span>
+      </li>
+    </ul>
+  </div>
+
   {
     gruposPorTipo.map((g) => (
       <div class="grupo-medallas">
@@ -124,6 +153,7 @@ const tarjetasPropias = await tarjetasPropiasColeccionables(materiaId);
     import {
       calcularEstadosCasillas,
       calcularMedallasPersonaje,
+      calcularMedallasReto,
       leerEstado,
     } from "../../lib/estado";
 
@@ -135,6 +165,19 @@ const tarjetasPropias = await tarjetasPropiasColeccionables(materiaId);
           tarjetasPropias: Record<string, string[]>;
         })
       : null;
+
+    const estadoReto = leerEstado();
+    for (const medalla of calcularMedallasReto(estadoReto)) {
+      const li = document.querySelector(`#lista-medallas-reto [data-umbral="${medalla.umbral}"]`);
+      const casilla = li?.querySelector<HTMLElement>(".casilla-reto");
+      const progreso = li?.querySelector<HTMLElement>(".progreso-medalla");
+      casilla?.classList.toggle("ganada", medalla.ganada);
+      if (progreso) {
+        progreso.textContent = medalla.ganada
+          ? "Conseguida"
+          : `Faltan ${medalla.umbral - estadoReto.retos.completados}`;
+      }
+    }
 
     if (datos) {
       const estadoActual = leerEstado();
@@ -249,6 +292,25 @@ const tarjetasPropias = await tarjetasPropiasColeccionables(materiaId);
     padding: 10px 0;
     text-decoration: none;
     color: var(--color-texto);
+  }
+
+  .casilla-reto {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radio);
+    background: var(--color-tarjeta-fondo);
+    font-size: 22px;
+    opacity: 0.4;
+    filter: grayscale(1);
+  }
+
+  .casilla-reto.ganada {
+    opacity: 1;
+    filter: none;
   }
 
   .fila-medalla :global(.casilla) {

@@ -26,6 +26,11 @@ export interface EstadoV1 {
 	// render, no se declara aquí; ver calcularMedallasPersonaje.
 	tarjetasAcertadas: string[];
 	modo: "aventura" | "sandbox";
+	// Bloque Z (reto del día, plan de gamificación §9): contador acumulado,
+	// nunca racha — un hueco no resta nada, así que no hace falta guardar
+	// fechas ni comprobar continuidad. `ultimaFecha` sirve solo para decir
+	// "hoy ya lo hiciste" y ofrecer repetirlo, nunca para impedirlo.
+	retos: { completados: number; ultimaFecha: string | null };
 }
 
 const CLAVE_VIEJA = "trama:estado";
@@ -60,6 +65,7 @@ export function estadoPorDefecto(): EstadoV1 {
 		medallas: [],
 		tarjetasAcertadas: [],
 		modo: "aventura",
+		retos: { completados: 0, ultimaFecha: null },
 	};
 }
 
@@ -79,6 +85,7 @@ function esEstadoV1(valor: unknown): valor is EstadoV1 {
 // huérfana; no está en el tipo, así que nada vuelve a leerlo).
 function normalizar(estado: EstadoV1): EstadoV1 {
 	estado.tarjetasAcertadas ??= [];
+	estado.retos ??= { completados: 0, ultimaFecha: null };
 	return estado;
 }
 
@@ -286,6 +293,32 @@ export async function importarEstado(
 	}
 	guardarEstado(normalizar(valor));
 	return { ok: true };
+}
+
+// Bloque Z (reto del día, §9): único punto de escritura del contador. Sin
+// umbral que superar y sin comprobar si ya se hizo hoy — repetir el mismo
+// día vuelve a sumar, es justo lo que "ofrecer repetirlo" implica.
+export function registrarRetoCompletado(fecha: string): void {
+	const estado = leerEstado();
+	estado.retos.completados += 1;
+	estado.retos.ultimaFecha = fecha;
+	guardarEstado(estado);
+}
+
+export interface MedallaReto {
+	umbral: number;
+	ganada: boolean;
+}
+
+const UMBRALES_MEDALLA_RETO = [10, 50];
+
+// Mismo criterio que calcularMedallasPersonaje: se derivan del contador en
+// cada render, nunca se guardan aparte.
+export function calcularMedallasReto(estado: EstadoV1): MedallaReto[] {
+	return UMBRALES_MEDALLA_RETO.map((umbral) => ({
+		umbral,
+		ganada: estado.retos.completados >= umbral,
+	}));
 }
 
 export interface MedallaPersonaje {

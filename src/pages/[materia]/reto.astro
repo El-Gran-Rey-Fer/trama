@@ -1,0 +1,622 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { cargarCapitulos } from "../../lib/capitulos";
+import { relatosDeMateria } from "../../lib/contenidoPorMateria";
+import { conjuntoDeRelato } from "../../lib/desbloqueo";
+import { generarRondasIdentificar } from "../../lib/identificar";
+import { generarRondasArbol } from "../../lib/juegoArbol";
+import { generarPertenencia } from "../../lib/pertenencia";
+import type { DatosReto } from "../../lib/retoCliente";
+import { rutaMateria } from "../../lib/rutas";
+import { generarTarjetas } from "../../lib/tarjetas";
+
+export async function getStaticPaths() {
+	const materias = await getCollection("materias");
+	return materias.map((m) => ({
+		params: { materia: m.data.slug },
+		props: { materiaId: m.id },
+	}));
+}
+
+const { materia } = Astro.params;
+const { materiaId } = Astro.props;
+
+// Sin acotar a un capítulo (a diferencia del examen): el pool es de toda la
+// materia y se recorta en cliente según lo desbloqueado, igual que
+// /practicar (bloque V, §5).
+const tarjetas = await generarTarjetas(materiaId);
+const pertenencia = await generarPertenencia(materiaId);
+const rondasArbol = await generarRondasArbol(materiaId);
+const rondasIdentificar = await generarRondasIdentificar(materiaId);
+
+const relatos = await relatosDeMateria(materiaId);
+const relatoConjuntos = Object.fromEntries(
+	relatos.map((r) => [r.id, conjuntoDeRelato(r.data)]),
+);
+
+const capitulos = await cargarCapitulos(materiaId);
+const primerCapitulo = capitulos.find((c) => c.activo);
+const idsPrimerCapitulo = primerCapitulo ? [...primerCapitulo.conjunto] : [];
+
+const datos: DatosReto = {
+	tarjetas,
+	pertenencia,
+	rondasArbol,
+	rondasIdentificar,
+	relatoConjuntos,
+	idsPrimerCapitulo,
+};
+---
+
+<Base titulo={`Reto del día — ${materia}`} materiaSlug={materia}>
+  <article class="examen">
+    <header class="cabecera-juego">
+      <a class="salir" href={rutaMateria(materia)}>&lsaquo; Salir</a>
+      <div class="titulo-wrap">
+        <h1>Reto del día</h1>
+      </div>
+      <p id="progreso" class="progreso"></p>
+    </header>
+
+    <p id="estado-reto" class="estado-reto"></p>
+
+    <div id="tablero"></div>
+
+    <p id="sin-preguntas" hidden>
+      Todavía no hay suficiente contenido desbloqueado para el reto de hoy.
+      Sigue leyendo y vuelve más tarde.
+    </p>
+  </article>
+
+  <script
+    is:inline
+    type="application/json"
+    id="datos-reto"
+    set:html={JSON.stringify({ datos, materiaSlug: materia })}
+  />
+
+  <script>
+    import {
+      calcularMedallasReto,
+      leerEstado,
+      registrarRetoCompletado,
+    } from "../../lib/estado";
+    import {
+      iniciarExamenMixto,
+      type PreguntaMixta,
+    } from "../../lib/examenMixtoCliente";
+    import { poolDisponible, seleccionarReto, type DatosReto } from "../../lib/retoCliente";
+    import { rutaMateria } from "../../lib/rutas";
+
+    interface Payload {
+      datos: DatosReto;
+      materiaSlug: string;
+    }
+
+    const datosEl = document.getElementById("datos-reto");
+    const payload = datosEl
+      ? (JSON.parse(datosEl.textContent ?? "{}") as Payload)
+      : null;
+
+    const tablero = document.getElementById("tablero");
+    const elProgreso = document.getElementById("progreso");
+    const elSinPreguntas = document.getElementById("sin-preguntas");
+    const elEstadoReto = document.getElementById("estado-reto");
+
+    const hoy = new Date().toISOString().slice(0, 10);
+
+    if (payload && tablero) {
+      const estadoInicial = leerEstado();
+      if (elEstadoReto) {
+        elEstadoReto.textContent =
+          estadoInicial.retos.ultimaFecha === hoy
+            ? `Ya completaste el reto de hoy (${estadoInicial.retos.completados} en total) — puedes repetirlo.`
+            : `Retos completados hasta ahora: ${estadoInicial.retos.completados}.`;
+      }
+
+      const pool = poolDisponible(payload.datos, estadoInicial);
+      const preguntas: PreguntaMixta[] = seleccionarReto(pool, hoy, 5);
+      const materiaSlug = payload.materiaSlug;
+
+      function mostrarResultado(
+        resultado: { aciertos: number; total: number },
+        reintentar: () => void,
+      ) {
+        if (!tablero) return;
+        tablero.innerHTML = "";
+
+        const medallasAntes = calcularMedallasReto(leerEstado());
+        registrarRetoCompletado(hoy);
+        const estadoNuevo = leerEstado();
+        const medallasDespues = calcularMedallasReto(estadoNuevo);
+        const nuevasMedallas = medallasDespues.filter(
+          (m, i) => m.ganada && !medallasAntes[i].ganada,
+        );
+
+        const resumen = document.createElement("p");
+        resumen.className = "resultado";
+        resumen.textContent = `${resultado.aciertos} / ${resultado.total} correctas.`;
+        tablero.appendChild(resumen);
+
+        const exito = document.createElement("p");
+        exito.className = "exito";
+        exito.textContent = "¡Reto completado!";
+        tablero.appendChild(exito);
+
+        if (nuevasMedallas.length > 0) {
+          const medalla = document.createElement("p");
+          medalla.textContent = `Nueva medalla: ${nuevasMedallas
+            .map((m) => `${m.umbral} retos`)
+            .join(", ")}.`;
+          tablero.appendChild(medalla);
+        }
+
+        const contador = document.createElement("p");
+        contador.textContent = `Retos completados en total: ${estadoNuevo.retos.completados}.`;
+        tablero.appendChild(contador);
+
+        const repetirBoton = document.createElement("button");
+        repetirBoton.type = "button";
+        repetirBoton.className = "boton-siguiente";
+        repetirBoton.textContent = "Repetir";
+        repetirBoton.addEventListener("click", reintentar);
+        tablero.appendChild(repetirBoton);
+
+        const volver = document.createElement("a");
+        volver.className = "boton-siguiente";
+        volver.href = rutaMateria(materiaSlug);
+        volver.textContent = "Volver al mapa";
+        tablero.appendChild(volver);
+      }
+
+      iniciarExamenMixto({
+        tablero,
+        elProgreso,
+        elSinPreguntas,
+        preguntas,
+        // Sin umbral (§9): el reto no bloquea ni desbloquea nada, así que
+        // `mostrarResultado` ignora aciertos/necesarios más allá de
+        // enseñarlos — siempre se cuenta como completado.
+        umbral: { aciertos: 0, de: Math.max(1, preguntas.length) },
+        onResultado: mostrarResultado,
+      });
+    }
+  </script>
+
+  <!--
+    is:global: mismo motivo que en examen.astro — examenMixtoCliente crea el
+    tablero entero con document.createElement, y esos nodos nunca reciben el
+    atributo data-astro-cid-* que necesita un <style> con scope de
+    componente.
+  -->
+  <style is:global>
+    .cabecera-juego {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px 6px;
+    }
+
+    .salir {
+      flex: 0 0 auto;
+      color: var(--color-acento);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .titulo-wrap {
+      flex: 1;
+      text-align: center;
+    }
+
+    .titulo-wrap h1 {
+      margin: 0;
+      font-size: 18px;
+      font-family: var(--fuente-titulo);
+    }
+
+    .progreso {
+      flex: 0 0 auto;
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-texto-muted);
+      font-family: var(--fuente-titulo);
+    }
+
+    .estado-reto {
+      margin: 0 0 12px;
+      padding: 0 20px;
+      font-size: 13px;
+      color: var(--color-texto-muted);
+    }
+
+    .texto-pregunta {
+      padding: 0 20px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    #sin-preguntas {
+      padding: 0 20px;
+      color: var(--color-texto-muted);
+    }
+
+    .opciones {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px 20px;
+    }
+
+    .opcion {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      font-size: 15px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .opcion.acierto {
+      border-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 15%, var(--color-tarjeta-fondo));
+      animation: destello-acierto 0.3s ease;
+    }
+
+    .opcion.fallo {
+      border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
+    }
+
+    .opcion:disabled {
+      cursor: default;
+    }
+
+    .marca-opcion {
+      font-family: var(--fuente-titulo);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .marca-opcion.acierto {
+      color: var(--color-acierto);
+    }
+
+    .marca-opcion.fallo {
+      color: var(--color-fallo);
+    }
+
+    .tarjeta-pertenencia {
+      margin: 0 20px 18px;
+      padding: 20px;
+      border: 1px solid var(--color-tarjeta-borde);
+      border-left-width: 4px;
+      border-left-color: var(--color-acento);
+      border-radius: var(--radio);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-texto);
+      font-family: var(--fuente-titulo);
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .opciones-pertenencia {
+      display: flex;
+      gap: 12px;
+      padding: 0 20px;
+    }
+
+    .opcion-pertenencia {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 22px 14px;
+      border: 1.5px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-fondo-pantalla);
+      color: var(--color-texto);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .icono-pertenencia {
+      font-size: 26px;
+      color: var(--color-texto-muted);
+    }
+
+    .opcion-pertenencia.acierto {
+      border-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 12%, var(--color-fondo-pantalla));
+      animation: destello-acierto 0.3s ease;
+    }
+
+    .opcion-pertenencia.acierto .icono-pertenencia {
+      color: var(--color-acierto);
+    }
+
+    .opcion-pertenencia.fallo {
+      border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
+    }
+
+    .opcion-pertenencia.fallo .icono-pertenencia {
+      color: var(--color-fallo);
+    }
+
+    .opcion-pertenencia:disabled {
+      cursor: default;
+    }
+
+    .arbol-juego-scroll {
+      overflow-x: auto;
+      padding: 16px 20px 4px;
+    }
+
+    .arbol-juego-lienzo {
+      position: relative;
+      margin: 0 auto;
+    }
+
+    .arbol-juego-svg {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+    }
+
+    .arbol-juego-svg line {
+      stroke: var(--color-tarjeta-borde);
+      stroke-width: 2;
+    }
+
+    .arbol-juego-nodo {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .arbol-juego-casilla {
+      width: 64px;
+    }
+
+    .arbol-juego-nodo.raiz .arbol-juego-casilla,
+    .arbol-juego-nodo.raiz .arbol-juego-hueco {
+      outline: 2px solid var(--color-acento);
+      outline-offset: 2px;
+    }
+
+    .arbol-juego-nombre {
+      font-size: 11px;
+      text-align: center;
+      line-height: 1.2;
+      color: var(--color-texto);
+    }
+
+    .arbol-juego-hueco {
+      width: 64px;
+      aspect-ratio: 1;
+      border-radius: var(--radio);
+      border: 2px dashed var(--color-acento);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-acento);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .arbol-juego-casilla.acierto .casilla-inicial {
+      outline: 2px solid var(--color-acierto);
+      outline-offset: -2px;
+      animation: destello-acierto 0.3s ease;
+    }
+
+    .arbol-juego-casilla.fallo .casilla-inicial {
+      outline: 2px solid var(--color-fallo);
+      outline-offset: -2px;
+      animation: agitar-fallo 0.3s ease;
+    }
+
+    .opciones-arbol {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 16px 20px;
+    }
+
+    .opcion-arbol {
+      flex: 1 1 40%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 14px;
+      border: 1px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-tarjeta-fondo);
+      color: var(--color-texto);
+      font-family: var(--fuente);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .opcion-arbol.acierto {
+      border-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 15%, var(--color-tarjeta-fondo));
+      animation: destello-acierto 0.3s ease;
+    }
+
+    .opcion-arbol.fallo {
+      border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
+    }
+
+    .figura-identificar {
+      position: relative;
+      overflow: hidden;
+      margin: 0 0 16px;
+      line-height: 0;
+    }
+
+    .figura-identificar img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .marco-identificar {
+      position: absolute;
+      border: 3px solid var(--color-acento);
+      border-radius: 4px;
+      box-shadow: 0 0 0 999px rgb(0 0 0 / 45%);
+      pointer-events: none;
+    }
+
+    .marca-identificar {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+      border: 3px solid var(--color-acento);
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--color-acento) 30%, transparent);
+      pointer-events: none;
+    }
+
+    .pregunta-identificar {
+      margin: 0 20px 14px;
+      font-family: var(--fuente-titulo);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .opciones-identificar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 0 20px;
+    }
+
+    .opcion-identificar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 14px 10px;
+      border: 1.5px solid var(--color-tarjeta-borde);
+      border-radius: var(--radio);
+      background: var(--color-fondo-pantalla);
+      color: var(--color-texto);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .opcion-identificar.acierto {
+      border-color: var(--color-acierto);
+      background: color-mix(in srgb, var(--color-acierto) 12%, var(--color-fondo-pantalla));
+      animation: destello-acierto 0.3s ease;
+    }
+
+    .opcion-identificar.fallo {
+      border-color: var(--color-fallo);
+      animation: agitar-fallo 0.3s ease;
+    }
+
+    .opcion-identificar:disabled {
+      cursor: default;
+    }
+
+    .resultado {
+      margin: 0 20px 14px;
+      padding: 0;
+      font-size: 20px;
+      font-weight: 800;
+      text-align: center;
+      font-family: var(--fuente-titulo);
+    }
+
+    .exito {
+      margin: 0 20px 14px;
+      padding: 0;
+      color: var(--color-acento);
+      font-weight: 800;
+      text-align: center;
+      font-size: 18px;
+      font-family: var(--fuente-titulo);
+    }
+
+    #tablero > p:not(.resultado):not(.exito):not(.tarjeta-pertenencia):not(.pregunta-identificar) {
+      margin: 0 20px 14px;
+      color: var(--color-texto-muted);
+      font-size: 14px;
+    }
+
+    .boton-siguiente {
+      display: block;
+      width: calc(100% - 40px);
+      margin: 0 20px 28px;
+      padding: 14px 20px;
+      border: none;
+      border-radius: var(--radio);
+      background: var(--color-acento);
+      color: var(--color-acento-contraste);
+      font-family: var(--fuente-titulo);
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    @keyframes destello-acierto {
+      0% {
+        transform: scale(1);
+      }
+      40% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes agitar-fallo {
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+      25% {
+        transform: translateX(-4px);
+      }
+      75% {
+        transform: translateX(4px);
+      }
+    }
+  </style>
+</Base>

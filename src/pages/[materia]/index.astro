@@ -2,7 +2,7 @@
 import { getCollection, getEntry } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import { cargarCapitulos } from "../../lib/capitulos";
-import { rutaCapitulo } from "../../lib/rutas";
+import { rutaCapitulo, rutaReto } from "../../lib/rutas";
 import { generarTarjetas } from "../../lib/tarjetas";
 
 export async function getStaticPaths() {
@@ -61,6 +61,22 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
         <span id="continua-detalle" class="continua-detalle"></span>
       </span>
       <span class="continua-boton">Seguir &rarr;</span>
+    </a>
+  </section>
+
+  <!--
+    Reto del día (bloque Z, §9): módulo secundario, siempre por debajo del de
+    continuación — nunca lo primero, para que no parezca la vía principal.
+    Visible en los dos modos: no depende de la progresión de aventura, solo
+    la respeta cuando la hay.
+  -->
+  <section class="seccion-reto">
+    <a class="reto-fila" href={rutaReto(materia)}>
+      <span class="reto-texto">
+        <span class="reto-etiqueta">Reto del día</span>
+        <span id="reto-detalle" class="reto-detalle">Cinco preguntas rápidas con lo que ya tienes.</span>
+      </span>
+      <span class="reto-boton">Jugar &rarr;</span>
     </a>
   </section>
 
@@ -168,6 +184,15 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     const estado = leerEstado();
     const materiaSlug = document.documentElement.dataset.materia ?? "";
 
+    const hoy = new Date().toISOString().slice(0, 10);
+    const elRetoDetalle = document.getElementById("reto-detalle");
+    if (elRetoDetalle) {
+      elRetoDetalle.textContent =
+        estado.retos.ultimaFecha === hoy
+          ? `Ya lo hiciste hoy (${estado.retos.completados} en total) — repítelo si quieres.`
+          : `Cinco preguntas rápidas con lo que ya tienes. Llevas ${estado.retos.completados}.`;
+    }
+
     if (estado.modo === "sandbox") {
       for (const c of capitulos) {
         const fila = document.querySelector(`[data-capitulo="${c.id}"]`);
@@ -250,6 +275,46 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
     font-family: var(--fuente-titulo);
     font-weight: 700;
     font-size: 14px;
+  }
+
+  .seccion-reto {
+    margin: 10px 20px 0;
+  }
+
+  .reto-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: none;
+    color: var(--color-texto);
+    text-decoration: none;
+  }
+
+  .reto-texto {
+    display: block;
+    font-size: 13px;
+  }
+
+  .reto-etiqueta {
+    display: block;
+    font-weight: 700;
+    font-family: var(--fuente-titulo);
+  }
+
+  .reto-detalle {
+    color: var(--color-texto-muted);
+  }
+
+  .reto-boton {
+    flex: 0 0 auto;
+    color: var(--color-acento);
+    font-family: var(--fuente-titulo);
+    font-weight: 700;
+    font-size: 13px;
   }
 
   .cabecera-lista {
