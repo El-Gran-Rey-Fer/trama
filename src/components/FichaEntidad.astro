@@ -1,5 +1,6 @@
 ---
 import { TIPOS_GENEALOGIA } from "../lib/arbol";
+import type { CapituloResumen } from "../lib/estado";
 import type { Entidad, TipoNodo } from "../lib/grafo";
 import { calcularAspectRatio, type RetratoResuelto } from "../lib/retrato";
 import {
@@ -17,8 +18,16 @@ interface Props {
 	materiaSlug: string;
 	nodos: Map<string, { nombre: string; kind: TipoNodo }>;
 	retrato?: RetratoResuelto;
+	// Modo aventura, bloque W: para cada id que esta ficha enlaza (relaciones
+	// + "aparece en"), los capítulos que lo desbloquean — no el `conjunto`
+	// completo de la materia, solo lo que hace falta para ESTA ficha. Sin
+	// estas dos props (p. ej. si algún día se renderiza fuera de una página
+	// con muro) no se aplica ningún filtro: los enlaces se quedan como
+	// siempre.
+	destinos?: Record<string, string[]>;
+	cadena?: CapituloResumen[];
 }
-const { entidad, materiaSlug, nodos, retrato } = Astro.props;
+const { entidad, materiaSlug, nodos, retrato, destinos, cadena } = Astro.props;
 
 function rutaNodo(id: string): string {
 	return nodos.get(id)?.kind === "relato"
@@ -140,9 +149,12 @@ const esStub =
           <h2 class="etiqueta-seccion">Relaciones</h2>
           <ul class="relaciones">
             {relaciones.map((r) => (
-              <li>
+              <li data-destino={r.destino}>
                 <span class="tipo-relacion">{r.tipo.replaceAll("_", " ")}</span>
-                <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
+                <a href={rutaNodo(r.destino)} data-destino-nombre>
+                  {nodos.get(r.destino)?.nombre ?? r.destino}
+                </a>
+                <span class="silueta" hidden aria-label="Sin desbloquear" />
               </li>
             ))}
           </ul>
@@ -156,8 +168,11 @@ const esStub =
           <h2 class="etiqueta-seccion">Aparece en</h2>
           <ul class="chips">
             {relatos.map((r) => (
-              <li>
-                <a href={rutaNodo(r.destino)}>{nodos.get(r.destino)?.nombre ?? r.destino}</a>
+              <li data-destino={r.destino}>
+                <a href={rutaNodo(r.destino)} data-destino-nombre>
+                  {nodos.get(r.destino)?.nombre ?? r.destino}
+                </a>
+                <span class="silueta silueta-chip" hidden aria-label="Sin desbloquear" />
               </li>
             ))}
           </ul>
@@ -336,6 +351,28 @@ const esStub =
     font-weight: 600;
   }
 
+  /* Silueta (modo aventura, bloque W): el destino de una relación o de
+     "aparece en" que todavía no está desbloqueado. Sin nombre y sin enlace
+     — "el hueco es gancho" (plan de gamificación §2.1) — a diferencia de la
+     casilla del álbum, aquí no hay retrato que atenuar, así que el
+     tratamiento es puramente textual. */
+  .silueta::before {
+    content: "Sin desbloquear";
+    color: var(--color-texto-muted);
+    font-style: italic;
+  }
+
+  .silueta-chip {
+    background: var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+
+  .silueta-chip::before {
+    font-style: normal;
+  }
+
   /* Escritorio (proyecto Trama de Claude Design): con retrato, la ficha
      pasa a imagen a la izquierda + texto a la derecha, en vez de imagen
      arriba y texto debajo. Sin retrato no hay nada que poner en la
@@ -375,6 +412,45 @@ const esStub =
     }
   }
 </style>
+
+{
+  destinos && cadena && (
+    <script
+      is:inline
+      type="application/json"
+      id="datos-silueta"
+      set:html={JSON.stringify({ destinos, cadena })}
+    />
+  )
+}
+
+<script>
+  import { entidadAccesible, leerEstado, type CapituloResumen } from "../lib/estado";
+
+  interface DatosSilueta {
+    destinos: Record<string, string[]>;
+    cadena: CapituloResumen[];
+  }
+
+  // Silueta no clicable en relaciones y "aparece en" (modo aventura, bloque
+  // W, §2.1): un destino sin desbloquear pierde nombre y enlace. Ausente en
+  // sandbox (§5, sandbox no tiene muro) o si la página no pasó los datos
+  // (uso de FichaEntidad fuera de una ruta con muro).
+  const datosEl = document.getElementById("datos-silueta");
+  const datos: DatosSilueta | null = datosEl
+    ? JSON.parse(datosEl.textContent ?? "{}")
+    : null;
+  const estado = leerEstado();
+
+  if (datos && estado.modo === "aventura") {
+    for (const [destinoId, capitulosQueDesbloquean] of Object.entries(datos.destinos)) {
+      if (entidadAccesible(datos.cadena, capitulosQueDesbloquean, estado)) continue;
+      const fila = document.querySelector(`[data-destino="${destinoId}"]`);
+      fila?.querySelector("[data-destino-nombre]")?.setAttribute("hidden", "");
+      fila?.querySelector(".silueta")?.removeAttribute("hidden");
+    }
+  }
+</script>
 
 <script define:vars={{ materiaSlug }}>
   // Origen-aware sin mecanismo nuevo por página estática: cada ficha es su

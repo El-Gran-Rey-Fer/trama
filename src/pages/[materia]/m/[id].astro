@@ -3,7 +3,7 @@ import { getCollection, getEntry, render } from "astro:content";
 import E from "../../../components/E.astro";
 import Fuente from "../../../components/Fuente.astro";
 import LayoutLectura from "../../../layouts/LayoutLectura.astro";
-import { cargarCapitulos } from "../../../lib/capitulos";
+import { cargarCapitulos, construirCadena } from "../../../lib/capitulos";
 import { relatosDeMateria } from "../../../lib/contenidoPorMateria";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
 import { resolverRetrato } from "../../../lib/retrato";
@@ -60,6 +60,11 @@ const lugar = entrada.data.lugar
 // el CTA de examen.
 const capitulos = await cargarCapitulos(materiaId);
 const capituloPadre = capitulos.find((c) => c.relatos.includes(id));
+
+// Muro de aventura (bloque W): un relato lo desbloquea únicamente el
+// capítulo que lo declara.
+const cadena = construirCadena(capitulos);
+const desbloqueadoPor = capituloPadre ? [capituloPadre.id] : [];
 ---
 
 <LayoutLectura
@@ -72,6 +77,8 @@ const capituloPadre = capitulos.find((c) => c.relatos.includes(id));
   lugar={lugar}
   capituloId={capituloPadre?.id}
   capituloNombre={capituloPadre?.nombre}
+  cadenaCapitulos={cadena}
+  capitulosQueDesbloquean={desbloqueadoPor}
 >
   <Content components={{ E, Fuente }} />
 </LayoutLectura>

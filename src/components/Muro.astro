@@ -1,0 +1,113 @@
+---
+// El muro de aventura (modo aventura, bloque W): tapa el contenido real
+// —nunca lo omite del HTML, es un sitio estático (§4.1)— y muestra en su
+// lugar el aviso con el paso accionable y el escape al interruptor de modo.
+// Ambos paneles empiezan ocultos; el script de cliente decide cuál revelar
+// con `aplicarMuro` (lib/muroCliente.ts), después de leer `localStorage`.
+import type { CapituloResumen } from "../lib/estado";
+
+interface Props {
+	cadena: CapituloResumen[];
+	// Los capítulos cuyo conjunto (o cuya lista de relatos, si esto es un
+	// relato) contienen lo que esta página enseña — normalmente uno solo. Ver
+	// `capitulosQueDesbloquean` en lib/capitulos.ts.
+	capitulosQueDesbloquean: string[];
+	materiaSlug: string;
+}
+const { cadena, capitulosQueDesbloquean, materiaSlug } = Astro.props;
+---
+
+<div id="muro-contenido" hidden>
+  <slot />
+</div>
+
+<div id="muro-aviso" class="muro-aviso" hidden>
+  <p class="muro-mensaje" data-muro-mensaje></p>
+  <div class="muro-acciones">
+    <a class="muro-boton-principal" data-muro-accion href="#">
+      Seguir &rarr;
+    </a>
+    <button type="button" class="muro-boton-sandbox" id="muro-ver-sandbox">
+      Verlo en sandbox
+    </button>
+  </div>
+</div>
+
+<script
+  is:inline
+  type="application/json"
+  id="datos-muro"
+  set:html={JSON.stringify({ cadena, capitulosQueDesbloquean, materiaSlug })}
+/>
+
+<script>
+  import { aplicarMuro, verEnSandboxYRecargar } from "../lib/muroCliente";
+  import type { CapituloResumen } from "../lib/estado";
+
+  interface DatosMuro {
+    cadena: CapituloResumen[];
+    capitulosQueDesbloquean: string[];
+    materiaSlug: string;
+  }
+
+  const datosEl = document.getElementById("datos-muro");
+  const datos: DatosMuro | null = datosEl
+    ? JSON.parse(datosEl.textContent ?? "{}")
+    : null;
+
+  if (datos) {
+    aplicarMuro(datos.cadena, datos.capitulosQueDesbloquean, datos.materiaSlug);
+  }
+
+  document
+    .getElementById("muro-ver-sandbox")
+    ?.addEventListener("click", verEnSandboxYRecargar);
+</script>
+
+<style>
+  .muro-aviso {
+    max-width: 640px;
+    margin: 40px auto;
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .muro-mensaje {
+    margin: 0 0 20px;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .muro-acciones {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .muro-boton-principal {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    padding: 14px;
+    border-radius: var(--radio);
+    background: var(--color-acento);
+    color: var(--color-acento-contraste);
+    font-family: var(--fuente-titulo);
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+  }
+
+  .muro-boton-sandbox {
+    border: none;
+    background: none;
+    color: var(--color-texto-muted);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 6px;
+  }
+</style>

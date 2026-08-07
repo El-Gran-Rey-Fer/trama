@@ -1,7 +1,8 @@
 ---
 import { getCollection } from "astro:content";
+import Muro from "../../../../components/Muro.astro";
 import Base from "../../../../layouts/Base.astro";
-import { cargarCapitulos } from "../../../../lib/capitulos";
+import { cargarCapitulos, construirCadena } from "../../../../lib/capitulos";
 import type { PreguntaMixta } from "../../../../lib/examenMixtoCliente";
 import { generarRondasIdentificar } from "../../../../lib/identificar";
 import { generarRondasArbol } from "../../../../lib/juegoArbol";
@@ -62,9 +63,14 @@ const preguntas: PreguntaMixta[] = [
 		(ronda): PreguntaMixta => ({ tipo: "identificar", ronda }),
 	),
 ];
+
+// Muro de aventura (bloque W): el examen de un capítulo solo lo desbloquea
+// ese mismo capítulo.
+const cadena = construirCadena(capitulos);
 ---
 
 <Base titulo={`Examen — ${capitulo.nombre}`} materiaSlug={materia}>
+  <Muro cadena={cadena} capitulosQueDesbloquean={[capitulo.id]} materiaSlug={materia}>
   <article class="examen">
     <header class="cabecera-juego">
       <a class="salir" href={rutaCapitulo(materia, capitulo.id)}>&lsaquo; Salir</a>
@@ -81,6 +87,7 @@ const preguntas: PreguntaMixta[] = [
       examen. Vuelve cuando tenga más contenido.
     </p>
   </article>
+  </Muro>
 
   <script
     is:inline

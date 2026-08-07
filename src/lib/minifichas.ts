@@ -3,6 +3,7 @@
 // imágenes y álbum) — ver el comentario en E.astro para el porqué.
 
 import { crearCasilla, type DatosRetrato } from "./casillaCliente";
+import { type CapituloResumen, entidadAccesible, leerEstado } from "./estado";
 
 interface DatosMiniFicha {
 	tipo: string;
@@ -12,6 +13,9 @@ interface DatosMiniFicha {
 	href: string;
 	etiquetaVerMas: string;
 	retrato: DatosRetrato | null;
+	// Modo aventura, bloque W: capítulos que desbloquean este destino — ver
+	// `aplicarAccesoE`.
+	desbloqueadoPor: string[];
 }
 
 function crearMiniFicha(popoverId: string, datos: DatosMiniFicha): HTMLElement {
@@ -90,5 +94,32 @@ export function montarMinifichas(contenedor: HTMLElement): void {
 		if (!popoverId || document.getElementById(popoverId)) continue;
 		const datos = JSON.parse(bloque.textContent ?? "{}") as DatosMiniFicha;
 		contenedor.appendChild(crearMiniFicha(popoverId, datos));
+	}
+}
+
+// `<E />` atenuado en prosa (modo aventura, bloque W, §2.1): un botón cuyo
+// destino no está desbloqueado pierde el popover y pasa a texto plano —
+// el nombre (ya en el `<slot>` del botón) no se toca, solo la
+// interactividad. `cadena` es la de TODA la materia de esta página (Base.astro
+// la embebe una vez); cada botón trae su propio `desbloqueadoPor` en el
+// mismo bloque JSON que ya usa `montarMinifichas`.
+export function aplicarAccesoE(cadena: CapituloResumen[]): void {
+	const estado = leerEstado();
+	if (estado.modo === "sandbox") return;
+
+	const botones = document.querySelectorAll<HTMLButtonElement>(
+		".e-link[popovertarget]",
+	);
+	for (const boton of botones) {
+		const popoverId = boton.getAttribute("popovertarget");
+		if (!popoverId) continue;
+		const bloque = document.querySelector<HTMLScriptElement>(
+			`script[data-mini-ficha="${popoverId}"]`,
+		);
+		if (!bloque) continue;
+		const datos = JSON.parse(bloque.textContent ?? "{}") as DatosMiniFicha;
+		if (entidadAccesible(cadena, datos.desbloqueadoPor, estado)) continue;
+		boton.removeAttribute("popovertarget");
+		boton.classList.add("e-link--atenuado");
 	}
 }

@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import { capitulosQueDesbloquean, cargarCapitulos } from "../lib/capitulos";
 import { construirGrafo, obtenerEntidad } from "../lib/grafo";
 import { resolverRetrato } from "../lib/retrato";
 import { rutaEntidad, rutaRelato } from "../lib/rutas";
@@ -52,6 +53,17 @@ const etiquetaVerMas =
 // (`Base.astro`, vía `lib/minifichas.ts`) construye el popover una sola vez
 // por página y lo cuelga fuera del flujo de la prosa.
 const retrato = resolverRetrato(grafo, nodo);
+
+// Modo aventura, bloque W: qué capítulos desbloquean el destino de este
+// `<E />` — casi siempre uno. `minifichas.ts` decide con esto, en cliente, si
+// el botón se atenúa (§2.1: "texto plano atenuado, con el nombre visible").
+const capitulos = await cargarCapitulos(materiaEntry.id);
+const desbloqueadoPor = capitulosQueDesbloquean(
+	capitulos,
+	id,
+	nodo.kind === "relato" ? "relato" : "entidad",
+);
+
 const datosMiniFicha = {
 	tipo: nodo.tipo,
 	nombre: nodo.nombre,
@@ -66,10 +78,16 @@ const datosMiniFicha = {
 				foco: retrato.foco,
 			}
 		: null,
+	desbloqueadoPor,
 };
 ---
 
-<button type="button" class="e-link" popovertarget={popoverId}>
+<button
+  type="button"
+  class="e-link"
+  popovertarget={popoverId}
+  data-entidad-id={id}
+>
   <slot>{nodo.nombre}</slot>
 </button>
 <script
@@ -92,5 +110,15 @@ const datosMiniFicha = {
     text-decoration: underline;
     text-decoration-color: var(--color-acento);
     text-underline-offset: 3px;
+  }
+
+  /* Modo aventura, bloque W (§2.1): destino sin desbloquear — texto plano
+     atenuado, nombre visible, sin popover. `minifichas.ts` quita
+     `popovertarget` y añade esta clase en cliente. */
+  .e-link--atenuado {
+    color: var(--color-texto-muted);
+    cursor: default;
+    text-decoration-color: var(--color-texto-muted);
+    text-decoration-style: dotted;
   }
 </style>

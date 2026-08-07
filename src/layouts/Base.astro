@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import "../styles/tokens.css";
+import { cargarCapitulos, construirCadena } from "../lib/capitulos";
 import {
 	rutaAjustes,
 	rutaAlbum,
@@ -34,6 +35,13 @@ const reglaColoresTipo = materiaSlug
 			.map(([tipo, color]) => `--color-tipo-${tipo}: ${color};`)
 			.join(" ")} }`
 	: "";
+
+// Modo aventura, bloque W: la cadena de capítulos activos, para que
+// `<E />` (en la prosa que cuelga de este layout) sepa qué está desbloqueado.
+// Barata siempre — ver el comentario de `construirCadena`.
+const cadenaCapitulos = materiaEntry
+	? construirCadena(await cargarCapitulos(materiaEntry.id))
+	: [];
 
 const pestanas = materiaSlug
 	? [
@@ -123,6 +131,16 @@ function activa(id: string, href: string): boolean {
         <slot />
       </main>
       <div id="minifichas"></div>
+      {
+        materiaSlug && (
+          <script
+            is:inline
+            type="application/json"
+            id="datos-cadena-materia"
+            set:html={JSON.stringify(cadenaCapitulos)}
+          />
+        )
+      }
       {
         pestanas.length > 0 && (
           <nav class="tabs" aria-label="Navegación principal">
@@ -294,14 +312,23 @@ function activa(id: string, href: string): boolean {
 </style>
 
 <script>
-  import { montarMinifichas } from "../lib/minifichas";
+  import type { CapituloResumen } from "../lib/estado";
+  import { aplicarAccesoE, montarMinifichas } from "../lib/minifichas";
 
   const contenedorMinifichas = document.getElementById("minifichas");
   if (contenedorMinifichas) montarMinifichas(contenedorMinifichas);
+
+  // <E /> atenuado en prosa (modo aventura, bloque W): después de montar los
+  // popovers, para que ya existan los bloques `data-mini-ficha` que lee.
+  const datosCadenaEl = document.getElementById("datos-cadena-materia");
+  if (datosCadenaEl) {
+    const cadena: CapituloResumen[] = JSON.parse(datosCadenaEl.textContent ?? "[]");
+    aplicarAccesoE(cadena);
+  }
 </script>
 
 <script>
-  import { leerEstado, guardarEstado } from "../lib/estado";
+  import { alternarModo, leerEstado } from "../lib/estado";
 
   const boton = document.getElementById("interruptor-modo");
   const valor = boton?.querySelector<HTMLElement>(".valor-modo");
@@ -314,10 +341,8 @@ function activa(id: string, href: string): boolean {
   pintar(leerEstado().modo);
 
   boton?.addEventListener("click", () => {
-    const estado = leerEstado();
-    estado.modo = estado.modo === "aventura" ? "sandbox" : "aventura";
-    guardarEstado(estado);
-    pintar(estado.modo);
+    const modo = alternarModo(leerEstado());
+    pintar(modo);
     // Recarga para que la página actual recalcule su vista con el modo
     // nuevo (portada, práctica). Si se nota lento, se sustituye por un
     // evento que cada página escuche en vez de recargar entera.

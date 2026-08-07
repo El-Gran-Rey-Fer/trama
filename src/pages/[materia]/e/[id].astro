@@ -1,7 +1,13 @@
 ---
 import { getCollection } from "astro:content";
 import FichaEntidad from "../../../components/FichaEntidad.astro";
+import Muro from "../../../components/Muro.astro";
 import Base from "../../../layouts/Base.astro";
+import {
+	capitulosQueDesbloquean,
+	cargarCapitulos,
+	construirCadena,
+} from "../../../lib/capitulos";
 import { entidadesDeMateria } from "../../../lib/contenidoPorMateria";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
 import { resolverRetrato } from "../../../lib/retrato";
@@ -33,8 +39,36 @@ const nodos = new Map(
 	]),
 );
 const retrato = resolverRetrato(grafo, entidad);
+
+// Muro de aventura (bloque W): esta ficha la desbloquea cualquier capítulo
+// cuyo conjunto la contenga. `destinos` cubre además cada id que la propia
+// ficha enlaza (relaciones + "aparece en"), para que FichaEntidad pueda
+// convertir en silueta los que no sean accesibles — sin enviarle el
+// `conjunto` completo de los capítulos, solo los ids que le hacen falta a
+// ESTA ficha.
+const capitulos = await cargarCapitulos(materiaId);
+const cadena = construirCadena(capitulos);
+const desbloqueadoPor = capitulosQueDesbloquean(capitulos, id, "entidad");
+const idsDestino = new Set(entidad.relaciones.map((r) => r.destino));
+const destinos: Record<string, string[]> = {};
+for (const destinoId of idsDestino) {
+	destinos[destinoId] = capitulosQueDesbloquean(
+		capitulos,
+		destinoId,
+		nodos.get(destinoId)?.kind === "relato" ? "relato" : "entidad",
+	);
+}
 ---
 
 <Base titulo={entidad.nombre} materiaSlug={materia}>
-  <FichaEntidad entidad={entidad} materiaSlug={grafo.slug} nodos={nodos} retrato={retrato} />
+  <Muro cadena={cadena} capitulosQueDesbloquean={desbloqueadoPor} materiaSlug={materia}>
+    <FichaEntidad
+      entidad={entidad}
+      materiaSlug={grafo.slug}
+      nodos={nodos}
+      retrato={retrato}
+      destinos={destinos}
+      cadena={cadena}
+    />
+  </Muro>
 </Base>

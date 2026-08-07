@@ -1,7 +1,9 @@
 ---
+import Muro from "../components/Muro.astro";
 import ParticipantesRelato, {
 	type Participante,
 } from "../components/ParticipantesRelato.astro";
+import type { CapituloResumen } from "../lib/estado";
 import {
 	rutaCapitulo,
 	rutaEntidad,
@@ -20,6 +22,10 @@ interface Props {
 	lugar: { id: string; nombre: string } | null;
 	capituloId?: string;
 	capituloNombre?: string;
+	// Muro de aventura (bloque W): la cadena completa de capítulos activos y
+	// el (como mucho uno) capítulo que desbloquea este relato.
+	cadenaCapitulos: CapituloResumen[];
+	capitulosQueDesbloquean: string[];
 }
 const {
 	id,
@@ -31,10 +37,23 @@ const {
 	lugar,
 	capituloId,
 	capituloNombre,
+	cadenaCapitulos,
+	capitulosQueDesbloquean,
 } = Astro.props;
+
+// Gating del CTA de examen (§4.4, extendido por consistencia a esta página):
+// todos los relatos ESCRITOS del capítulo dueño, no solo este — antes solo
+// reflejaba si este relato estaba leído, sin mirar el resto.
+const relatosCapitulo =
+	cadenaCapitulos.find((c) => c.id === capituloId)?.relatos ?? [];
 ---
 
 <Base titulo={titulo} materiaSlug={materiaSlug}>
+  <Muro
+    cadena={cadenaCapitulos}
+    capitulosQueDesbloquean={capitulosQueDesbloquean}
+    materiaSlug={materiaSlug}
+  >
   <article class="relato">
     {
       capituloId && (
@@ -69,9 +88,18 @@ const {
       </button>
       {
         capituloId && (
-          <a class="examen-cta" data-leido="false" href={rutaExamen(materiaSlug, capituloId)}>
-            Examen de este capítulo
-          </a>
+          <>
+            <a
+              class="examen-cta"
+              id="examen-cta"
+              href={rutaExamen(materiaSlug, capituloId)}
+              aria-disabled="true"
+              tabindex="-1"
+            >
+              Examen de este capítulo
+            </a>
+            <ul id="pendientes-examen-cta" class="pendientes-examen-cta" />
+          </>
         )
       }
     </div>
@@ -87,6 +115,7 @@ const {
 
     <p class="volver-wrap"><a class="volver" href={rutaMateria(materiaSlug)}>&lsaquo; volver</a></p>
   </article>
+  </Muro>
 </Base>
 
 <style>
@@ -191,19 +220,35 @@ const {
     border: 1px solid var(--color-tarjeta-borde);
     border-radius: var(--radio);
     background: none;
-    color: var(--color-texto-muted);
+    color: var(--color-acento);
     font-size: 16px;
     font-weight: 700;
     font-family: var(--fuente-titulo);
     text-align: center;
     text-decoration: none;
-    opacity: 0.5;
     box-sizing: border-box;
   }
 
-  .examen-cta[data-leido="true"] {
+  .examen-cta[aria-disabled="true"] {
+    color: var(--color-texto-muted);
+    cursor: not-allowed;
+  }
+
+  .pendientes-examen-cta {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pendientes-examen-cta li {
+    padding: 4px 0;
+  }
+
+  .pendientes-examen-cta a {
     color: var(--color-acento);
-    opacity: 1;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
   }
 
   .volver-wrap {
@@ -217,18 +262,33 @@ const {
   }
 </style>
 
+{
+  capituloId && (
+    <script
+      is:inline
+      type="application/json"
+      id="datos-examen-cta"
+      set:html={JSON.stringify(relatosCapitulo)}
+    />
+  )
+}
+
 <script>
   import { leerEstado, guardarEstado } from "../lib/estado";
+  import { rutaRelato } from "../lib/rutas";
+
+  interface RelatoDatos {
+    id: string;
+    nombre: string;
+  }
 
   const boton = document.querySelector<HTMLButtonElement>(".marcar-leido");
-  const examenCta = document.querySelector<HTMLAnchorElement>(".examen-cta");
   if (boton) {
     const relatoId = boton.dataset.relatoId ?? "";
 
     const aplicar = (leido: boolean) => {
       boton.textContent = leido ? "✓ Marcado como leído" : "Marcar relato como leído";
       boton.classList.toggle("leido", leido);
-      examenCta?.setAttribute("data-leido", String(leido));
     };
 
     aplicar(leerEstado().leidos.includes(relatoId));
@@ -240,6 +300,46 @@ const {
         guardarEstado(estado);
       }
       aplicar(true);
+      actualizarExamenCta();
     });
   }
+
+  // Gating del CTA de examen (§4.4, extendido a esta página por consistencia
+  // con c/[id].astro): visible siempre, deshabilitado hasta que TODOS los
+  // relatos escritos del capítulo dueño —no solo este— estén en `leidos`.
+  const materiaSlug = document.documentElement.dataset.materia ?? "";
+  const examenCta = document.getElementById("examen-cta");
+  const listaPendientes = document.getElementById("pendientes-examen-cta");
+  const datosEl = document.getElementById("datos-examen-cta");
+  const relatosCapitulo: RelatoDatos[] = datosEl
+    ? JSON.parse(datosEl.textContent ?? "[]")
+    : [];
+
+  function actualizarExamenCta() {
+    if (!examenCta || !listaPendientes) return;
+    const estado = leerEstado();
+    const pendientes = relatosCapitulo.filter((r) => !estado.leidos.includes(r.id));
+    listaPendientes.innerHTML = "";
+    if (pendientes.length === 0) {
+      examenCta.removeAttribute("aria-disabled");
+      examenCta.removeAttribute("tabindex");
+      return;
+    }
+    examenCta.setAttribute("aria-disabled", "true");
+    examenCta.setAttribute("tabindex", "-1");
+    for (const relato of pendientes) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = rutaRelato(materiaSlug, relato.id);
+      a.textContent = relato.nombre;
+      li.appendChild(a);
+      listaPendientes.appendChild(li);
+    }
+  }
+
+  examenCta?.addEventListener("click", (evento) => {
+    if (examenCta.getAttribute("aria-disabled") === "true") evento.preventDefault();
+  });
+
+  actualizarExamenCta();
 </script>

@@ -1,6 +1,7 @@
 import { getEntry } from "astro:content";
 import { relatosDeMateria } from "./contenidoPorMateria";
 import { conjuntoDeRelato } from "./desbloqueo";
+import type { CapituloResumen, RelatoResumen } from "./estado";
 
 export interface Capitulo {
 	id: string;
@@ -23,6 +24,9 @@ export interface Capitulo {
 	// aquí salen las tarjetas y el examen del capítulo — no se lista a mano lo
 	// que el grafo deriva, y nunca incluye nada de un relato que no existe.
 	conjunto: Set<string>;
+	// `relatosEscritos` con nombre — para la cadena de mensajes del muro (modo
+	// aventura, bloque W), sin releer `relatosDeMateria` en cada página.
+	relatosResumen: RelatoResumen[];
 }
 
 export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
@@ -66,6 +70,10 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 			if (!data) continue;
 			for (const p of conjuntoDeRelato(data)) conjunto.add(p);
 		}
+		const relatosResumen: RelatoResumen[] = relatosEscritos.map((id) => ({
+			id,
+			nombre: relatosPorId.get(id)?.nombre ?? id,
+		}));
 		return {
 			id: c.id,
 			nombre: c.nombre,
@@ -78,6 +86,7 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 			examen: c.examen,
 			activo: relatosEscritos.length > 0,
 			conjunto,
+			relatosResumen,
 		};
 	});
 
@@ -88,4 +97,30 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 	});
 
 	return capitulos;
+}
+
+// La cadena que consume `calcularEstadosCapitulos`/`entidadAccesible`
+// (estado.ts) y el muro (modo aventura, bloque W): solo capítulos activos,
+// en el mismo orden que ya determina cuál es "el activo". Barata siempre —
+// escala con el número de capítulos, no con el tamaño de sus `conjunto`.
+export function construirCadena(capitulos: Capitulo[]): CapituloResumen[] {
+	return capitulos
+		.filter((c) => c.activo)
+		.map((c) => ({ id: c.id, nombre: c.nombre, relatos: c.relatosResumen }));
+}
+
+// Los capítulos cuyo `conjunto` (o, para un relato, cuya lista de relatos
+// escritos) contienen este id — con eso decide el cliente si es accesible en
+// aventura (`entidadAccesible` en estado.ts). Vacío = no pertenece a ningún
+// capítulo declarado: nunca accesible en aventura, sea cual sea el progreso.
+export function capitulosQueDesbloquean(
+	capitulos: Capitulo[],
+	id: string,
+	kind: "entidad" | "relato",
+): string[] {
+	if (kind === "relato") {
+		const capitulo = capitulos.find((c) => c.relatosEscritos.includes(id));
+		return capitulo ? [capitulo.id] : [];
+	}
+	return capitulos.filter((c) => c.conjunto.has(id)).map((c) => c.id);
 }

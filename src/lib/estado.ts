@@ -129,9 +129,18 @@ export function exportarEstado(): void {
 	URL.revokeObjectURL(url);
 }
 
+export interface RelatoResumen {
+	id: string;
+	nombre: string;
+}
+
+// Relatos YA ESCRITOS del capítulo, con nombre — los previstos sin escribir
+// no tienen página que enlazar y nunca pueden aparecer en `leidos`, así que
+// no entran en el cálculo de estado ni en los mensajes del muro (bloque W).
 export interface CapituloResumen {
 	id: string;
-	relatos: string[];
+	nombre: string;
+	relatos: RelatoResumen[];
 }
 
 // "Cerrado" desaparece del vocabulario visible (bloque V, plan de
@@ -166,11 +175,59 @@ export function calcularEstadosCapitulos(
 			resultado[capitulo.id] = "bloqueado";
 			continue;
 		}
-		const algoLeido = capitulo.relatos.some((r) => estado.leidos.includes(r));
+		const algoLeido = capitulo.relatos.some((r) =>
+			estado.leidos.includes(r.id),
+		);
 		resultado[capitulo.id] = algoLeido ? "en-curso" : "abierto";
 		activoAsignado = true;
 	}
 	return resultado;
+}
+
+// El capítulo activo es el único "abierto" o "en-curso" que devuelve
+// `calcularEstadosCapitulos` — el resto está superado (por delante) o
+// bloqueado (por detrás). Modo aventura, bloque W: es el capítulo al que
+// apunta siempre el mensaje del muro (§4.3), nunca al intermedio bloqueado
+// que el usuario intentó visitar.
+export function capituloActivoId(
+	cadena: CapituloResumen[],
+	estado: EstadoV1,
+): string | undefined {
+	const estados = calcularEstadosCapitulos(cadena, estado);
+	return cadena.find(
+		(c) => estados[c.id] === "abierto" || estados[c.id] === "en-curso",
+	)?.id;
+}
+
+const ESTADOS_ACCESIBLES = new Set<EstadoVisualCapitulo>([
+	"abierto",
+	"en-curso",
+	"superado",
+]);
+
+// Una entidad o un relato es accesible en aventura si al menos uno de los
+// capítulos que lo contienen —su `conjunto`, o el capítulo que lo declara si
+// es un relato (`capitulosQueDesbloquean` en lib/capitulos.ts resuelve cuál
+// aplica)— no está bloqueado. Lista vacía = no pertenece a ningún capítulo
+// declarado: nunca accesible en aventura, sea cual sea el progreso.
+export function entidadAccesible(
+	cadena: CapituloResumen[],
+	capitulosQueDesbloquean: string[],
+	estado: EstadoV1,
+): boolean {
+	const estados = calcularEstadosCapitulos(cadena, estado);
+	return capitulosQueDesbloquean.some((id) => {
+		const visual = estados[id];
+		return visual !== undefined && ESTADOS_ACCESIBLES.has(visual);
+	});
+}
+
+// Compartido entre el interruptor global (Base.astro) y el botón "Verlo en
+// sandbox" del muro (bloque W) — antes cada uno mutaba `estado.modo` a mano.
+export function alternarModo(estado: EstadoV1): EstadoV1["modo"] {
+	estado.modo = estado.modo === "aventura" ? "sandbox" : "aventura";
+	guardarEstado(estado);
+	return estado.modo;
 }
 
 export async function importarEstado(

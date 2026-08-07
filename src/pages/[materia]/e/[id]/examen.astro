@@ -1,6 +1,12 @@
 ---
 import { getCollection } from "astro:content";
+import Muro from "../../../../components/Muro.astro";
 import Base from "../../../../layouts/Base.astro";
+import {
+	capitulosQueDesbloquean,
+	cargarCapitulos,
+	construirCadena,
+} from "../../../../lib/capitulos";
 import { entidadesDeMateria } from "../../../../lib/contenidoPorMateria";
 import type { PreguntaMixta } from "../../../../lib/examenMixtoCliente";
 import { construirGrafo, obtenerEntidad } from "../../../../lib/grafo";
@@ -70,9 +76,16 @@ const preguntas: PreguntaMixta[] = [
 // añadan relaciones y atributos): una tanda fija de como mucho 15, con el
 // mismo criterio de 80% que ya usan los capítulos.
 const UMBRAL = { aciertos: 12, de: 15 };
+
+// Muro de aventura (bloque W): el examen de personaje lo desbloquea
+// cualquier capítulo cuyo conjunto contenga a esta entidad.
+const capitulos = await cargarCapitulos(materiaId);
+const cadena = construirCadena(capitulos);
+const desbloqueadoPor = capitulosQueDesbloquean(capitulos, id, "entidad");
 ---
 
 <Base titulo={`Examen — ${entidad.nombre}`} materiaSlug={materia}>
+  <Muro cadena={cadena} capitulosQueDesbloquean={desbloqueadoPor} materiaSlug={materia}>
   <article class="examen">
     <header class="cabecera-juego">
       <a class="salir" href={rutaEntidad(materia, id)}>&lsaquo; Salir</a>
@@ -89,6 +102,7 @@ const UMBRAL = { aciertos: 12, de: 15 };
       para un examen. Vuelve cuando tenga más contenido.
     </p>
   </article>
+  </Muro>
 
   <script
     is:inline

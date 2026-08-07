@@ -1,8 +1,9 @@
 ---
 import { getCollection } from "astro:content";
 import Casilla from "../../../components/Casilla.astro";
+import Muro from "../../../components/Muro.astro";
 import Base from "../../../layouts/Base.astro";
-import { cargarCapitulos } from "../../../lib/capitulos";
+import { cargarCapitulos, construirCadena } from "../../../lib/capitulos";
 import { relatosDeMateria } from "../../../lib/contenidoPorMateria";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
 import { resolverRetrato } from "../../../lib/retrato";
@@ -65,9 +66,14 @@ const relatos = capitulo.relatos.map((rid) => {
 });
 
 const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
+
+// Muro de aventura (bloque W): esta página solo enseña ESTE capítulo, así
+// que solo su propio id puede desbloquearla.
+const cadena = construirCadena(capitulos);
 ---
 
 <Base titulo={capitulo.nombre} materiaSlug={materia}>
+  <Muro cadena={cadena} capitulosQueDesbloquean={[capitulo.id]} materiaSlug={materia}>
   <article class="pagina-capitulo">
     <div class="cabecera-lista">
       <h1 class="titulo-lista">{capitulo.nombre}</h1>
@@ -119,7 +125,19 @@ const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
       <p class="examen-umbral">
         Aprueba con {capitulo.examen.aciertos} de {capitulo.examen.de}.
       </p>
-      <a class="boton-examen" href={rutaExamen(materia, capitulo.id)}>Empezar el examen</a>
+      <a
+        class="boton-examen"
+        id="boton-examen"
+        href={rutaExamen(materia, capitulo.id)}
+        aria-disabled="true"
+        tabindex="-1"
+      >
+        Empezar el examen
+      </a>
+      <p id="examen-pendiente-texto" class="examen-pendiente-texto" hidden>
+        Lee lo que falta para desbloquear el examen:
+      </p>
+      <ul id="pendientes-examen" class="pendientes-examen" />
     </div>
 
     <div id="bloque-practicar" class="tarjeta-examen" hidden>
@@ -133,27 +151,62 @@ const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
 
     <p class="salir"><a href={rutaMateria(materia)}>&larr; Volver</a></p>
   </article>
+  </Muro>
 
   <script
     is:inline
     type="application/json"
     id="datos-relatos"
-    set:html={JSON.stringify(capitulo.relatos)}
+    set:html={JSON.stringify(capitulo.relatosResumen)}
   />
 
   <script>
     import { leerEstado } from "../../../lib/estado";
+    import { rutaRelato } from "../../../lib/rutas";
 
+    interface RelatoDatos {
+      id: string;
+      nombre: string;
+    }
+
+    const materiaSlug = document.documentElement.dataset.materia ?? "";
     const datosEl = document.getElementById("datos-relatos");
-    const relatoIds: string[] = datosEl ? JSON.parse(datosEl.textContent ?? "[]") : [];
+    const relatosCapitulo: RelatoDatos[] = datosEl
+      ? JSON.parse(datosEl.textContent ?? "[]")
+      : [];
     const estado = leerEstado();
 
-    for (const relatoId of relatoIds) {
-      const fila = document.querySelector(`[data-relato="${relatoId}"]`);
+    for (const relato of relatosCapitulo) {
+      const fila = document.querySelector(`[data-relato="${relato.id}"]`);
       const el = fila?.querySelector(".estado-relato");
-      const leido = estado.leidos.includes(relatoId);
+      const leido = estado.leidos.includes(relato.id);
       if (el) el.textContent = leido ? "Leído" : "";
       if (fila instanceof HTMLElement) fila.dataset.leido = String(leido);
+    }
+
+    // Examen deshabilitado sin lectura completa (§4.4): visible siempre,
+    // nunca oculto — solo se desbloquea cuando TODOS los relatos escritos del
+    // capítulo están en `leidos`. Los previstos sin escribir no cuentan: no
+    // tienen página que enlazar y nunca podrán estar en `leidos`.
+    const pendientes = relatosCapitulo.filter((r) => !estado.leidos.includes(r.id));
+    const botonExamen = document.getElementById("boton-examen");
+    const listaPendientes = document.getElementById("pendientes-examen");
+    if (pendientes.length === 0) {
+      botonExamen?.removeAttribute("aria-disabled");
+      botonExamen?.removeAttribute("tabindex");
+    } else {
+      document.getElementById("examen-pendiente-texto")?.removeAttribute("hidden");
+      for (const relato of pendientes) {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = rutaRelato(materiaSlug, relato.id);
+        a.textContent = relato.nombre;
+        li.appendChild(a);
+        listaPendientes?.appendChild(li);
+      }
+      botonExamen?.addEventListener("click", (evento) => {
+        if (botonExamen.getAttribute("aria-disabled") === "true") evento.preventDefault();
+      });
     }
 
     // Sandbox diferencial (plan de gamificación §5): el examen no existe en
@@ -296,6 +349,35 @@ const tarjetas = await generarTarjetas(materiaId, capitulo.conjunto);
     font-size: 15px;
     font-weight: 700;
     text-align: center;
+    text-decoration: none;
+  }
+
+  .boton-examen[aria-disabled="true"] {
+    background: var(--color-tarjeta-borde);
+    color: var(--color-texto-muted);
+    cursor: not-allowed;
+  }
+
+  .examen-pendiente-texto {
+    margin: 10px 0 4px;
+    font-size: 13px;
+    color: var(--color-texto-muted);
+  }
+
+  .pendientes-examen {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pendientes-examen li {
+    padding: 4px 0;
+  }
+
+  .pendientes-examen a {
+    color: var(--color-acento);
+    font-size: 14px;
+    font-weight: 600;
     text-decoration: none;
   }
 

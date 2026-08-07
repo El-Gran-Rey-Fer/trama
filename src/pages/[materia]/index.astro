@@ -19,21 +19,6 @@ const materiaEntry = await getEntry("materias", materiaId);
 const eras = materiaEntry?.data.eras ?? [];
 const capitulos = await cargarCapitulos(materiaId);
 const activos = capitulos.filter((c) => c.activo);
-// El recuento de contenido (sandbox, plan de gamificación §5) se calcula aquí
-// —en build, no en cliente— y viaja en el mismo JSON que ya usaba el
-// vocabulario de aventura: mismo patrón que examen.astro:37 con
-// `generarTarjetas`.
-const datosCapitulos = await Promise.all(
-	activos.map(async (c) => ({
-		id: c.id,
-		relatos: c.relatos,
-		recuento: {
-			relatos: c.relatosEscritos.length,
-			entidades: c.conjunto.size,
-			tarjetas: (await generarTarjetas(materiaId, c.conjunto)).length,
-		},
-	})),
-);
 // era.posición sobre todos los capítulos, activos o no: la numeración ya
 // refleja su lugar real en el mapa desde el primer día, y activar uno no
 // corre la de los demás — el hueco ya estaba contado.
@@ -44,11 +29,41 @@ eras.forEach((era, indiceEra) => {
 		numeroPorCapitulo.set(c.id, `${indiceEra + 1}.${indiceCapitulo + 1}`);
 	});
 });
+// El recuento de contenido (sandbox, plan de gamificación §5) se calcula aquí
+// —en build, no en cliente— y viaja en el mismo JSON que ya usaba el
+// vocabulario de aventura: mismo patrón que examen.astro:37 con
+// `generarTarjetas`. `numero` (era.posición) viaja también, para el módulo
+// de continuación (§6) — sin recalcularlo en cliente.
+const datosCapitulos = await Promise.all(
+	activos.map(async (c) => ({
+		id: c.id,
+		nombre: c.nombre,
+		numero: numeroPorCapitulo.get(c.id) ?? "",
+		relatos: c.relatosResumen,
+		recuento: {
+			relatos: c.relatosEscritos.length,
+			entidades: c.conjunto.size,
+			tarjetas: (await generarTarjetas(materiaId, c.conjunto)).length,
+		},
+	})),
+);
 
 const nombreMateria = materiaEntry?.data.nombre ?? materia;
 ---
 
 <Base titulo={`${nombreMateria} — modo aventura`} materiaSlug={materia}>
+  <section id="continua" class="seccion-continua" hidden>
+    <p class="continua-etiqueta">Continúa</p>
+    <a id="continua-enlace" class="continua-fila" href="#">
+      <span class="continua-texto">
+        <span id="continua-numero" class="continua-numero"></span>
+        <span id="continua-nombre" class="continua-nombre"></span>
+        <span id="continua-detalle" class="continua-detalle"></span>
+      </span>
+      <span class="continua-boton">Seguir &rarr;</span>
+    </a>
+  </section>
+
   <section id="capitulos" class="seccion-leer">
     <div class="cabecera-lista">
       <h1 class="titulo-lista">{nombreMateria}</h1>
@@ -112,6 +127,7 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
       leerEstado,
       type CapituloResumen,
     } from "../../lib/estado";
+    import { calcularPasoAccionable } from "../../lib/muroCliente";
 
     const ETIQUETA = {
       bloqueado: "Bloqueado",
@@ -126,6 +142,7 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
       tarjetas: number;
     }
     interface DatosCapitulo extends CapituloResumen {
+      numero: string;
       recuento: RecuentoCapitulo;
     }
 
@@ -149,6 +166,7 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
       ? JSON.parse(datosCapitulosEl.textContent ?? "[]")
       : [];
     const estado = leerEstado();
+    const materiaSlug = document.documentElement.dataset.materia ?? "";
 
     if (estado.modo === "sandbox") {
       for (const c of capitulos) {
@@ -166,11 +184,74 @@ const nombreMateria = materiaEntry?.data.nombre ?? materia;
           fila.dataset.estadoCapitulo = estadoCapitulo;
         }
       }
+
+      // Módulo de continuación (§6): solo en aventura, y solo si queda algún
+      // paso pendiente — reutiliza el mismo cálculo que el muro (§4.3), cero
+      // lógica duplicada.
+      const paso = calcularPasoAccionable(capitulos, estado, materiaSlug);
+      if (paso) {
+        const numero = capitulos.find((c) => c.id === paso.capituloId)?.numero ?? "";
+        document.getElementById("continua-numero")!.textContent = numero ? `${numero} · ` : "";
+        document.getElementById("continua-nombre")!.textContent = paso.capituloNombre;
+        document.getElementById("continua-detalle")!.textContent = ` — ${paso.detalle}`;
+        const enlace = document.getElementById("continua-enlace");
+        if (enlace instanceof HTMLAnchorElement) enlace.href = paso.hrefAccion;
+        document.getElementById("continua")?.removeAttribute("hidden");
+      }
     }
   </script>
 </Base>
 
 <style>
+  .seccion-continua {
+    margin: 16px 20px 0;
+  }
+
+  .continua-etiqueta {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-texto-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .continua-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: var(--color-tarjeta-fondo);
+    color: var(--color-texto);
+    text-decoration: none;
+  }
+
+  .continua-texto {
+    display: block;
+    font-size: 15px;
+  }
+
+  .continua-numero,
+  .continua-nombre {
+    font-weight: 700;
+    font-family: var(--fuente-titulo);
+  }
+
+  .continua-detalle {
+    color: var(--color-texto-muted);
+  }
+
+  .continua-boton {
+    flex: 0 0 auto;
+    color: var(--color-acento);
+    font-family: var(--fuente-titulo);
+    font-weight: 700;
+    font-size: 14px;
+  }
+
   .cabecera-lista {
     padding: 20px 20px 4px;
   }
