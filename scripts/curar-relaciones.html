@@ -116,6 +116,19 @@
   }
   .fila input, .fila select { flex: 1; min-width: 120px; }
   .fila.checkbox label { width: auto; }
+  .etiquetas-grupo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 6px 0;
+  }
+  .etiquetas-grupo label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #aaa;
+  }
   .sugerencia {
     display: flex;
     justify-content: space-between;
@@ -332,6 +345,17 @@
             <label>resumen</label>
             <input name="resumen" placeholder="opcional, PENDIENTE si se omite" />
           </div>
+          <div class="fila">
+            <label>etiquetas</label>
+            <div class="etiquetas-grupo">
+              ${(relatoActual.etiquetas ?? [])
+                .map(
+                  (e) =>
+                    `<label><input type="checkbox" name="etiquetas" value="${e}" />${e}</label>`,
+                )
+                .join("")}
+            </div>
+          </div>
           <button class="primario" type="submit">Dar de alta</button>
         </form>
       `;
@@ -339,7 +363,13 @@
 
       div.querySelector("form").addEventListener("submit", async (ev) => {
         ev.preventDefault();
-        const datos = Object.fromEntries(new FormData(ev.target));
+        const formData = new FormData(ev.target);
+        const datos = {
+          nombre: formData.get("nombre"),
+          tipo: formData.get("tipo"),
+          resumen: formData.get("resumen"),
+          etiquetas: formData.getAll("etiquetas"),
+        };
         try {
           await api("/api/entidad", {
             method: "POST",

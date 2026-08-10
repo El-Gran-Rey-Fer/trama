@@ -94,6 +94,10 @@ function cargarTipos() {
 	return cargarMateria().tipos ?? [];
 }
 
+function cargarEtiquetas() {
+	return cargarMateria().etiquetas ?? [];
+}
+
 function indexarEntidades() {
 	const indice = new Map();
 	for (const ruta of listarYaml(CARPETA_ENTIDADES)) {
@@ -152,8 +156,12 @@ function nombrePropuestoDesdeId(id) {
 	].join(" ");
 }
 
-function construirYamlEntidad({ id, tipo, nombre, resumen }) {
-	return `id: ${id}\ntipo: ${tipo}\nnombre: ${nombre}\nresumen: ${resumen}\n`;
+function construirYamlEntidad({ id, tipo, nombre, resumen, etiquetas }) {
+	let yaml = `id: ${id}\ntipo: ${tipo}\nnombre: ${nombre}\nresumen: ${resumen}\n`;
+	if (etiquetas && etiquetas.length > 0) {
+		yaml += `etiquetas: [${etiquetas.join(", ")}]\n`;
+	}
+	return yaml;
 }
 
 // Fase 0: da de alta, una por una, las entidades citadas por el relato que
@@ -167,6 +175,7 @@ async function altaDeEntidadesFaltantes(idsCitados, entidades, idsRelatos, rl) {
 	if (faltantes.length === 0) return;
 
 	const tipos = cargarTipos();
+	const etiquetasDisponibles = cargarEtiquetas();
 	console.log(
 		`\nEntidades citadas en el relato sin YAML propio: ${faltantes.join(", ")}\n`,
 	);
@@ -202,8 +211,30 @@ async function altaDeEntidadesFaltantes(idsCitados, entidades, idsRelatos, rl) {
 				await rl.question("  resumen (opcional, enter para PENDIENTE): ")
 			).trim() || "PENDIENTE";
 
+		console.log(
+			`  etiquetas — ${etiquetasDisponibles.map((e, i) => `${i + 1}) ${e}`).join(", ")}`,
+		);
+		const respuestaEtiquetas = (
+			await rl.question(
+				"  elige números separados por coma (opcional, enter para ninguna): ",
+			)
+		).trim();
+		const etiquetas = respuestaEtiquetas
+			? respuestaEtiquetas
+					.split(",")
+					.map((s) => s.trim())
+					.filter(Boolean)
+					.map((s) => etiquetasDisponibles[Number(s) - 1] ?? s)
+					.filter((e) => {
+						const valida = etiquetasDisponibles.includes(e);
+						if (!valida)
+							console.log(`  "${e}" no es una etiqueta válida, se descarta.`);
+						return valida;
+					})
+			: [];
+
 		const ruta = path.join(CARPETA_ENTIDADES, tipo, `${id}.yaml`);
-		const datos = { id, tipo, nombre, resumen };
+		const datos = { id, tipo, nombre, resumen, etiquetas };
 		mkdirSync(path.dirname(ruta), { recursive: true });
 		writeFileSync(ruta, construirYamlEntidad(datos));
 		entidades.set(id, { ruta, datos });

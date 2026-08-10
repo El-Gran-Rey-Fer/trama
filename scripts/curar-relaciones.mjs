@@ -160,8 +160,12 @@ function sugerirPorLectura(cuerpo, idsCitados, entidades, registro) {
 	return sugerencias;
 }
 
-function construirYamlEntidad({ id, tipo, nombre, resumen }) {
-	return `id: ${id}\ntipo: ${tipo}\nnombre: ${nombre}\nresumen: ${resumen}\n`;
+function construirYamlEntidad({ id, tipo, nombre, resumen, etiquetas }) {
+	let yaml = `id: ${id}\ntipo: ${tipo}\nnombre: ${nombre}\nresumen: ${resumen}\n`;
+	if (etiquetas && etiquetas.length > 0) {
+		yaml += `etiquetas: [${etiquetas.join(", ")}]\n`;
+	}
+	return yaml;
 }
 
 // Misma corrección que en relaciones-de-relato.mjs: `doc.set(k, [])` guarda
@@ -258,6 +262,7 @@ function analizarRelato(id) {
 		tipos: materia.tipos ?? [],
 		tiposRelacion: Object.keys(registro),
 		fuentes: Object.keys(materia.fuentes ?? {}),
+		etiquetas: materia.etiquetas ?? [],
 		idsConocidos: [...entidades.keys(), ...idsRelatos].sort((a, b) =>
 			a.localeCompare(b, "es"),
 		),
@@ -301,6 +306,9 @@ async function manejarAltaEntidad(req, res) {
 	const nombre = String(cuerpo.nombre || "").trim();
 	const tipo = String(cuerpo.tipo || "").trim();
 	const resumen = String(cuerpo.resumen || "").trim() || "PENDIENTE";
+	const etiquetas = Array.isArray(cuerpo.etiquetas)
+		? cuerpo.etiquetas.map((e) => String(e).trim()).filter(Boolean)
+		: [];
 
 	if (!ID_VALIDO.test(id))
 		return responderJson(res, 400, {
@@ -308,10 +316,20 @@ async function manejarAltaEntidad(req, res) {
 		});
 	if (!nombre) return responderJson(res, 400, { error: "falta nombre" });
 
-	const tipos = cargarMateria().tipos ?? [];
+	const materia = cargarMateria();
+	const tipos = materia.tipos ?? [];
 	if (!tipos.includes(tipo))
 		return responderJson(res, 400, {
 			error: `tipo "${tipo}" no está en materia.yaml`,
+		});
+
+	const etiquetasValidas = new Set(materia.etiquetas ?? []);
+	const etiquetasDesconocidas = etiquetas.filter(
+		(e) => !etiquetasValidas.has(e),
+	);
+	if (etiquetasDesconocidas.length > 0)
+		return responderJson(res, 400, {
+			error: `etiqueta(s) desconocida(s): ${etiquetasDesconocidas.join(", ")}`,
 		});
 
 	const entidades = indexarEntidades();
@@ -321,7 +339,10 @@ async function manejarAltaEntidad(req, res) {
 
 	const ruta = path.join(CARPETA_ENTIDADES, tipo, `${id}.yaml`);
 	mkdirSync(path.dirname(ruta), { recursive: true });
-	writeFileSync(ruta, construirYamlEntidad({ id, tipo, nombre, resumen }));
+	writeFileSync(
+		ruta,
+		construirYamlEntidad({ id, tipo, nombre, resumen, etiquetas }),
+	);
 	responderJson(res, 200, { ok: true, ruta: relativa(ruta) });
 }
 
