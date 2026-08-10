@@ -11,6 +11,39 @@ relaciones:
   - tipo: padre_de
     destino: crono
     fuente: teogonia
+  - tipo: padre_de
+    destino: oceano
+    fuente: teogonia
+  - tipo: padre_de
+    destino: ceo
+    fuente: teogonia
+  - tipo: padre_de
+    destino: crio
+    fuente: teogonia
+  - tipo: padre_de
+    destino: hiperion
+    fuente: teogonia
+  - tipo: padre_de
+    destino: japeto
+    fuente: teogonia
+  - tipo: padre_de
+    destino: tea
+    fuente: teogonia
+  - tipo: padre_de
+    destino: rea
+    fuente: teogonia
+  - tipo: padre_de
+    destino: temis
+    fuente: teogonia
+  - tipo: padre_de
+    destino: mnemosine
+    fuente: teogonia
+  - tipo: padre_de
+    destino: febe
+    fuente: teogonia
+  - tipo: padre_de
+    destino: tetis-titanide
+    fuente: teogonia
   - tipo: encierra_a
     destino: titanes
   - tipo: encierra_a

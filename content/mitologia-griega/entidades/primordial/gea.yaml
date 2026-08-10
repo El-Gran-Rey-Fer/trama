@@ -14,6 +14,39 @@ relaciones:
   - tipo: madre_de
     destino: crono
     fuente: teogonia
+  - tipo: madre_de
+    destino: oceano
+    fuente: teogonia
+  - tipo: madre_de
+    destino: ceo
+    fuente: teogonia
+  - tipo: madre_de
+    destino: crio
+    fuente: teogonia
+  - tipo: madre_de
+    destino: hiperion
+    fuente: teogonia
+  - tipo: madre_de
+    destino: japeto
+    fuente: teogonia
+  - tipo: madre_de
+    destino: tea
+    fuente: teogonia
+  - tipo: madre_de
+    destino: rea
+    fuente: teogonia
+  - tipo: madre_de
+    destino: temis
+    fuente: teogonia
+  - tipo: madre_de
+    destino: mnemosine
+    fuente: teogonia
+  - tipo: madre_de
+    destino: febe
+    fuente: teogonia
+  - tipo: madre_de
+    destino: tetis-titanide
+    fuente: teogonia
   - tipo: consorte_de
     destino: urano
   - tipo: forja
@@ -24,3 +57,7 @@ relaciones:
   - tipo: madre_de
     destino: tartaro
     fuente: teogonia
+  - tipo: madre_de
+    destino: equidna
+    fuente: biblioteca
+    principal: false

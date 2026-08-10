@@ -16,8 +16,12 @@ interface Props {
 	// Sin materiaSlug (p. ej. portada de trama, selector de materias) no hay
 	// tab bar: no hay "Leer/Álbum/Practicar/Ajustes" de qué materia.
 	materiaSlug?: string;
+	// El ancho máximo de `.contenido` (880px en escritorio) es para prosa
+	// legible; páginas como el grafo no leen, exploran un lienzo, y ese tope
+	// solo fuerza scroll antes de tiempo. Los relatos y fichas no lo activan.
+	anchoCompleto?: boolean;
 }
-const { titulo, materiaSlug } = Astro.props;
+const { titulo, materiaSlug, anchoCompleto = false } = Astro.props;
 
 // `estado.ts` namespacea localStorage por materia leyendo este atributo del
 // DOM (bloque V) — así su API (`leerEstado()`, etc.) no necesita recibir la
@@ -134,7 +138,7 @@ function activa(id: string, href: string): boolean {
           Modo: <span class="valor-modo">aventura</span>
         </button>
       </header>
-      <main class="contenido">
+      <main class:list={["contenido", { "contenido-ancho-completo": anchoCompleto }]}>
         <slot />
       </main>
       <div id="minifichas"></div>
@@ -314,6 +318,10 @@ function activa(id: string, href: string): boolean {
       max-width: 880px;
       margin: 0 auto;
       padding: 0 40px;
+    }
+
+    .contenido.contenido-ancho-completo {
+      max-width: none;
     }
   }
 </style>

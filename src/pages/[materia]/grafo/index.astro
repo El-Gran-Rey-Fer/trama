@@ -31,10 +31,12 @@ const retratos = new Map(
 		return [n.id, e ? resolverRetrato(grafo, e) : undefined];
 	}),
 );
-const posiciones = new Map((vista?.nodos ?? []).map((n) => [n.id, n]));
+const posiciones = new Map(
+	[...(vista?.nodos ?? []), ...(vista?.uniones ?? [])].map((n) => [n.id, n]),
+);
 ---
 
-<Base titulo={`Árbol — ${materia}`} materiaSlug={materia}>
+<Base titulo={`Árbol — ${materia}`} materiaSlug={materia} anchoCompleto>
   <article class="grafo-pagina">
     <header class="cabecera-juego">
       <h1>Árbol genealógico</h1>
@@ -80,6 +82,9 @@ const posiciones = new Map((vista?.nodos ?? []).map((n) => [n.id, n]));
                   />
                 );
               })}
+              {vista.uniones.map((u) => (
+                <circle class="union" cx={u.x} cy={u.y} r="3.5" />
+              ))}
             </svg>
             {vista.nodos.map((n) => (
               <div class="nodo" style={`left:${n.x}px; top:${n.y}px`}>
@@ -164,6 +169,12 @@ const posiciones = new Map((vista?.nodos ?? []).map((n) => [n.id, n]));
 
   .enlaces line {
     stroke-width: 2;
+  }
+
+  .enlaces circle.union {
+    fill: var(--color-fondo-pantalla);
+    stroke: var(--color-tarjeta-borde);
+    stroke-width: 1.5;
   }
 
   .nodo {
