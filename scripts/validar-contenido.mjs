@@ -132,6 +132,13 @@ function validarNodo(doc, rutaAbsoluta, registro, idsConocidos) {
 	}
 
 	for (const [i, relacion] of (datos.relaciones ?? []).entries()) {
+		if (relacion.tipo === "hermano_de") {
+			error(
+				rutaAbsoluta,
+				linea(["relaciones", i, "tipo"]),
+				`"hermano_de" ya no se declara a mano: se deriva de la filiación (padre_de/madre_de/hijo_de) en construirGrafo (src/lib/grafo.ts)`,
+			);
+		}
 		if (!idsConocidos.has(relacion.destino)) {
 			error(
 				rutaAbsoluta,

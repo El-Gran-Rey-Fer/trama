@@ -11,7 +11,6 @@ atributos:
   dominio: el inframundo y los muertos
   culto: escaso; pocos templos dedicados
   equivalente_romano: Plutón
-# hermano_de con poseidón llega por inversa
 relaciones:
   - tipo: rapta_a
     destino: persefone

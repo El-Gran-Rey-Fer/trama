@@ -14,5 +14,5 @@ atributos:
 relaciones:
   - tipo: consorte_de
     destino: zeus
-  - tipo: hermano_de
-    destino: zeus
+  - tipo: habita
+    destino: monte-olimpo

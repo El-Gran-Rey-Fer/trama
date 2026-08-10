@@ -1,11 +1,16 @@
 import { hierarchy, tree } from "d3-hierarchy";
-import { type Entidad, type Grafo, obtenerEntidad } from "./grafo";
+import {
+	type Entidad,
+	type Grafo,
+	obtenerEntidad,
+	TIPOS_GENEALOGIA,
+} from "./grafo";
 
-// Plan de imágenes y álbum, paso A7. Igual que `ocurre_en`/`participa_en` en
-// grafo.ts, estos son nombres de vocabulario del esquema (tipos de
-// relación), no entidades concretas: hardcodearlos aquí no rompe la regla
-// invariante.
-export const TIPOS_GENEALOGIA = ["padre_de", "madre_de", "hijo_de"];
+// Vive en grafo.ts (la usa también su pasada de hermandad derivada);
+// reexportada aquí porque grafoCompleto.ts, juegoArbol.ts y
+// FichaEntidad.astro ya la importan de este fichero.
+export { TIPOS_GENEALOGIA };
+
 const TIPOS_ASCENDENCIA = ["hijo_de"];
 const TIPOS_DESCENDENCIA = ["padre_de", "madre_de"];
 

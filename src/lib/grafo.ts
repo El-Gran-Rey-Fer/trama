@@ -90,6 +90,12 @@ function claveArista(tipo: string, destino: string): string {
 	return `${tipo}:${destino}`;
 }
 
+// Plan de imágenes y álbum, paso A7 / bloque "hermandad derivada". Igual que
+// `ocurre_en`/`participa_en` más abajo en este fichero, son nombres de
+// vocabulario del esquema (tipos de relación), no entidades concretas:
+// hardcodearlos aquí no rompe la regla de neutralidad de `src/`.
+export const TIPOS_GENEALOGIA = ["padre_de", "madre_de", "hijo_de"];
+
 export async function construirGrafo(materiaId: string): Promise<Grafo> {
 	const [
 		entradasEntidades,
@@ -250,6 +256,118 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 			inferida: true,
 		});
 		clavesDestino?.add(clave);
+	}
+
+	// Pasada 3: derivar `hermano_de` de la filiación ya canónica (bloque
+	// "hermandad derivada"). Criterio: al menos un progenitor en común, salvo
+	// que una de las dos entidades sea antepasada de la otra (guarda de
+	// ascendencia — ej. Tártaro y Tifón, padre e hijo y a la vez ambos hijos
+	// de Gea). Es simétrica y su inversa es ella misma, pero la pasada 2 ya ha
+	// corrido, así que aquí hay que completar los dos sentidos a mano.
+	const hijosPorPadre = new Map<
+		string,
+		{ hijoId: string; relacion: RelacionCruda }[]
+	>();
+	const padresDeHijo = new Map<string, string[]>();
+	for (const { origenId, relacion } of aristas) {
+		if (!TIPOS_GENEALOGIA.includes(relacion.tipo)) continue;
+		const [padreId, hijoId] =
+			relacion.tipo === "hijo_de"
+				? [relacion.destino, origenId]
+				: [origenId, relacion.destino];
+		if (!hijosPorPadre.has(padreId)) hijosPorPadre.set(padreId, []);
+		hijosPorPadre.get(padreId)?.push({ hijoId, relacion });
+		if (!padresDeHijo.has(hijoId)) padresDeHijo.set(hijoId, []);
+		padresDeHijo.get(hijoId)?.push(padreId);
+	}
+
+	function esAncestro(posibleAncestro: string, id: string): boolean {
+		const pendientes = [...(padresDeHijo.get(id) ?? [])];
+		const visitados = new Set<string>();
+		while (pendientes.length > 0) {
+			const padreId = pendientes.pop();
+			if (padreId === undefined || visitados.has(padreId)) continue;
+			if (padreId === posibleAncestro) return true;
+			visitados.add(padreId);
+			pendientes.push(...(padresDeHijo.get(padreId) ?? []));
+		}
+		return false;
+	}
+
+	// Cada progenitor con dos o más hijos produce una "candidatura" de
+	// hermandad por cada par. Un par visto vía dos progenitores compartidos
+	// (ej. Equidna y Tifón, hijos de Gea y de Tártaro a la vez) se fusiona en
+	// una sola entrada en vez de duplicarse.
+	interface ParHermanos {
+		a: string;
+		b: string;
+		principalFalso: boolean;
+		fuentes: Set<string | undefined>;
+	}
+	const pares = new Map<string, ParHermanos>();
+	for (const hijos of hijosPorPadre.values()) {
+		for (let i = 0; i < hijos.length; i++) {
+			for (let j = i + 1; j < hijos.length; j++) {
+				const x = hijos[i];
+				const y = hijos[j];
+				if (x.hijoId === y.hijoId) continue;
+				const [a, b] = [x.hijoId, y.hijoId].sort();
+				const clave = `${a}|${b}`;
+				const par = pares.get(clave) ?? {
+					a,
+					b,
+					principalFalso: false,
+					fuentes: new Set<string | undefined>(),
+				};
+				// Variantes se propagan: una hermandad derivada es
+				// `principal: false` si cualquiera de las aristas de filiación
+				// que la producen lo es.
+				if (x.relacion.principal === false || y.relacion.principal === false) {
+					par.principalFalso = true;
+				}
+				par.fuentes.add(x.relacion.fuente);
+				par.fuentes.add(y.relacion.fuente);
+				pares.set(clave, par);
+			}
+		}
+	}
+
+	for (const { a, b, principalFalso, fuentes } of pares.values()) {
+		if (esAncestro(a, b) || esAncestro(b, a)) continue;
+		// Ya existe (autoría o inferida) en cualquiera de los dos sentidos: no
+		// duplicar, aunque las declaradas a mano se hayan retirado del
+		// contenido.
+		const yaExiste =
+			clavesPorEntidad.get(a)?.has(claveArista("hermano_de", b)) ||
+			clavesPorEntidad.get(b)?.has(claveArista("hermano_de", a));
+		if (yaExiste) continue;
+
+		const principal = principalFalso ? false : undefined;
+		// La fuente se propaga solo si todas las aristas de filiación que
+		// producen el par coinciden en ella; si difieren (o falta en alguna),
+		// la arista derivada queda sin fuente.
+		const fuente = fuentes.size === 1 ? [...fuentes][0] : undefined;
+
+		aristas.push({
+			origenId: a,
+			relacion: { tipo: "hermano_de", destino: b, principal, fuente },
+		});
+		entidades.get(a)?.relaciones.push({
+			tipo: "hermano_de",
+			destino: b,
+			principal,
+			fuente,
+			inferida: true,
+		});
+		entidades.get(b)?.relaciones.push({
+			tipo: "hermano_de",
+			destino: a,
+			principal,
+			fuente,
+			inferida: true,
+		});
+		clavesPorEntidad.get(a)?.add(claveArista("hermano_de", b));
+		clavesPorEntidad.get(b)?.add(claveArista("hermano_de", a));
 	}
 
 	return {

@@ -12,8 +12,6 @@ atributos:
   culto: los Juegos Ístmicos, cerca de Corinto
   equivalente_romano: Neptuno
 relaciones:
-  - tipo: hermano_de
-    destino: hades
   - tipo: castiga_a
     destino: minos
   - tipo: encierra_a

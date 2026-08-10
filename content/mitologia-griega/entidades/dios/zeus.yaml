@@ -18,14 +18,12 @@ relaciones:
     destino: atenea
   - tipo: encierra_a
     destino: titanes
-  - tipo: hermano_de
-    destino: poseidon
-  - tipo: hermano_de
-    destino: hades
   - tipo: mutila_a
     destino: tifon
     fuente: teogonia
   - tipo: encierra_a
     destino: tifon
     fuente: teogonia
+  - tipo: habita
+    destino: monte-olimpo
 retrato: jupiter-louvre-lens
