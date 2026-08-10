@@ -1,8 +1,19 @@
 id: metis
 tipo: titan
 nombre: Metis
+genero: femenino
 resumen: >
   Titánide hija de Océano, considerada la más sabia entre dioses y hombres;
   primera esposa de Zeus, que la devora estando embarazada.
 atributos:
   dominio: la sabiduría y la astucia
+relaciones:
+  - tipo: hijo_de
+    destino: oceano
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: tetis-titanide
+    fuente: teogonia
+  - tipo: consorte_de
+    destino: zeus
+    fuente: teogonia
