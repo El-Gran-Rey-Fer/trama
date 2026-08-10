@@ -1,0 +1,9 @@
+id: tridente
+tipo: objeto
+nombre: Tridente
+resumen: Arma de tres puntas forjada por los Cíclopes, con la que Poseidón
+  sacude la tierra y el mar.
+relaciones:
+  - tipo: portado_por
+    destino: poseidon
+    fuente: biblioteca

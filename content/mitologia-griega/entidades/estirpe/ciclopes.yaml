@@ -2,7 +2,8 @@ id: ciclopes
 tipo: estirpe
 nombre: Cíclopes
 resumen: >
-  Tres hijos de Urano y Gea, gigantes de un solo ojo y herreros que forjaron el rayo de Zeus.
+  Tres hijos de Urano y Gea, gigantes de un solo ojo y herreros que forjaron el
+  rayo de Zeus.
 relaciones:
   - tipo: hijo_de
     destino: urano
@@ -10,3 +11,9 @@ relaciones:
     destino: gea
   - tipo: forja
     destino: rayo
+  - tipo: forja
+    destino: tridente
+    fuente: biblioteca
+  - tipo: forja
+    destino: casco-de-hades
+    fuente: biblioteca

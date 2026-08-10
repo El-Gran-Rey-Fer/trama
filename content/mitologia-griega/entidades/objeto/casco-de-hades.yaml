@@ -1,0 +1,8 @@
+id: casco-de-hades
+tipo: objeto
+nombre: Casco de hades
+resumen: Casco forjado por los Cíclopes que vuelve invisible a quien lo lleva puesto.
+relaciones:
+  - tipo: portado_por
+    destino: hades
+    fuente: biblioteca

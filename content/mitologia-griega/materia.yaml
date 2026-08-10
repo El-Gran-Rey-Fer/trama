@@ -68,10 +68,18 @@ relaciones:
     inversa: habita
     pregunta: "¿Quién habita en {origen}?"
     pregunta_inversa: "¿Dónde habita {destino}?"
-    conjunto: true # un lugar puede tener varios habitantes (el Monte Olimpo ya tiene dos)
+    conjunto: true # un lugar puede tener varios habitantes
+    conjunto_inversa: true # y alguien puede habitar varios sitios, ver Perséfone
     pertenencia: "¿Habita {candidato} en {origen}?"
+    pertenencia_inversa: "¿Habita {destino} en {candidato}?"
   habita:
     inversa: habitado_por
+    pregunta: "¿Dónde habita {origen}?"
+    pregunta_inversa: "¿Quién habita en {destino}?"
+    conjunto: true
+    conjunto_inversa: true
+    pertenencia: "¿Habita {origen} en {candidato}?"
+    pertenencia_inversa: "¿Habita {candidato} en {destino}?"
   portado_por:
     inversa: porta
     pregunta: "¿Quién porta {origen}?"
