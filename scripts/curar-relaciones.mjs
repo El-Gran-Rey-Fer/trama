@@ -65,7 +65,7 @@ function listarMdx(carpeta) {
 
 function cargarMateria() {
 	const texto = readFileSync(FICHERO_MATERIA, "utf-8");
-	return parse(texto)["mitologia-griega"];
+	return parse(texto);
 }
 
 function indexarEntidades() {
@@ -194,7 +194,7 @@ function escribirTipoRelacion({
 }) {
 	const texto = readFileSync(FICHERO_MATERIA, "utf-8");
 	const doc = parseDocument(texto);
-	const relaciones = doc.getIn(["mitologia-griega", "relaciones"], true);
+	const relaciones = doc.get("relaciones", true);
 
 	// entre comillas dobles, como el resto de plantillas pregunta/pregunta_inversa del registro.
 	const comillas = (texto) =>

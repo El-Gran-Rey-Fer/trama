@@ -83,7 +83,7 @@ function buscarRelatoPorId(id) {
 
 function cargarMateria() {
 	const texto = readFileSync(FICHERO_MATERIA, "utf-8");
-	return parse(texto)["mitologia-griega"];
+	return parse(texto);
 }
 
 function cargarRegistroRelaciones() {

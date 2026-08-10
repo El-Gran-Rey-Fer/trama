@@ -62,14 +62,14 @@ function cargarRelatos() {
 
 function cargarMateria() {
 	const texto = readFileSync(FICHERO_MATERIA, "utf-8");
-	return { texto, datos: parse(texto)["mitologia-griega"] };
+	return { texto, datos: parse(texto) };
 }
 
 // Notas de huecos futuros: comentarios sueltos dentro del bloque `capitulos:`
 // que no son el separador decorativo de era (los que son solo rayas). No
 // intenta emparejarlos con una era concreta — son pistas, no datos.
 function extraerNotasDeCapitulos(textoMateria) {
-	const inicio = textoMateria.indexOf("\n  capitulos:");
+	const inicio = textoMateria.indexOf("\ncapitulos:");
 	if (inicio === -1) return [];
 	const bloque = textoMateria.slice(inicio);
 	return bloque
