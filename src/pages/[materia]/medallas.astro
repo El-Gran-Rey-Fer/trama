@@ -31,11 +31,16 @@ const grafo = await construirGrafo(materiaId);
 const tiposColeccionables = new Set(
 	materiaEntry?.data.tipos_coleccionables ?? [],
 );
-// Solo entidades de un tipo coleccionable: son las únicas que pueden llegar
-// a tener medalla (bloque Y, plan de gamificación §8). Una entidad de un tipo
-// no coleccionable no entra aquí aunque tenga tarjetas propias.
+const tarjetasPropias = await tarjetasPropiasColeccionables(materiaId);
+// Solo entidades de un tipo coleccionable y con tarjetas propias: son las
+// únicas que pueden llegar a tener medalla (bloque Y, plan de gamificación
+// §8). Sin tarjetas propias la medalla es inalcanzable de raíz, así que ni
+// se lista.
 const entidades = [...grafo.entidades.values()].filter(
-	(e) => e.kind === "entidad" && tiposColeccionables.has(e.tipo),
+	(e) =>
+		e.kind === "entidad" &&
+		tiposColeccionables.has(e.tipo) &&
+		(tarjetasPropias[e.id]?.length ?? 0) > 0,
 );
 
 function datosParticipante(e: (typeof entidades)[number]) {
@@ -76,7 +81,6 @@ const gruposPorTipo = tiposPresentes.map((tipo) => ({
 		.map(datosParticipante),
 }));
 
-const tarjetasPropias = await tarjetasPropiasColeccionables(materiaId);
 ---
 
 <Base titulo={`Medallas — ${nombreMateria}`} materiaSlug={materia}>
