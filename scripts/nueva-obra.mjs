@@ -5,14 +5,14 @@
 //
 // Uso: pnpm nueva-obra <url-de-commons> <id>
 //
-// Lo que la API de Commons da de forma fiable: crédito (autor + licencia),
-// origen (la propia URL) y a veces una descripción en inglés que sirve de
-// borrador de `alt`. Lo que NO da de forma fiable: autor real (a veces es un
-// museo o "desconocido"), fecha, período, soporte y museo — esos campos
-// suelen vivir en texto libre de la plantilla {{Information}} de la página,
-// no en metadatos estructurados. El script los deja marcados como
-// "PENDIENTE" en vez de inventarlos. `representa` y `foco` se dejan siempre
-// vacíos: eso es trabajo de curación, no de metadatos.
+// Mismo criterio que curar-obra.mjs: sin atributos (autor/fecha/periodo/
+// soporte/museo) — nada los lee todavía y la API de Commons rara vez los da
+// de forma fiable (suelen vivir en texto libre de la plantilla
+// {{Information}}, no en metadatos estructurados) — y sin `alt` de relleno
+// cuando Commons no trae ImageDescription: si falta, el render cae solo al
+// nombre de la entidad. Ningún campo lleva placeholder "PENDIENTE": un valor
+// que no se tiene, se omite. `representa` y `foco` se dejan siempre vacíos:
+// eso es trabajo de curación, no de metadatos.
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -31,6 +31,21 @@ function quitarEtiquetasHtml(texto) {
 		.replace(/&nbsp;/g, " ")
 		.replace(/\s+/g, " ")
 		.trim();
+}
+
+// Igual que en curar-obra.mjs: sin parser de YAML, así que cualquier valor
+// que pueda traer Commons (un `:` en una descripción, comillas en un nombre
+// de autor…) se escapa a mano antes de escribirlo.
+function escaparEscalar(valor) {
+	const texto = String(valor ?? "");
+	const necesitaComillas =
+		texto === "" ||
+		texto.trim() !== texto ||
+		/^[-?:!&*[\]{}|>'"%@`#]/.test(texto) ||
+		texto.includes(": ") ||
+		texto.includes(" #");
+	if (!necesitaComillas) return texto;
+	return `"${texto.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
 function tituloDesdeUrl(url) {
@@ -86,27 +101,23 @@ async function descargarImagen(url, rutaDestino) {
 	await writeFile(rutaDestino, buffer);
 }
 
-function construirYaml({ id, nombre, extension, credito, origen, alt, autor }) {
+function construirYaml({ id, nombre, extension, credito, origen, alt }) {
 	const lineas = [
 		`id: ${id}`,
 		"tipo: obra",
-		`nombre: ${nombre}`,
-		"atributos:",
-		`  autor: ${autor ?? "desconocido"}`,
-		"  fecha: PENDIENTE",
-		"  periodo: PENDIENTE",
-		"  soporte: PENDIENTE",
-		"  museo: PENDIENTE",
+		`nombre: ${escaparEscalar(nombre)}`,
 		"imagen:",
 		`  archivo: /img/gr/obras/${id}.${extension}`,
-		`  credito: "${credito ?? "PENDIENTE: revisar autor/licencia"}"`,
-		`  origen: ${origen}`,
-		`  alt: ${alt ?? "PENDIENTE: describe la imagen"}`,
+	];
+	if (credito) lineas.push(`  credito: ${escaparEscalar(credito)}`);
+	lineas.push(`  origen: ${origen}`);
+	if (alt) lineas.push(`  alt: ${escaparEscalar(alt)}`);
+	lineas.push(
 		"# PENDIENTE: relaciones: representa (+ foco donde sirva de retrato).",
 		"# Ver plan-imagenes-y-album.md §3.1/§3.2. No se deja `relaciones:` vacío",
 		"# a propósito: una clave sin valor puede parsear como objeto, no como",
 		"# ausente, y el schema espera un array.",
-	];
+	);
 	return `${lineas.join("\n")}\n`;
 }
 
@@ -126,7 +137,12 @@ async function main() {
 	const creditoBruto = valor(meta, "Credit");
 	const descripcion = valor(meta, "ImageDescription");
 
-	const extension = (info.url?.split(".").pop() || "jpg").toLowerCase();
+	// path.extname sobre el pathname (no sobre la URL entera): la API de
+	// Commons devuelve el fichero con parámetros de tracking en la query
+	// (?utm_campaign=imageinfo&utm_content=original), y un simple
+	// url.split(".").pop() los cuela como si fueran la extensión.
+	const extension =
+		path.extname(new URL(info.url).pathname).slice(1).toLowerCase() || "jpg";
 	const nombrePropuesto = titulo
 		.replace(/^File:/, "")
 		.replace(/\.[a-zA-Z]+$/, "")
@@ -148,7 +164,6 @@ async function main() {
 		credito,
 		origen: info.descriptionurl ?? urlEntrada,
 		alt: descripcion,
-		autor: artista,
 	});
 
 	const rutaYaml = path.join(CARPETA_ENTIDADES_OBRAS, `${id}.yaml`);
@@ -157,7 +172,7 @@ async function main() {
 	console.log(`Imagen descargada en ${path.relative(RAIZ, rutaImagen)}`);
 	console.log(`YAML escrito en ${path.relative(RAIZ, rutaYaml)}`);
 	console.log(
-		"Quedan a mano: autor/fecha/periodo/soporte/museo, alt final, y representa + foco.",
+		"Quedan a mano: alt final (si Commons no lo dio) y representa + foco.",
 	);
 }
 
