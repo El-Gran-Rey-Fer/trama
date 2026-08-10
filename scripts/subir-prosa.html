@@ -116,6 +116,17 @@
   }
   .fila input, .fila select { flex: 1; min-width: 120px; }
   .fila.checkbox label { width: auto; }
+  input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    flex: none;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    accent-color: #4a7dff;
+  }
   .etiquetas-grupo {
     display: flex;
     flex-wrap: wrap;
@@ -398,6 +409,10 @@
             <label>resumen</label>
             <input name="resumen" placeholder="opcional, PENDIENTE si se omite" />
           </div>
+          <div class="fila checkbox">
+            <label>femenino</label>
+            <input type="checkbox" name="femenino" />
+          </div>
           <div class="fila">
             <label>etiquetas</label>
             <div class="etiquetas-grupo">
@@ -419,6 +434,7 @@
           nombre: formData.get("nombre"),
           tipo: formData.get("tipo"),
           resumen: formData.get("resumen"),
+          genero: formData.get("femenino") === "on" ? "femenino" : undefined,
           etiquetas: formData.getAll("etiquetas"),
         };
         try {

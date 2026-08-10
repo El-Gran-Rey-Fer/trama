@@ -169,8 +169,19 @@ function sugerirPorLectura(cuerpo, idsCitados, entidades, registro) {
 	return sugerencias;
 }
 
-function construirYamlEntidad({ id, tipo, nombre, resumen, etiquetas }) {
-	let yaml = `id: ${id}\ntipo: ${tipo}\nnombre: ${nombre}\nresumen: ${resumen}\n`;
+function construirYamlEntidad({
+	id,
+	tipo,
+	nombre,
+	resumen,
+	etiquetas,
+	genero,
+}) {
+	let yaml = `id: ${id}\ntipo: ${tipo}\nnombre: ${nombre}\n`;
+	// Ver docs/guia-de-prosa.md §10: sin este campo el inverso de
+	// padre_de/madre_de se resuelve como hijo_de por defecto.
+	if (genero === "femenino") yaml += "genero: femenino\n";
+	yaml += `resumen: ${resumen}\n`;
 	if (etiquetas && etiquetas.length > 0) {
 		yaml += `etiquetas: [${etiquetas.join(", ")}]\n`;
 	}
@@ -461,12 +472,18 @@ async function manejarAltaEntidad(req, res) {
 	const etiquetas = Array.isArray(cuerpo.etiquetas)
 		? cuerpo.etiquetas.map((e) => String(e).trim()).filter(Boolean)
 		: [];
+	const generoBruto = String(cuerpo.genero || "").trim();
+	const genero = generoBruto || undefined;
 
 	if (!ID_VALIDO.test(id))
 		return responderJson(res, 400, {
 			error: "id inválido: minúsculas, números y guiones",
 		});
 	if (!nombre) return responderJson(res, 400, { error: "falta nombre" });
+	if (genero && genero !== "femenino")
+		return responderJson(res, 400, {
+			error: `genero "${genero}" no reconocido (solo "femenino", el resto se omite)`,
+		});
 
 	const materia = cargarMateria();
 	const tipos = materia.tipos ?? [];
@@ -493,7 +510,7 @@ async function manejarAltaEntidad(req, res) {
 	mkdirSync(path.dirname(ruta), { recursive: true });
 	writeFileSync(
 		ruta,
-		construirYamlEntidad({ id, tipo, nombre, resumen, etiquetas }),
+		construirYamlEntidad({ id, tipo, nombre, resumen, etiquetas, genero }),
 	);
 	responderJson(res, 200, { ok: true, ruta: relativa(ruta) });
 }
