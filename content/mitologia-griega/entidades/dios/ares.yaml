@@ -1,0 +1,9 @@
+id: ares
+tipo: dios
+nombre: Ares
+resumen: PENDIENTE
+etiquetas: [ atributo ]
+relaciones:
+  - tipo: libera_a
+    destino: tanatos
+    fuente: escolios-iliada

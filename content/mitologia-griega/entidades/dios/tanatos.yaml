@@ -1,0 +1,8 @@
+id: tanatos
+tipo: dios
+nombre: Tánatos
+resumen: PENDIENTE
+relaciones:
+  - tipo: hijo_de
+    destino: nix
+    fuente: teogonia

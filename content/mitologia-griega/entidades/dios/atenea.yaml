@@ -11,3 +11,6 @@ atributos:
   dominio: la sabiduría, la estrategia y los oficios
   culto: Atenas, el Partenón
   equivalente_romano: Minerva
+relaciones:
+  - tipo: habita
+    destino: monte-olimpo

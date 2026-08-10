@@ -1,11 +1,20 @@
 #!/usr/bin/env node
-// Servidor local para curar-relaciones.html: versión visual de
-// relaciones-de-relato.mjs (mismo alcance — alta de entidades citadas,
-// sugerencia por lectura, relaciones a mano — pero en el navegador en vez de
-// la terminal). Sin dependencias nuevas: solo módulos nativos de Node y el
-// parser `yaml` que ya usa el resto del proyecto.
+// Servidor local para subir-prosa.html. Dos tareas sobre el mismo servidor:
 //
-// Uso: pnpm curar-relaciones
+// 1. Relaciones de un relato ya escrito (antes "curar-relaciones"): alta de
+//    entidades citadas sin YAML, sugerencia de relaciones por lectura,
+//    relaciones a mano. Mismo alcance que relaciones-de-relato.mjs, pero con
+//    formularios en el navegador en vez de prompts de terminal.
+// 2. Aterrizar una prosa nueva (de entidad, de obra o de relato) en el
+//    fichero correcto de `content/`: valida las reglas cerradas de
+//    docs/guia-de-prosa.md (sin frontmatter en prosa de entidad/obra, límite
+//    de `<E>`, autoenlace prohibido, lista de componentes permitida) antes de
+//    escribir, y da de alta los ids nuevos que la prosa cite.
+//
+// Sin dependencias nuevas: solo módulos nativos de Node y el parser `yaml`
+// que ya usa el resto del proyecto.
+//
+// Uso: pnpm subir-prosa
 //
 // Duplica helpers de relaciones-de-relato.mjs (indexar entidades, extraer
 // ids citados, heurístico de sugerencia, escritura de relación) en vez de
@@ -218,6 +227,149 @@ function escribirTipoRelacion({
 	writeFileSync(FICHERO_MATERIA, doc.toString());
 }
 
+// --- prosa nueva ---
+
+// Mismo criterio que scripts/indice-de-contenido.mjs (mdxDisponibles), pero
+// sin filtrar `tipo: obra`: aquí interesan también las obras sin prosa.
+function listarEntidadesSinProsa() {
+	const mdxDisponibles = new Set(
+		listarMdx(CARPETA_ENTIDADES).map((f) => path.basename(f, ".mdx")),
+	);
+	return listarYaml(CARPETA_ENTIDADES)
+		.map((ruta) => parse(readFileSync(ruta, "utf-8")))
+		.filter((datos) => datos?.id && !mdxDisponibles.has(datos.id))
+		.map((datos) => ({ id: datos.id, nombre: datos.nombre, tipo: datos.tipo }));
+}
+
+// Recuento orientativo: quita etiquetas y comentarios MDX antes de contar,
+// para no inflar el número con `<E id="...">`.
+function contarPalabras(texto) {
+	const limpio = texto
+		.replace(/\{\/\*[\s\S]*?\*\/\}/g, " ")
+		.replace(/<[^>]+>/g, " ");
+	return limpio.split(/\s+/).filter(Boolean).length;
+}
+
+function extraerComponentesUsados(cuerpo) {
+	return [...cuerpo.matchAll(/<\/?([A-Z][a-zA-Z]*)\b/g)].map((m) => m[1]);
+}
+
+function extraerIdsEnlazados(cuerpo) {
+	return [...cuerpo.matchAll(/<E\s+id\s*=\s*["']([^"']+)["']/g)].map(
+		(m) => m[1],
+	);
+}
+
+// Reglas de docs/guia-de-prosa.md §5/§6/§12 para prosa de entidad y de obra
+// (mismo mecanismo, distinto apriete de límites). Las que bloquean son las
+// objetivas del checklist; el recuento de palabras solo avisa.
+function validarProsaEntidad(cuerpo, { id, tipo }) {
+	const errores = [];
+	const avisos = [];
+
+	if (/^\s*---/.test(cuerpo)) {
+		errores.push("la prosa de entidad/obra no lleva frontmatter (§5/§6)");
+	}
+
+	const permitidos = new Set(["E", "Fuente"]);
+	const noPermitidos = [
+		...new Set(
+			extraerComponentesUsados(cuerpo).filter((c) => !permitidos.has(c)),
+		),
+	];
+	if (noPermitidos.length > 0) {
+		errores.push(
+			`componente(s) no permitidos en prosa de entidad/obra: ${noPermitidos.join(", ")}`,
+		);
+	}
+
+	const idsEnlazados = extraerIdsEnlazados(cuerpo);
+	if (idsEnlazados.includes(id)) {
+		errores.push(`la prosa enlaza a su propia entidad ("${id}"): prohibido`);
+	}
+	const repetidos = [
+		...new Set(
+			idsEnlazados.filter((eid, i) => idsEnlazados.indexOf(eid) !== i),
+		),
+	];
+	if (repetidos.length > 0) {
+		errores.push(
+			`entidad(es) enlazada(s) más de una vez: ${repetidos.join(", ")}`,
+		);
+	}
+
+	const maximoE = tipo === "obra" ? 2 : 3;
+	if (idsEnlazados.length > maximoE) {
+		errores.push(
+			`${idsEnlazados.length} <E /> en el texto, máximo ${maximoE} en prosa de ${tipo === "obra" ? "obra" : "entidad"}`,
+		);
+	}
+
+	const palabras = contarPalabras(cuerpo);
+	const [minimo, maximo] = tipo === "obra" ? [80, 180] : [150, 350];
+	if (palabras < minimo || palabras > maximo) {
+		avisos.push(
+			`${palabras} palabras, fuera de la banda orientativa ${minimo}-${maximo}`,
+		);
+	}
+
+	return { errores, avisos, idsCitados: [...new Set(idsEnlazados)] };
+}
+
+// Reglas de §3/§7/§12 para un relato nuevo (lleva frontmatter completo, y el
+// componente permitido es la lista larga: E, Fuente, Coleccion,
+// TablaComparativa).
+function validarProsaRelato(datosRelato, cuerpo) {
+	const errores = [];
+	const avisos = [];
+
+	const obligatorios = ["id", "tipo", "nombre", "resumen", "era", "orden"];
+	const faltantes = obligatorios.filter(
+		(campo) =>
+			datosRelato[campo] === undefined ||
+			datosRelato[campo] === null ||
+			datosRelato[campo] === "",
+	);
+	if (faltantes.length > 0) {
+		errores.push(
+			`faltan campos obligatorios en el frontmatter: ${faltantes.join(", ")}`,
+		);
+	}
+	if (datosRelato.id && !ID_VALIDO.test(datosRelato.id)) {
+		errores.push(
+			`id "${datosRelato.id}" no cumple la convención (minúsculas, sin tildes, con guiones)`,
+		);
+	}
+
+	const permitidos = new Set(["E", "Fuente", "Coleccion", "TablaComparativa"]);
+	const noPermitidos = [
+		...new Set(
+			extraerComponentesUsados(cuerpo).filter((c) => !permitidos.has(c)),
+		),
+	];
+	if (noPermitidos.length > 0) {
+		errores.push(`componente(s) no permitidos: ${noPermitidos.join(", ")}`);
+	}
+
+	const idsEnlazados = extraerIdsEnlazados(cuerpo);
+	if (datosRelato.id && idsEnlazados.includes(datosRelato.id)) {
+		errores.push(
+			`la prosa enlaza a su propio relato ("${datosRelato.id}"): prohibido`,
+		);
+	}
+
+	const palabras = contarPalabras(cuerpo);
+	if (palabras < 600 || palabras > 1200) {
+		avisos.push(`${palabras} palabras, fuera de la banda orientativa 600-1200`);
+	}
+
+	return {
+		errores,
+		avisos,
+		idsCitados: extraerIdsCitados(datosRelato, cuerpo),
+	};
+}
+
 // --- lectura del estado de un relato para la UI ---
 
 function analizarRelato(id) {
@@ -420,14 +572,120 @@ async function manejarTipoRelacion(req, res) {
 	responderJson(res, 200, { ok: true, tipo, inversa });
 }
 
+// Cuerpo de prosa de una entidad o una obra: la entidad tiene que existir ya
+// (dada de alta antes, a mano o vía la pestaña de relaciones) — la prosa de
+// entidad/obra no crea la entidad, solo le pone cuerpo. Escribe el `.mdx`
+// aunque cite ids sin YAML todavía: se devuelven en `idsNuevos` para darlos
+// de alta con el mismo formulario que usa la pestaña de relaciones.
+async function manejarProsaEntidad(req, res) {
+	const cuerpoPeticion = await leerCuerpoJson(req);
+	const id = String(cuerpoPeticion.id || "").trim();
+	const cuerpo = String(cuerpoPeticion.cuerpo || "");
+	const alt = String(cuerpoPeticion.alt || "").trim();
+
+	const entidades = indexarEntidades();
+	const entrada = entidades.get(id);
+	if (!entrada)
+		return responderJson(res, 404, {
+			error: `no existe el YAML de "${id}": la prosa de entidad/obra requiere una entidad ya dada de alta`,
+		});
+
+	const tipo = entrada.datos.tipo;
+	const { errores, avisos, idsCitados } = validarProsaEntidad(cuerpo, {
+		id,
+		tipo,
+	});
+	if (errores.length > 0) return responderJson(res, 400, { errores });
+
+	const idsRelatos = new Set(listarRelatos().map((r) => r.id));
+	const idsNuevos = idsCitados.filter(
+		(eid) => !entidades.has(eid) && !idsRelatos.has(eid),
+	);
+
+	const rutaMdx = path.join(path.dirname(entrada.ruta), `${id}.mdx`);
+	writeFileSync(rutaMdx, cuerpo);
+
+	if (tipo === "obra" && alt) {
+		const doc = parseDocument(readFileSync(entrada.ruta, "utf-8"));
+		if (!doc.has("imagen")) doc.set("imagen", doc.createNode({}));
+		doc.get("imagen", true).set("alt", alt);
+		writeFileSync(entrada.ruta, doc.toString());
+	}
+
+	responderJson(res, 200, {
+		ok: true,
+		ruta: relativa(rutaMdx),
+		avisos,
+		idsNuevos,
+		propuestas: Object.fromEntries(
+			idsNuevos.map((eid) => [eid, nombrePropuestoDesdeId(eid)]),
+		),
+	});
+}
+
+// Relato nuevo: a diferencia de la prosa de entidad/obra, aquí sí se crea el
+// fichero (con frontmatter completo) desde cero. La carpeta sale de `era`,
+// igual que ya viven organizados los relatos existentes.
+async function manejarProsaRelato(req, res) {
+	const cuerpoPeticion = await leerCuerpoJson(req);
+	const mdxCompleto = String(cuerpoPeticion.mdxCompleto || "");
+
+	let frontmatter;
+	let cuerpo;
+	try {
+		({ frontmatter, cuerpo } = extraerFrontmatterYCuerpo(mdxCompleto));
+	} catch (error) {
+		return responderJson(res, 400, { errores: [error.message] });
+	}
+
+	let datosRelato;
+	try {
+		datosRelato = parse(frontmatter) ?? {};
+	} catch (error) {
+		return responderJson(res, 400, {
+			errores: [`frontmatter inválido: ${error.message}`],
+		});
+	}
+
+	const { errores, avisos, idsCitados } = validarProsaRelato(
+		datosRelato,
+		cuerpo,
+	);
+	if (errores.length > 0) return responderJson(res, 400, { errores });
+
+	const id = datosRelato.id;
+	const entidades = indexarEntidades();
+	const idsRelatos = new Set(listarRelatos().map((r) => r.id));
+	if (entidades.has(id) || idsRelatos.has(id))
+		return responderJson(res, 409, { error: `"${id}" ya existe` });
+
+	const era = String(datosRelato.era || "").trim();
+	const carpeta = era ? path.join(CARPETA_RELATOS, era) : CARPETA_RELATOS;
+	mkdirSync(carpeta, { recursive: true });
+	const ruta = path.join(carpeta, `${id}.mdx`);
+	writeFileSync(ruta, mdxCompleto);
+
+	const idsNuevos = idsCitados.filter(
+		(eid) => eid !== id && !entidades.has(eid) && !idsRelatos.has(eid),
+	);
+
+	responderJson(res, 200, {
+		ok: true,
+		ruta: relativa(ruta),
+		avisos,
+		idsNuevos,
+		propuestas: Object.fromEntries(
+			idsNuevos.map((eid) => [eid, nombrePropuestoDesdeId(eid)]),
+		),
+	});
+}
+
 const servidor = http.createServer(async (req, res) => {
 	const url = new URL(req.url, `http://${req.headers.host}`);
 	try {
 		if (req.method === "GET" && url.pathname === "/") {
 			res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-			return res.end(
-				readFileSync(path.join(RAIZ, "scripts/curar-relaciones.html")),
-			);
+			return res.end(readFileSync(path.join(RAIZ, "scripts/subir-prosa.html")));
 		}
 		if (req.method === "GET" && url.pathname === "/api/relatos") {
 			return responderJson(
@@ -456,6 +714,28 @@ const servidor = http.createServer(async (req, res) => {
 		if (req.method === "POST" && url.pathname === "/api/tipo-relacion") {
 			return await manejarTipoRelacion(req, res);
 		}
+		if (req.method === "GET" && url.pathname === "/api/materia") {
+			const materia = cargarMateria();
+			return responderJson(res, 200, {
+				tipos: materia.tipos ?? [],
+				etiquetas: materia.etiquetas ?? [],
+			});
+		}
+		if (req.method === "GET" && url.pathname === "/api/prosa/pendientes") {
+			return responderJson(
+				res,
+				200,
+				listarEntidadesSinProsa().sort((a, b) =>
+					(a.nombre ?? "").localeCompare(b.nombre ?? "", "es"),
+				),
+			);
+		}
+		if (req.method === "POST" && url.pathname === "/api/prosa/entidad") {
+			return await manejarProsaEntidad(req, res);
+		}
+		if (req.method === "POST" && url.pathname === "/api/prosa/relato") {
+			return await manejarProsaRelato(req, res);
+		}
 		res.writeHead(404);
 		res.end("no encontrado");
 	} catch (error) {
@@ -465,5 +745,5 @@ const servidor = http.createServer(async (req, res) => {
 });
 
 servidor.listen(PUERTO, () => {
-	console.log(`Curar relaciones: http://localhost:${PUERTO}`);
+	console.log(`Subir prosa: http://localhost:${PUERTO}`);
 });

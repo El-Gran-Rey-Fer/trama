@@ -16,3 +16,5 @@ relaciones:
     destino: zeus
     fuente: olimpicas
     principal: false
+  - tipo: habita
+    destino: monte-olimpo

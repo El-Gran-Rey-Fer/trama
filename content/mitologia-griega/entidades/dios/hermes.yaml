@@ -11,3 +11,6 @@ atributos:
   dominio: los caminos, los mensajeros y el comercio
   culto: hermai (pilares) en los cruces de caminos
   equivalente_romano: Mercurio
+relaciones:
+  - tipo: habita
+    destino: monte-olimpo

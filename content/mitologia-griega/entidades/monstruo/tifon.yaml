@@ -11,3 +11,6 @@ relaciones:
     destino: zeus
     fuente: biblioteca
     principal: false
+  - tipo: padre_de
+    destino: cerbero
+    fuente: teogonia

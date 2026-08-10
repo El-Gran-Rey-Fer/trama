@@ -9,3 +9,6 @@ atributos:
   dominio: la agricultura y las cosechas
   culto: Eleusis, los misterios eleusinos
   equivalente_romano: Ceres
+relaciones:
+  - tipo: habita
+    destino: monte-olimpo

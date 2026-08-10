@@ -7,3 +7,7 @@ relaciones:
   - tipo: padre_de
     destino: tifon
     fuente: teogonia
+  - tipo: padre_de
+    destino: equidna
+    fuente: biblioteca
+    principal: false

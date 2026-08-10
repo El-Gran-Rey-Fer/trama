@@ -1,4 +1,10 @@
 id: equidna
 tipo: monstruo
 nombre: Equidna
-resumen: Ser mitad mujer y mitad serpiente, consorte de Tifón y madre de buena parte de los grandes monstruos del mito.
+genero: femenino
+resumen: Ser mitad mujer y mitad serpiente, consorte de Tifón y madre de buena
+  parte de los grandes monstruos del mito.
+relaciones:
+  - tipo: madre_de
+    destino: cerbero
+    fuente: teogonia

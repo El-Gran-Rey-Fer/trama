@@ -1,0 +1,8 @@
+id: ixion
+tipo: mortal
+nombre: Ixion
+resumen: PENDIENTE
+relaciones:
+  - tipo: mata_a
+    destino: deyoneo
+    fuente: piticas

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<title>Curar relaciones — Trama</title>
+<title>Subir prosa — Trama</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -153,15 +153,50 @@
   }
   #estado.error { color: #e77; }
   #estado.ok { color: #7c7; }
+  .pestanas {
+    display: flex;
+    gap: 6px;
+  }
+  .pestanas button {
+    border-color: #333;
+  }
+  .pestanas button.activa {
+    border-color: #4a7dff;
+    color: #9db8ff;
+    background: #1a2038;
+  }
+  textarea.cuerpo-prosa {
+    width: 100%;
+    min-height: 160px;
+    resize: vertical;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  textarea.cuerpo-prosa.grande { min-height: 320px; }
+  .mensajes { margin: 8px 0; font-size: 13px; }
+  .mensajes .error-linea { color: #e77; padding: 2px 0; }
+  .mensajes .aviso-linea { color: #d9a441; padding: 2px 0; }
+  .mensajes .ok-linea { color: #7c7; padding: 2px 0; }
+  .altas-pendientes {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #333;
+  }
 </style>
 </head>
 <body>
   <header>
-    <h1>Curar relaciones</h1>
+    <h1>Subir prosa</h1>
+    <div class="pestanas">
+      <button type="button" id="pestana-relaciones" class="activa">Relaciones de un relato</button>
+      <button type="button" id="pestana-prosa">Prosa nueva</button>
+    </div>
     <select id="selector-relato"><option value="">elige un relato…</option></select>
   </header>
 
   <main>
+    <div id="vista-relaciones">
     <p id="vacio">Elige un relato para repasar sus entidades citadas y sus relaciones.</p>
 
     <div id="contenido" hidden>
@@ -240,6 +275,53 @@
         </form>
       </section>
     </div>
+    </div>
+
+    <div id="vista-prosa" hidden>
+      <section id="seccion-prosa-entidad">
+        <h2>Prosa de entidad u obra</h2>
+        <form id="form-prosa-entidad">
+          <div class="fila">
+            <label for="pe-id">entidad</label>
+            <select id="pe-id-select"><option value="">elige una entidad sin prosa…</option></select>
+          </div>
+          <div class="fila">
+            <label for="pe-id">o id</label>
+            <input id="pe-id" placeholder="id de una entidad ya existente" autocomplete="off" />
+          </div>
+          <div class="fila">
+            <label for="pe-cuerpo">cuerpo</label>
+            <textarea id="pe-cuerpo" class="cuerpo-prosa" placeholder="MDX sin frontmatter, solo &lt;E /&gt; y &lt;Fuente /&gt;"></textarea>
+          </div>
+          <div class="fila">
+            <label for="pe-alt">alt</label>
+            <input id="pe-alt" placeholder="solo si es una obra (opcional)" autocomplete="off" />
+          </div>
+          <button class="primario" type="submit">Guardar prosa de entidad</button>
+        </form>
+        <div class="mensajes" id="mensajes-prosa-entidad"></div>
+        <div class="altas-pendientes" id="altas-prosa-entidad" hidden>
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#999;margin-bottom:6px;">Ids citados sin YAML propio</div>
+          <div id="lista-altas-prosa-entidad"></div>
+        </div>
+      </section>
+
+      <section id="seccion-prosa-relato">
+        <h2>Relato nuevo</h2>
+        <form id="form-prosa-relato">
+          <div class="fila">
+            <label for="pr-mdx">MDX completo</label>
+            <textarea id="pr-mdx" class="cuerpo-prosa grande" placeholder="---&#10;id: …&#10;tipo: mito&#10;…&#10;---&#10;&#10;cuerpo del relato"></textarea>
+          </div>
+          <button class="primario" type="submit">Guardar relato</button>
+        </form>
+        <div class="mensajes" id="mensajes-prosa-relato"></div>
+        <div class="altas-pendientes" id="altas-prosa-relato" hidden>
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#999;margin-bottom:6px;">Ids citados sin YAML propio</div>
+          <div id="lista-altas-prosa-relato"></div>
+        </div>
+      </section>
+    </div>
 
     <datalist id="datalist-ids"></datalist>
     <datalist id="datalist-tipos-relacion"></datalist>
@@ -289,11 +371,74 @@
       }
     }
 
-    function pintarEntidad(entidad, propuestas) {
+    // Formulario de alta para un id citado sin YAML propio. Compartido entre
+    // la pestaña de relaciones (entidades citadas en un relato) y la de
+    // prosa (ids citados por un `<E />` que aún no existen).
+    function crearFormularioAlta(id, nombrePropuesto, tipos, etiquetas, alExito) {
       const div = document.createElement("div");
-      div.className = `tarjeta${entidad.existe ? "" : " faltante"}`;
+      div.className = "tarjeta faltante";
+      div.innerHTML = `
+        <div class="tarjeta-cabecera">
+          <span class="id">${id}</span>
+          <span class="aviso">citada, sin YAML propio</span>
+        </div>
+        <form>
+          <div class="fila">
+            <label>nombre</label>
+            <input name="nombre" value="${nombrePropuesto ?? ""}" required />
+          </div>
+          <div class="fila">
+            <label>tipo</label>
+            <select name="tipo" required>
+              <option value="" disabled selected>elige…</option>
+              ${(tipos ?? []).map((t) => `<option value="${t}">${t}</option>`).join("")}
+            </select>
+          </div>
+          <div class="fila">
+            <label>resumen</label>
+            <input name="resumen" placeholder="opcional, PENDIENTE si se omite" />
+          </div>
+          <div class="fila">
+            <label>etiquetas</label>
+            <div class="etiquetas-grupo">
+              ${(etiquetas ?? [])
+                .map(
+                  (e) =>
+                    `<label><input type="checkbox" name="etiquetas" value="${e}" />${e}</label>`,
+                )
+                .join("")}
+            </div>
+          </div>
+          <button class="primario" type="submit">Dar de alta</button>
+        </form>
+      `;
+      div.querySelector("form").addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const formData = new FormData(ev.target);
+        const datos = {
+          nombre: formData.get("nombre"),
+          tipo: formData.get("tipo"),
+          resumen: formData.get("resumen"),
+          etiquetas: formData.getAll("etiquetas"),
+        };
+        try {
+          await api("/api/entidad", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ id, ...datos }),
+          });
+          await alExito?.(id);
+        } catch (error) {
+          mostrarEstado(error.message, "error");
+        }
+      });
+      return div;
+    }
 
+    function pintarEntidad(entidad, propuestas) {
       if (entidad.existe) {
+        const div = document.createElement("div");
+        div.className = "tarjeta";
         const relaciones = (entidad.relaciones ?? [])
           .map((r) => {
             const extra = [
@@ -321,67 +466,17 @@
         return;
       }
 
-      const idFormulario = `alta-${entidad.id}`;
-      div.innerHTML = `
-        <div class="tarjeta-cabecera">
-          <span class="id">${entidad.id}</span>
-          <span class="aviso">citada en el relato, sin YAML propio</span>
-        </div>
-        <form id="${idFormulario}">
-          <div class="fila">
-            <label>nombre</label>
-            <input name="nombre" value="${propuestas[entidad.id] ?? ""}" required />
-          </div>
-          <div class="fila">
-            <label>tipo</label>
-            <select name="tipo" required>
-              <option value="" disabled selected>elige…</option>
-              ${(relatoActual.tipos ?? [])
-                .map((t) => `<option value="${t}">${t}</option>`)
-                .join("")}
-            </select>
-          </div>
-          <div class="fila">
-            <label>resumen</label>
-            <input name="resumen" placeholder="opcional, PENDIENTE si se omite" />
-          </div>
-          <div class="fila">
-            <label>etiquetas</label>
-            <div class="etiquetas-grupo">
-              ${(relatoActual.etiquetas ?? [])
-                .map(
-                  (e) =>
-                    `<label><input type="checkbox" name="etiquetas" value="${e}" />${e}</label>`,
-                )
-                .join("")}
-            </div>
-          </div>
-          <button class="primario" type="submit">Dar de alta</button>
-        </form>
-      `;
-      elListaEntidades.appendChild(div);
-
-      div.querySelector("form").addEventListener("submit", async (ev) => {
-        ev.preventDefault();
-        const formData = new FormData(ev.target);
-        const datos = {
-          nombre: formData.get("nombre"),
-          tipo: formData.get("tipo"),
-          resumen: formData.get("resumen"),
-          etiquetas: formData.getAll("etiquetas"),
-        };
-        try {
-          await api("/api/entidad", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ id: entidad.id, ...datos }),
-          });
+      const div = crearFormularioAlta(
+        entidad.id,
+        propuestas[entidad.id],
+        relatoActual.tipos,
+        relatoActual.etiquetas,
+        async () => {
           mostrarEstado(`Dado de alta ${entidad.id}`, "ok");
           await cargarRelato(relatoActual.id);
-        } catch (error) {
-          mostrarEstado(error.message, "error");
-        }
-      });
+        },
+      );
+      elListaEntidades.appendChild(div);
     }
 
     function pintarSugerencia(sugerencia) {
@@ -527,7 +622,183 @@
       }
     });
 
+    // --- pestañas ---
+
+    const elPestanaRelaciones = document.getElementById("pestana-relaciones");
+    const elPestanaProsa = document.getElementById("pestana-prosa");
+    const elVistaRelaciones = document.getElementById("vista-relaciones");
+    const elVistaProsa = document.getElementById("vista-prosa");
+
+    function mostrarPestana(nombre) {
+      const esRelaciones = nombre === "relaciones";
+      elVistaRelaciones.hidden = !esRelaciones;
+      elVistaProsa.hidden = esRelaciones;
+      elPestanaRelaciones.classList.toggle("activa", esRelaciones);
+      elPestanaProsa.classList.toggle("activa", !esRelaciones);
+      elSelector.hidden = !esRelaciones;
+      mostrarEstado("");
+    }
+
+    elPestanaRelaciones.addEventListener("click", () => mostrarPestana("relaciones"));
+    elPestanaProsa.addEventListener("click", () => {
+      mostrarPestana("prosa");
+      cargarPendientesProsa().catch((error) => mostrarEstado(error.message, "error"));
+    });
+
+    // --- prosa nueva ---
+
+    let materiaInfo = { tipos: [], etiquetas: [] };
+
+    async function cargarMateriaInfo() {
+      materiaInfo = await api("/api/materia");
+    }
+
+    const elSelectPendientes = document.getElementById("pe-id-select");
+    const elPeId = document.getElementById("pe-id");
+    const elPeCuerpo = document.getElementById("pe-cuerpo");
+    const elPeAlt = document.getElementById("pe-alt");
+    const elFormProsaEntidad = document.getElementById("form-prosa-entidad");
+    const elMensajesProsaEntidad = document.getElementById("mensajes-prosa-entidad");
+    const elAltasProsaEntidad = document.getElementById("altas-prosa-entidad");
+    const elListaAltasProsaEntidad = document.getElementById("lista-altas-prosa-entidad");
+
+    const elPrMdx = document.getElementById("pr-mdx");
+    const elFormProsaRelato = document.getElementById("form-prosa-relato");
+    const elMensajesProsaRelato = document.getElementById("mensajes-prosa-relato");
+    const elAltasProsaRelato = document.getElementById("altas-prosa-relato");
+    const elListaAltasProsaRelato = document.getElementById("lista-altas-prosa-relato");
+
+    async function cargarPendientesProsa() {
+      const pendientes = await api("/api/prosa/pendientes");
+      elSelectPendientes.innerHTML =
+        '<option value="">elige una entidad sin prosa…</option>' +
+        pendientes
+          .map((e) => `<option value="${e.id}">${e.nombre} (${e.tipo})</option>`)
+          .join("");
+    }
+
+    elSelectPendientes.addEventListener("change", () => {
+      if (elSelectPendientes.value) elPeId.value = elSelectPendientes.value;
+    });
+
+    // Como `api()`, pero sin tirar en 4xx: aquí interesa la lista completa de
+    // `errores`, no solo el primer mensaje.
+    async function enviarProsa(ruta, cuerpo) {
+      const respuesta = await fetch(ruta, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(cuerpo),
+      });
+      const datos = await respuesta.json().catch(() => ({}));
+      return { ok: respuesta.ok, datos };
+    }
+
+    function pintarMensajes(contenedor, { errores = [], avisos = [], oks = [] } = {}) {
+      contenedor.innerHTML = [
+        ...oks.map((m) => `<div class="ok-linea">✓ ${m}</div>`),
+        ...errores.map((m) => `<div class="error-linea">✗ ${m}</div>`),
+        ...avisos.map((m) => `<div class="aviso-linea">⚠ ${m}</div>`),
+      ].join("");
+    }
+
+    function pintarAltasPendientes(contenedorAltas, listaAltas, idsNuevos, propuestas, alExito) {
+      listaAltas.innerHTML = "";
+      if (!idsNuevos || idsNuevos.length === 0) {
+        contenedorAltas.hidden = true;
+        return;
+      }
+      contenedorAltas.hidden = false;
+      for (const id of idsNuevos) {
+        const form = crearFormularioAlta(
+          id,
+          propuestas?.[id],
+          materiaInfo.tipos,
+          materiaInfo.etiquetas,
+          async (idDado) => {
+            mostrarEstado(`Dado de alta ${idDado}`, "ok");
+            await alExito?.(idDado);
+          },
+        );
+        listaAltas.appendChild(form);
+      }
+    }
+
+    elFormProsaEntidad.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const id = elPeId.value.trim();
+      const cuerpo = elPeCuerpo.value;
+      const alt = elPeAlt.value.trim();
+      const { ok, datos } = await enviarProsa("/api/prosa/entidad", {
+        id,
+        cuerpo,
+        alt: alt || undefined,
+      });
+      if (!ok) {
+        pintarMensajes(elMensajesProsaEntidad, {
+          errores: datos.errores ?? [datos.error ?? "error al guardar"],
+        });
+        return;
+      }
+      pintarMensajes(elMensajesProsaEntidad, {
+        oks: [`Guardado en ${datos.ruta}`],
+        avisos: datos.avisos ?? [],
+      });
+      pintarAltasPendientes(
+        elAltasProsaEntidad,
+        elListaAltasProsaEntidad,
+        datos.idsNuevos,
+        datos.propuestas,
+        () => cargarPendientesProsa(),
+      );
+      await cargarPendientesProsa();
+    });
+
+    elFormProsaRelato.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const mdxCompleto = elPrMdx.value;
+      const { ok, datos } = await enviarProsa("/api/prosa/relato", { mdxCompleto });
+      if (!ok) {
+        pintarMensajes(elMensajesProsaRelato, {
+          errores: datos.errores ?? [datos.error ?? "error al guardar"],
+        });
+        return;
+      }
+      pintarMensajes(elMensajesProsaRelato, {
+        oks: [`Guardado en ${datos.ruta}`],
+        avisos: datos.avisos ?? [],
+      });
+      pintarAltasPendientes(
+        elAltasProsaRelato,
+        elListaAltasProsaRelato,
+        datos.idsNuevos,
+        datos.propuestas,
+        () => {},
+      );
+
+      const idGuardado = mdxCompleto.match(/^id:\s*(.+)$/m)?.[1]?.trim();
+      if (idGuardado) {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "primario";
+        boton.style.marginTop = "8px";
+        boton.textContent = `Ir a relaciones de "${idGuardado}"`;
+        boton.addEventListener("click", () => {
+          if (![...elSelector.options].some((o) => o.value === idGuardado)) {
+            const opcion = document.createElement("option");
+            opcion.value = idGuardado;
+            opcion.textContent = idGuardado;
+            elSelector.appendChild(opcion);
+          }
+          elSelector.value = idGuardado;
+          mostrarPestana("relaciones");
+          cargarRelato(idGuardado).catch((error) => mostrarEstado(error.message, "error"));
+        });
+        elMensajesProsaRelato.appendChild(boton);
+      }
+    });
+
     cargarSelector().catch((error) => mostrarEstado(error.message, "error"));
+    cargarMateriaInfo().catch((error) => mostrarEstado(error.message, "error"));
   </script>
 </body>
 </html>

@@ -26,4 +26,10 @@ relaciones:
     fuente: teogonia
   - tipo: habita
     destino: monte-olimpo
+  - tipo: castiga_a
+    destino: sisifo
+    fuente: biblioteca
+  - tipo: castiga_a
+    destino: ixion
+    fuente: piticas
 retrato: jupiter-louvre-lens

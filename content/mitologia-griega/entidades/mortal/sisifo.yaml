@@ -1,0 +1,11 @@
+id: sisifo
+tipo: mortal
+nombre: Sísifo
+resumen: PENDIENTE
+relaciones:
+  - tipo: gobierna
+    destino: corinto
+    fuente: iliada
+  - tipo: encierra_a
+    destino: tanatos
+    fuente: escolios-iliada

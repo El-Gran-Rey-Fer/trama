@@ -14,7 +14,7 @@ porque tienden a trabajar fichero a fichero (una obra, un relato).
 - [`pnpm nueva-obra <url-de-commons> <id>`](#pnpm-nueva-obra-url-de-commons-id)
 - [`pnpm curar-obra`](#pnpm-curar-obra)
 - [`pnpm relaciones-de-relato <id-de-relato>`](#pnpm-relaciones-de-relato-id-de-relato)
-- [`pnpm curar-relaciones`](#pnpm-curar-relaciones)
+- [`pnpm subir-prosa`](#pnpm-subir-prosa)
 - [`pnpm indice-de-contenido`](#pnpm-indice-de-contenido)
 - [`pnpm validar-contenido`](#pnpm-validar-contenido)
 - [Flujo sugerido en paralelo con Claude Code](#flujo-sugerido-en-paralelo-con-claude-code)
@@ -102,24 +102,39 @@ pide su `inversa` (obligatoria — ver `registroRelacionSchema` en `content.conf
 si es simétrica, y opcionalmente sus plantillas de pregunta de práctica, y lo escribe en
 `materia.yaml` antes de aplicar la relación.
 
-## `pnpm curar-relaciones`
+## `pnpm subir-prosa`
 
 Levanta un servidor local (puerto **4323**) con una UI en el navegador
-(`scripts/curar-relaciones.html`): la misma tarea que `relaciones-de-relato`
-(alta de entidades citadas sin YAML, sugerencia por lectura, relaciones a mano)
-pero con formularios en vez de prompts de terminal. Elige un relato en el
-desplegable y las tres fases aparecen como secciones de la página; cada alta o
-relación se escribe en el YAML al confirmarla, igual que en el CLI.
+(`scripts/subir-prosa.html`) con dos pestañas:
+
+**Relaciones de un relato** — la tarea que antes se llamaba
+`curar-relaciones`: alta de entidades citadas sin YAML, sugerencia por
+lectura, relaciones a mano, con formularios en vez de prompts de terminal.
+Elige un relato en el desplegable y las tres fases aparecen como secciones de
+la página; cada alta o relación se escribe en el YAML al confirmarla, igual
+que en `relaciones-de-relato`.
+
+**Prosa nueva** — aterriza en `content/` una prosa ya escrita (de entidad, de
+obra o de relato, entregada según `docs/guia-de-prosa.md` §11) y valida antes
+de escribir las reglas cerradas de esa guía: sin frontmatter en prosa de
+entidad/obra, autoenlace prohibido, ninguna entidad enlazada dos veces, límite
+de `<E>` (3 en entidad, 2 en obra), solo los componentes permitidos según el
+tipo de texto. El recuento de palabras (150-350 en entidad, 80-180 en obra,
+600-1200 en relato) solo avisa, no bloquea. Para prosa de entidad/obra, la
+entidad tiene que existir ya (su YAML); para un relato nuevo, el formulario
+pide el MDX completo con frontmatter y crea el fichero en la carpeta de su
+`era`. Si la prosa cita ids sin YAML propio, aparecen debajo con el mismo
+formulario de alta que la pestaña de relaciones.
 
 ```bash
-pnpm curar-relaciones
+pnpm subir-prosa
 # abre http://localhost:4323 en el navegador
 ```
 
 Se queda en primer plano ocupando la terminal mientras el servidor está vivo
 (mismo patrón que `curar-obra`); ábrelo en su propia pestaña/terminal para
 compaginarlo con una sesión de Claude Code. Para pararlo, Ctrl+C, o si quedó
-zombie: `pkill -f "node scripts/curar-relaciones.mjs"`.
+zombie: `pkill -f "node scripts/subir-prosa.mjs"`.
 
 ## `pnpm indice-de-contenido`
 

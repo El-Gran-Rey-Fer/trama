@@ -212,6 +212,14 @@ relaciones:
     pregunta_inversa: "¿Qué se convierte en {destino}?"
   surge_de:
     inversa: se_convierte_en
+  libera_a:
+    inversa: liberado_por
+    pregunta: "¿A quién libera {origen}?"
+    pregunta_inversa: "¿Quién es liberado por {destino}"
+    conjunto: true
+    conjunto_inversa: true
+  liberado_por:
+    inversa: libera_a
 
 fuentes:
   teogonia: { autor: "Hesíodo", obra: "Teogonía" }
@@ -223,6 +231,12 @@ fuentes:
   olimpicas: { autor: "Píndaro", obra: "Olímpicas" }
   himno-homerico-atenea: { obra: "Himno homérico a Atenea" }
   himno-homerico-demeter: { obra: "Himno homérico a Deméter" }
+  odisea: {autor: "Homero", obra: "Odisea"}
+  piticas: {autor: "Píndaro", obra: "Píticas"}
+  eneida: {autor: "Virgilio", obra: "Eneida"}
+  elegias: {autor: "Teognis", obra: "Elegías"}
+  descripcion-de-grecia: {autor: "Pausanias", obra: "Descripción de Grecia"}
+  escolios-iliada: {autor: "Ferécides", obra: "Escolios a la Ilíada"}
 
 # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (fuera del
 # alcance de A5: no está en su lista de comprobaciones).
@@ -721,7 +735,7 @@ capitulos:
     nombre: Los confines del mundo
     era: edad-de-los-heroes
     orden: 1900
-    relatos: [ bueyes-de-gerion, manzanas-de-las-hesperides, cerbero ]
+    relatos: [ bueyes-de-gerion, manzanas-de-las-hesperides, heracles-y-cerbero ]
     examen: { aciertos: 8, de: 10 }
 
   - id: por-el-camino

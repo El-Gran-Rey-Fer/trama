@@ -2,11 +2,4 @@ id: monte-olimpo
 tipo: lugar
 nombre: Monte Olimpo
 resumen: >
-  Morada de los dioses olímpicos.
-relaciones:
-  - tipo: habitado_por
-    destino: zeus
-  - tipo: habitado_por
-    destino: hera
-  - tipo: habitado_por
-    destino: poseidon
+    Montaña más alta de Grecia, sede de los dioses olímpicos y lugar de sus asambleas.

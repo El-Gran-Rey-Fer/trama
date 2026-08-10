@@ -1,0 +1,8 @@
+id: caronte
+tipo: dios
+nombre: Caronte
+resumen: PENDIENTE
+relaciones:
+  - tipo: habita
+    destino: inframundo
+    fuente: eneida

@@ -18,7 +18,7 @@
 		"validar-contenido": "node scripts/validar-contenido.mjs",
 		"comprobar-src-neutral": "node scripts/comprobar-src-neutral.mjs",
 		"relaciones-de-relato": "node scripts/relaciones-de-relato.mjs",
-		"curar-relaciones": "node scripts/curar-relaciones.mjs"
+		"subir-prosa": "node scripts/subir-prosa.mjs"
 	},
 	"dependencies": {
 		"@astrojs/mdx": "^7.0.4",

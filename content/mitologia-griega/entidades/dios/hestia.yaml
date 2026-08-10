@@ -1,6 +1,7 @@
 id: hestia
 tipo: dios
 nombre: Hestia
+genero: femenino
 resumen: >
   Diosa del hogar y el fuego doméstico, la primogénita de Crono y Rea.
 epitetos: [Guardiana del hogar]
@@ -9,3 +10,6 @@ atributos:
   dominio: el hogar y la vida doméstica
   culto: cada hogar tenía su altar; sin grandes templos propios
   equivalente_romano: Vesta
+relaciones:
+  - tipo: habita
+    destino: monte-olimpo

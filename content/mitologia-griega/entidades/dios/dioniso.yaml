@@ -11,3 +11,6 @@ atributos:
   dominio: el vino, el éxtasis y el teatro
   culto: las Dionisíacas de Atenas
   equivalente_romano: Baco
+relaciones:
+  - tipo: habita
+    destino: monte-olimpo

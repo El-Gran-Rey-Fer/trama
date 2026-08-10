@@ -11,3 +11,6 @@ atributos:
   dominio: el amor y la belleza
   culto: Chipre y Citera
   equivalente_romano: Venus
+relaciones:
+  - tipo: habita
+    destino: monte-olimpo
