@@ -1,8 +1,9 @@
 id: ares
 tipo: dios
 nombre: Ares
-resumen: PENDIENTE
-etiquetas: [ atributo ]
+resumen: Dios de la guerra y del furor del combate, hijo de Zeus y Hera, el menos
+  querido por el resto de los olímpicos.
+etiquetas: [olimpico]
 relaciones:
   - tipo: libera_a
     destino: tanatos

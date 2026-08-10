@@ -1,7 +1,8 @@
 id: cerbero
 tipo: monstruo
 nombre: Cerbero
-resumen: PENDIENTE
+resumen: Perro de varias cabezas, hijo de Tifón y Equidna, que guarda la puerta del
+  inframundo y despedaza a quien intenta salir.
 relaciones:
   - tipo: habita
     destino: inframundo

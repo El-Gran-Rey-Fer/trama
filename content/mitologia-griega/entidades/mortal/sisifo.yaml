@@ -1,7 +1,9 @@
 id: sisifo
 tipo: mortal
 nombre: Sísifo
-resumen: PENDIENTE
+resumen: Rey de Corinto y el más astuto de los mortales, que encadena a la Muerte y engaña
+  dos veces al inframundo antes de acabar empujando una piedra eternamente.
+etiquetas: [castigo-divino]
 relaciones:
   - tipo: gobierna
     destino: corinto

@@ -1,7 +1,9 @@
 id: tanatos
 tipo: dios
 nombre: Tánatos
-resumen: PENDIENTE
+resumen: Personificación de la muerte, hijo de Nix, que viene a buscar a cada mortal
+  cuando le llega la hora y no juzga ni decide nada.
+etiquetas: [ctonico]
 relaciones:
   - tipo: hijo_de
     destino: nix

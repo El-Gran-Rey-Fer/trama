@@ -1,0 +1,15 @@
+id: estigia
+tipo: lugar
+nombre: Estigia
+genero: femenino
+resumen: >
+  Hija mayor del Océano y río del inframundo por cuyas aguas juran los dioses
+  un juramento que ya no se puede deshacer.
+etiquetas: [ctonico]
+relaciones:
+  - tipo: hijo_de
+    destino: oceano
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: tetis-titanide
+    fuente: teogonia

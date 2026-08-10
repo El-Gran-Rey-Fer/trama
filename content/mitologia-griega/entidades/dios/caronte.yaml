@@ -1,7 +1,9 @@
 id: caronte
 tipo: dios
 nombre: Caronte
-resumen: PENDIENTE
+resumen: Barquero que pasa a los muertos al otro lado del agua del inframundo a cambio
+  de una moneda y deja en la orilla a los que llegan sin sepultura.
+etiquetas: [ctonico]
 relaciones:
   - tipo: habita
     destino: inframundo

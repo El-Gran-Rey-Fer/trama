@@ -1,7 +1,9 @@
 id: ixion
 tipo: mortal
 nombre: Ixion
-resumen: PENDIENTE
+resumen: Rey de los lápitas, primer mortal que derrama sangre de su propia familia,
+  condenado a girar atado a una rueda por intentar seducir a Hera.
+etiquetas: [castigo-divino]
 relaciones:
   - tipo: mata_a
     destino: deyoneo

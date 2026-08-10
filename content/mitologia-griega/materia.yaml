@@ -297,6 +297,7 @@ etiquetas:
   - sucesion-divina # castracion-de-urano, titanomaquia
   - profecia # nacimiento-de-atenea
   - rapto # rapto-de-persefone
+  - ctonico
   - mito-etiologico # rapto-de-persefone
   - castigo-divino # teseo-y-el-minotauro
   - zeus-amores # nacimiento-de-atenea
@@ -435,6 +436,7 @@ capitulos:
     era: edad-de-los-olimpicos
     orden: 400
     relatos: [ sisifo-engana-a-la-muerte, ixion-y-la-rueda ]
+    entidades_extra: [estigia]
     examen: { aciertos: 8, de: 10 }
 
   - id: los-castigos-eternos
