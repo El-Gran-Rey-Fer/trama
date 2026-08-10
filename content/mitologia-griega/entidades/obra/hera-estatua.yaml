@@ -1,0 +1,18 @@
+id: hera-estatua
+tipo: obra
+nombre: Hera Campana Louvre Ma2283
+atributos:
+  autor: Marie-Lan Nguyen
+  fecha: PENDIENTE
+  periodo: PENDIENTE
+  soporte: PENDIENTE
+  museo: PENDIENTE
+imagen:
+  archivo: /img/gr/obras/hera-estatua.org&utm_campaign=imageinfo&utm_content=original
+  credito: "Marie-Lan Nguyen, Own work, Public domain"
+  origen: https://commons.wikimedia.org/wiki/File:Hera_Campana_Louvre_Ma2283.jpg
+  alt: The Campana Hera, a 2nd century Roman imperial sculpture. Louvre, Paris
+# PENDIENTE: relaciones: representa (+ foco donde sirva de retrato).
+# Ver plan-imagenes-y-album.md §3.1/§3.2. No se deja `relaciones:` vacío
+# a propósito: una clave sin valor puede parsear como objeto, no como
+# ausente, y el schema espera un array.
