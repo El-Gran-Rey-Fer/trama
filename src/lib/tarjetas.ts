@@ -52,6 +52,10 @@ export function candidatosNoConectados(
 	tipoRelacion: string,
 	tipoEntidad: string,
 	excluidosExtra: Set<string>,
+	// Mismo scope que generarTarjetas/generarPertenencia (modo aventura): sin
+	// esto, una entidad todavía no desbloqueada puede colarse como distractor
+	// u opción falsa de pertenencia.
+	soloIds?: Set<string>,
 ): Entidad[] {
 	const sujeto = grafo.entidades.get(sujetoId);
 	if (!sujeto) return [];
@@ -65,7 +69,10 @@ export function candidatosNoConectados(
 	}
 
 	return [...grafo.entidades.values()].filter(
-		(e) => e.tipo === tipoEntidad && !excluidos.has(e.id),
+		(e) =>
+			e.tipo === tipoEntidad &&
+			!excluidos.has(e.id) &&
+			(!soloIds || soloIds.has(e.id)),
 	);
 }
 
@@ -79,6 +86,7 @@ function distractoresDeRelacion(
 	sujetoId: string,
 	respuestaId: string,
 	tipoRelacion: string,
+	soloIds?: Set<string>,
 ): string[] {
 	const respuesta = grafo.entidades.get(respuestaId);
 	if (!respuesta) return [];
@@ -88,6 +96,7 @@ function distractoresDeRelacion(
 		tipoRelacion,
 		respuesta.tipo,
 		new Set([respuestaId]),
+		soloIds,
 	);
 	return barajar(candidatos)
 		.slice(0, MAX_DISTRACTORES)
@@ -171,6 +180,7 @@ export async function generarTarjetas(
 						origenId,
 						relacion.destino,
 						relacion.tipo,
+						soloIds,
 					),
 				});
 			}
@@ -205,6 +215,7 @@ export async function generarTarjetas(
 						relacion.destino,
 						origenId,
 						definicion.inversa,
+						soloIds,
 					),
 				});
 			}

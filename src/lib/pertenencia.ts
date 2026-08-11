@@ -118,6 +118,7 @@ export async function generarPertenencia(
 				grupo.tipoRelacion,
 				tipo,
 				grupo.miembros,
+				soloIds,
 			)) {
 				if (vistos.has(candidato.id)) continue;
 				vistos.add(candidato.id);
