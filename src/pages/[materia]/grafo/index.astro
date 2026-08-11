@@ -68,6 +68,10 @@ const posiciones = new Map(
               height={vista.alto}
               viewBox={`0 0 ${vista.ancho} ${vista.alto}`}
             >
+              {vista.filas.slice(0, -1).map((y, i) => {
+                const mitad = (y + vista.filas[i + 1]) / 2;
+                return <line class="fila-divisor" x1={0} y1={mitad} x2={vista.ancho} y2={mitad} />;
+              })}
               {vista.enlaces.map((enlace) => {
                 const desde = posiciones.get(enlace.desde);
                 const hasta = posiciones.get(enlace.hasta);
@@ -169,6 +173,13 @@ const posiciones = new Map(
 
   .enlaces line {
     stroke-width: 2;
+  }
+
+  .enlaces line.fila-divisor {
+    stroke: var(--color-tarjeta-borde);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    opacity: 0.5;
   }
 
   .enlaces circle.union {

@@ -1,7 +1,11 @@
-import { TIPOS_GENEALOGIA } from "./arbol";
-import { type Arista, type Grafo, obtenerEntidad } from "./grafo";
+import {
+	type Arista,
+	type Grafo,
+	obtenerEntidad,
+	TIPOS_GENEALOGIA,
+} from "./grafo";
 
-// Árbol de parentesco navegable (fuera del plan de imágenes y álbum
+// Motor único de árbol de parentesco (fuera del plan de imágenes y álbum
 // original, pedido después de A7). El propio calendario-construccion.md
 // avisa de que "el grafo entero" con 200 entidades es una madeja ilegible:
 // esta vista se queda solo con la familia de relación de parentesco
@@ -10,6 +14,16 @@ import { type Arista, type Grafo, obtenerEntidad } from "./grafo";
 // relatos, lugares, objetos, acciones, obras) se probaron y se
 // descartaron: no aportaban sobre lo que ya cuenta la ficha de cada
 // entidad.
+//
+// Sirve dos modos con el mismo layout: la vista de toda la materia
+// (`construirVistaFamilia(grafo)`) y una ventana de ego centrada en una
+// entidad, ±N generaciones (`construirVistaFamilia(grafo, {centro,
+// profundidad})`) — la que usan la página de árbol por-entidad y el juego
+// "completar el árbol". Antes cada una tenía su propio motor (este, y un
+// segundo basado en d3-hierarchy que duplicaba antepasados compartidos en
+// vez de fusionarlos); se unificaron en uno para que colores, nodos de
+// unión, orden por importancia y divisores de generación salgan iguales
+// en las tres vistas.
 //
 // `hermano_de` no se dibuja: desde que se deriva de la filiación compartida
 // (grafo.ts), dos hermanos siempre tienen ya un padre/madre común pintado en
@@ -67,6 +81,14 @@ export interface UnionGrafo {
 	id: string;
 	x: number;
 	y: number;
+	// Los dos ids reales que fusiona, para quien necesite reconstruir "quién
+	// es el padre/madre de este hijo" sin parsear el id sintético.
+	padres: [string, string];
+}
+
+export interface VentanaEgo {
+	centro: string;
+	profundidad: number;
 }
 
 export interface VistaGrafo {
@@ -74,6 +96,9 @@ export interface VistaGrafo {
 	nodos: NodoGrafo[];
 	uniones: UnionGrafo[];
 	enlaces: EnlaceGrafo[];
+	// Coordenada `y` de cada generación presente, de arriba a abajo — para
+	// dibujar divisores entre filas.
+	filas: number[];
 	ancho: number;
 	alto: number;
 }
@@ -88,61 +113,111 @@ function agregar<K, V>(mapa: Map<K, V[]>, clave: K, valor: V) {
 	else mapa.set(clave, [valor]);
 }
 
-// Layout por capas (generación). Capa = camino más largo desde una raíz
-// (nadie declarado como su padre/madre), no el campo `generacion` de la
-// entidad: ese campo solo está relleno en 8 de 58 entidades y quedaría
-// vacío para el resto.
-function layoutJerarquico(
-	aristas: Arista[],
-): Map<string, { x: number; y: number }> {
-	// Solo padre_de/madre_de/hijo_de deciden la capa (la generación); los
-	// hermanos no tienen dirección jerárquica y ya caen en la misma capa que
-	// sus padres compartidos, así que se excluyen aquí y solo se dibujan como
-	// enlace en `construirVistaFamilia`.
-	const padreHijo: { padre: string; hijo: string }[] = aristas
-		.filter((a) => TIPOS_GENEALOGIA.includes(a.relacion.tipo))
-		.map((a) =>
-			a.relacion.tipo === "hijo_de"
-				? { padre: a.relacion.destino, hijo: a.origenId }
-				: { padre: a.origenId, hijo: a.relacion.destino },
-		);
+// Normaliza una arista de TIPOS_GENEALOGIA a la forma padre->hijo con el rol
+// resuelto. `hijo_de` sin género resuelto por `grafo.ts` (el destino no
+// declara `genero` o no hay entrada para él en `inversa_por_genero`) es
+// siempre el caso por defecto que el propio esquema declara —
+// `hijo_de.inversa: padre_de` en `materia.yaml` — así que se interpreta
+// como tal aquí, sin tocar `grafo.ts`.
+interface RolPadre {
+	padreId: string;
+	hijoId: string;
+	tipo: "padre_de" | "madre_de";
+}
 
-	const ids = new Set<string>();
+function normalizarRol(a: Arista): RolPadre {
+	if (a.relacion.tipo === "hijo_de") {
+		return {
+			padreId: a.relacion.destino,
+			hijoId: a.origenId,
+			tipo: "padre_de",
+		};
+	}
+	return {
+		padreId: a.origenId,
+		hijoId: a.relacion.destino,
+		tipo: a.relacion.tipo as "padre_de" | "madre_de",
+	};
+}
+
+// Importancia = cuántas aristas (de cualquier tipo, no solo parentesco)
+// tocan a esta entidad en el grafo completo de la materia — proxy de cuán
+// central es al relato sin depender de ningún campo de contenido nuevo (no
+// existe ningún "tier"/"importancia" en el esquema, y añadirlo obligaría a
+// etiquetar a mano el centenar largo de entidades de cada materia).
+function contarRelaciones(aristas: Arista[]): Map<string, number> {
+	const conteo = new Map<string, number>();
+	const inc = (id: string) => conteo.set(id, (conteo.get(id) ?? 0) + 1);
 	for (const a of aristas) {
-		ids.add(a.origenId);
-		ids.add(a.relacion.destino);
+		inc(a.origenId);
+		inc(a.relacion.destino);
+	}
+	return conteo;
+}
+
+// BFS de aristas de TIPOS_GENEALOGIA alcanzables desde `centro` en
+// cualquier sentido (ascendiendo vía progenitores, descendiendo vía hijos),
+// hasta `profundidad` saltos. `capa` sale con signo: centro = 0,
+// ascendientes negativos, descendientes positivos, por la distancia más
+// corta (primera vez que se visita cada id).
+function subgrafoEgo(
+	aristasGenealogicas: Arista[],
+	centro: string,
+	profundidad: number,
+): { aristas: Arista[]; capa: Map<string, number> } {
+	const porPadre = new Map<string, Arista[]>();
+	const porHijo = new Map<string, Arista[]>();
+	for (const a of aristasGenealogicas) {
+		const rol = normalizarRol(a);
+		agregar(porPadre, rol.padreId, a);
+		agregar(porHijo, rol.hijoId, a);
 	}
 
-	const hijosDe = new Map<string, string[]>();
-	const padresDe = new Map<string, string[]>();
-	for (const e of padreHijo) {
-		agregar(hijosDe, e.padre, e.hijo);
-		agregar(padresDe, e.hijo, e.padre);
-	}
-
-	// Pareja = comparte al menos un hijo con padre_de/madre_de ya resueltos
-	// (`fusionarUniones` los fusiona en un solo nodo de unión). Si sus dos
-	// miembros no caen en columnas contiguas, ese nodo de unión aparece a
-	// medio camino de toda la fila, y sus líneas cruzan por encima de
-	// hermanos que no tienen nada que ver — así que aquí se agrupan antes de
-	// asignar x.
-	const parejas = new Map<string, string>();
-	{
-		const padresPorHijo = new Map<string, string[]>();
-		for (const a of aristas) {
-			if (a.relacion.tipo !== "padre_de" && a.relacion.tipo !== "madre_de")
-				continue;
-			agregar(padresPorHijo, a.relacion.destino, a.origenId);
+	const capa = new Map<string, number>([[centro, 0]]);
+	const vistas = new Set<Arista>();
+	const aristas: Arista[] = [];
+	let frontera = [centro];
+	for (let paso = 0; paso < profundidad; paso++) {
+		const siguiente: string[] = [];
+		for (const id of frontera) {
+			const c = capa.get(id) ?? 0;
+			for (const a of porHijo.get(id) ?? []) {
+				if (!vistas.has(a)) {
+					vistas.add(a);
+					aristas.push(a);
+				}
+				const { padreId } = normalizarRol(a);
+				if (!capa.has(padreId)) {
+					capa.set(padreId, c - 1);
+					siguiente.push(padreId);
+				}
+			}
+			for (const a of porPadre.get(id) ?? []) {
+				if (!vistas.has(a)) {
+					vistas.add(a);
+					aristas.push(a);
+				}
+				const { hijoId } = normalizarRol(a);
+				if (!capa.has(hijoId)) {
+					capa.set(hijoId, c + 1);
+					siguiente.push(hijoId);
+				}
+			}
 		}
-		for (const lista of padresPorHijo.values()) {
-			if (lista.length !== 2) continue;
-			const [a, b] = lista;
-			if (!parejas.has(a)) parejas.set(a, b);
-			if (!parejas.has(b)) parejas.set(b, a);
-		}
+		frontera = siguiente;
 	}
+	return { aristas, capa };
+}
 
-	// Kahn por grado de entrada, relajando la capa al camino más largo visto.
+// Kahn por grado de entrada, relajando la capa al camino más largo visto.
+// Capa = camino más largo desde una raíz (nadie declarado como su
+// padre/madre) — no el campo `generacion` de la entidad: ese campo solo
+// está relleno en 8 de 58 entidades y quedaría vacío para el resto.
+function capaPorAlcance(
+	ids: Set<string>,
+	hijosDe: Map<string, string[]>,
+	padresDe: Map<string, string[]>,
+): Map<string, number> {
 	const indegreeRestante = new Map<string, number>();
 	for (const id of ids)
 		indegreeRestante.set(id, (padresDe.get(id) ?? []).length);
@@ -166,13 +241,61 @@ function layoutJerarquico(
 	// Ciclo (no debería pasar con datos correctos): lo que quede sin visitar
 	// se ancla a capa 0 en vez de colgar el build.
 	for (const id of ids) if (!capa.has(id)) capa.set(id, 0);
+	return capa;
+}
+
+// Layout por capas (generación): orden horizontal por baricentro de los
+// progenitores (con importancia y orden alfabético como desempate) más
+// agrupado de parejas contiguas, y una segunda pasada de abajo hacia
+// arriba que centra cada nodo sobre sus hijos. Sin `capaPrecalculada`, la
+// capa se calcula por alcance desde las raíces (vista de toda la
+// materia); con ella (ventana de ego — ver `subgrafoEgo`), se usa tal
+// cual, con signo — el resto del layout es agnóstico al rango de `capa`.
+function layoutJerarquico(
+	aristas: Arista[],
+	importancia: Map<string, number>,
+	capaPrecalculada?: Map<string, number>,
+): Map<string, { x: number; y: number }> {
+	const padreHijo = aristas.map(normalizarRol).map((r) => ({
+		padre: r.padreId,
+		hijo: r.hijoId,
+	}));
+
+	const ids = new Set<string>();
+	for (const a of aristas) {
+		ids.add(a.origenId);
+		ids.add(a.relacion.destino);
+	}
+
+	const hijosDe = new Map<string, string[]>();
+	const padresDe = new Map<string, string[]>();
+	for (const e of padreHijo) {
+		agregar(hijosDe, e.padre, e.hijo);
+		agregar(padresDe, e.hijo, e.padre);
+	}
+
+	// Pareja = comparte al menos un hijo con rol ya resuelto (`fusionarUniones`
+	// los fusiona en un solo nodo de unión). Si sus dos miembros no caen en
+	// columnas contiguas, ese nodo de unión aparece a medio camino de toda la
+	// fila, y sus líneas cruzan por encima de hermanos que no tienen nada que
+	// ver — así que aquí se agrupan antes de asignar x.
+	const parejas = new Map<string, string>();
+	{
+		const padresPorHijo = new Map<string, string[]>();
+		for (const { padre, hijo } of padreHijo)
+			agregar(padresPorHijo, hijo, padre);
+		for (const lista of padresPorHijo.values()) {
+			if (lista.length !== 2) continue;
+			const [a, b] = lista;
+			if (!parejas.has(a)) parejas.set(a, b);
+			if (!parejas.has(b)) parejas.set(b, a);
+		}
+	}
+
+	const capa = capaPrecalculada ?? capaPorAlcance(ids, hijosDe, padresDe);
 
 	const porCapa = new Map<number, string[]>();
-	for (const [id, l] of capa) {
-		const lista = porCapa.get(l);
-		if (lista) lista.push(id);
-		else porCapa.set(l, [id]);
-	}
+	for (const [id, l] of capa) agregar(porCapa, l, id);
 
 	const xPorId = new Map<string, number>();
 	function baricentro(id: string): number {
@@ -181,11 +304,26 @@ function layoutJerarquico(
 		return padres.reduce((s, p) => s + (xPorId.get(p) ?? 0), 0) / padres.length;
 	}
 
+	const ordenPorCapa = new Map<number, string[]>();
 	const capasOrdenadas = [...porCapa.keys()].sort((a, b) => a - b);
 	for (const l of capasOrdenadas) {
 		const nodos = [...(porCapa.get(l) ?? [])];
-		if (l === 0) nodos.sort();
-		else nodos.sort((a, b) => baricentro(a) - baricentro(b));
+		// Un único comparador para todas las capas: baricentro primero (sin
+		// progenitores conocidos en la ventana, ambos dan Infinity y se cae a
+		// importancia/alfabético — el caso de las raíces de la vista completa,
+		// o del extremo visible de una ventana de ego), importancia como
+		// desempate en vez del orden de inserción, id como último desempate
+		// para que el resultado sea determinista.
+		nodos.sort((a, b) => {
+			const ba = baricentro(a);
+			const bb = baricentro(b);
+			if (ba !== bb && (Number.isFinite(ba) || Number.isFinite(bb)))
+				return ba - bb;
+			return (
+				(importancia.get(b) ?? 0) - (importancia.get(a) ?? 0) ||
+				a.localeCompare(b)
+			);
+		});
 
 		const vistos = new Set<string>();
 		const agrupados: string[] = [];
@@ -200,9 +338,31 @@ function layoutJerarquico(
 			}
 		}
 
+		ordenPorCapa.set(l, agrupados);
 		agrupados.forEach((id, idx) => {
 			xPorId.set(id, idx * ESPACIO_HERMANOS);
 		});
+	}
+
+	// Centrado de abajo hacia arriba: cada nodo se reposiciona (sin
+	// reordenar) sobre la media de sus hijos, de la capa más profunda a la
+	// más alta. Una sola pasada basta porque cada capa solo depende de la de
+	// abajo, ya recalculada. Cuando el hueco a la izquierda no alcanza para
+	// centrar del todo, `Math.max` empuja lo mínimo necesario en vez de
+	// romper el espaciado o el orden ya establecido.
+	for (const l of [...capasOrdenadas].reverse()) {
+		const orden = ordenPorCapa.get(l) ?? [];
+		let anterior = Number.NEGATIVE_INFINITY;
+		for (const id of orden) {
+			const hijos = hijosDe.get(id) ?? [];
+			const deseada =
+				hijos.length > 0
+					? hijos.reduce((s, h) => s + (xPorId.get(h) ?? 0), 0) / hijos.length
+					: (xPorId.get(id) ?? 0);
+			const x = Math.max(deseada, anterior + ESPACIO_HERMANOS);
+			xPorId.set(id, x);
+			anterior = x;
+		}
 	}
 
 	const posiciones = new Map<string, { x: number; y: number }>();
@@ -215,44 +375,28 @@ function layoutJerarquico(
 	return posiciones;
 }
 
-// Solo padre_de/madre_de traen el rol ya resuelto (ver el comentario de
-// resolución de género en grafo.ts): son los únicos que pueden fusionarse en
-// un nodo de unión. `hijo_de` sin resolver (estirpes que nacen "de la
-// sangre" de un solo progenitor sin género conocido, tipo melias/gigantes
-// apuntando a Urano) se queda como línea directa — no hay pareja que fusionar.
-const TIPOS_ROL_CONOCIDO = ["padre_de", "madre_de"];
-
-// Cuando un hijo tiene sus dos progenitores en la misma capa (el caso normal:
-// padre y madre son de la misma generación), se sustituyen sus dos líneas
-// directas por un nodo de unión a medio camino entre ambos: una línea corta
-// de cada progenitor hasta la unión (con su color de padre/madre) y una sola
-// línea neutra de la unión a cada hijo compartido, en vez de dos líneas por
-// hijo que se cruzan entre sí.
+// Cuando un hijo tiene sus dos progenitores en la misma capa (el caso
+// normal: padre y madre son de la misma generación), se sustituyen sus dos
+// líneas directas por un nodo de unión a medio camino entre ambos: líneas
+// cortas de cada progenitor a la unión (con su color de padre/madre) y una
+// sola línea neutra de la unión a cada hijo compartido, en vez de dos
+// líneas por hijo que se cruzan entre sí.
 function fusionarUniones(
 	aristasGenealogicas: Arista[],
 	posiciones: Map<string, { x: number; y: number }>,
 ): { uniones: UnionGrafo[]; enlaces: EnlaceGrafo[] } {
-	const porHijo = new Map<string, { padreId: string; tipo: string }[]>();
-	const directas: Arista[] = [];
+	const porHijo = new Map<
+		string,
+		{ padreId: string; tipo: "padre_de" | "madre_de" }[]
+	>();
 	for (const a of aristasGenealogicas) {
-		if (!TIPOS_ROL_CONOCIDO.includes(a.relacion.tipo)) {
-			directas.push(a);
-			continue;
-		}
-		agregar(porHijo, a.relacion.destino, {
-			padreId: a.origenId,
-			tipo: a.relacion.tipo,
-		});
+		const rol = normalizarRol(a);
+		agregar(porHijo, rol.hijoId, { padreId: rol.padreId, tipo: rol.tipo });
 	}
 
 	const uniones: UnionGrafo[] = [];
 	const unionPorPareja = new Map<string, UnionGrafo>();
-	const enlaces: EnlaceGrafo[] = directas.map((a) => ({
-		desde: a.origenId,
-		hasta: a.relacion.destino,
-		tipo: a.relacion.tipo,
-		color: colorDeTipo(FAMILIA_PARENTESCO, a.relacion.tipo),
-	}));
+	const enlaces: EnlaceGrafo[] = [];
 
 	for (const [hijoId, padres] of porHijo) {
 		const posA = padres[0] && posiciones.get(padres[0].padreId);
@@ -276,7 +420,12 @@ function fusionarUniones(
 		const clave = [a.padreId, b.padreId].sort().join("+");
 		let union = unionPorPareja.get(clave);
 		if (!union) {
-			union = { id: `union:${clave}`, x: (posA.x + posB.x) / 2, y: posA.y };
+			union = {
+				id: `union:${clave}`,
+				x: (posA.x + posB.x) / 2,
+				y: posA.y,
+				padres: [a.padreId, b.padreId],
+			};
 			unionPorPareja.set(clave, union);
 			uniones.push(union);
 			enlaces.push({
@@ -303,20 +452,42 @@ function fusionarUniones(
 	return { uniones, enlaces };
 }
 
-export function construirVistaFamilia(grafo: Grafo): VistaGrafo | undefined {
+export function construirVistaFamilia(
+	grafo: Grafo,
+	ventana?: VentanaEgo,
+): VistaGrafo | undefined {
 	const familia = FAMILIA_PARENTESCO;
-	const aristas = grafo.aristas.filter((a) =>
+	const todasGenealogicas = grafo.aristas.filter((a) =>
 		familia.tipos.includes(a.relacion.tipo),
 	);
-	if (aristas.length === 0) return undefined;
+	const importancia = contarRelaciones(grafo.aristas);
 
-	const ids = new Set<string>();
-	for (const a of aristas) {
-		ids.add(a.origenId);
-		ids.add(a.relacion.destino);
+	let aristas = todasGenealogicas;
+	let capaPrecalculada: Map<string, number> | undefined;
+	if (ventana) {
+		const sub = subgrafoEgo(
+			todasGenealogicas,
+			ventana.centro,
+			ventana.profundidad,
+		);
+		aristas = sub.aristas;
+		capaPrecalculada = sub.capa;
+		if (capaPrecalculada.size <= 1) return undefined; // sin antepasados ni descendientes conocidos
+	} else if (aristas.length === 0) {
+		return undefined;
 	}
 
-	const posiciones = layoutJerarquico(aristas);
+	const ids = new Set<string>();
+	if (capaPrecalculada) {
+		for (const id of capaPrecalculada.keys()) ids.add(id);
+	} else {
+		for (const a of aristas) {
+			ids.add(a.origenId);
+			ids.add(a.relacion.destino);
+		}
+	}
+
+	const posiciones = layoutJerarquico(aristas, importancia, capaPrecalculada);
 
 	const nodos: NodoGrafo[] = [...ids]
 		.map((id) => {
@@ -345,11 +516,14 @@ export function construirVistaFamilia(grafo: Grafo): VistaGrafo | undefined {
 		u.y = u.y - minY + MARGEN;
 	}
 
+	const filas = [...new Set(nodos.map((n) => n.y))].sort((a, b) => a - b);
+
 	return {
 		familia,
 		nodos,
 		uniones,
 		enlaces,
+		filas,
 		ancho: maxX - minX + MARGEN * 2,
 		alto: maxY - minY + MARGEN * 2,
 	};

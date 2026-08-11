@@ -183,7 +183,9 @@ function renderArbol(
 	svg.setAttribute("height", String(ronda.alto));
 	svg.setAttribute("viewBox", `0 0 ${ronda.ancho} ${ronda.alto}`);
 
-	const posiciones = new Map(ronda.nodos.map((n) => [n.clave, n]));
+	const posiciones = new Map(
+		[...ronda.nodos, ...ronda.uniones].map((n) => [n.id, n]),
+	);
 	for (const enlace of ronda.enlaces) {
 		const desde = posiciones.get(enlace.desde);
 		const hasta = posiciones.get(enlace.hasta);
@@ -193,7 +195,16 @@ function renderArbol(
 		linea.setAttribute("y1", String(desde.y));
 		linea.setAttribute("x2", String(hasta.x));
 		linea.setAttribute("y2", String(hasta.y));
+		linea.setAttribute("stroke", enlace.color);
 		svg.appendChild(linea);
+	}
+	for (const union of ronda.uniones) {
+		const circulo = document.createElementNS(svgNS, "circle");
+		circulo.setAttribute("class", "arbol-juego-union");
+		circulo.setAttribute("cx", String(union.x));
+		circulo.setAttribute("cy", String(union.y));
+		circulo.setAttribute("r", "3.5");
+		svg.appendChild(circulo);
 	}
 	lienzo.appendChild(svg);
 

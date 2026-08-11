@@ -2,9 +2,9 @@
 import { getCollection } from "astro:content";
 import Casilla from "../../../../components/Casilla.astro";
 import Base from "../../../../layouts/Base.astro";
-import { construirArbolGenealogico } from "../../../../lib/arbol";
 import { entidadesDeMateria } from "../../../../lib/contenidoPorMateria";
 import { construirGrafo, obtenerEntidad } from "../../../../lib/grafo";
+import { construirVistaFamilia } from "../../../../lib/grafoCompleto";
 import { resolverRetrato } from "../../../../lib/retrato";
 import { rutaEntidad } from "../../../../lib/rutas";
 
@@ -31,8 +31,11 @@ if (!entidad) throw new Error(`Entidad no encontrada: ${materiaId}/${id}`);
 
 // Vista primero, calculada en build y servida sin JavaScript en cliente
 // (plan de imágenes y álbum, paso A7). El layout ya sale en píxeles listos
-// para posicionar; no hace falta tocarlo en el navegador.
-const arbol = construirArbolGenealogico(grafo, id);
+// para posicionar; no hace falta tocarlo en el navegador. Misma ventana de
+// ego (±2 generaciones) que antes calculaba arbol.ts con d3-hierarchy,
+// pero con el motor único de grafoCompleto.ts (fusiona parejas en nodos de
+// unión en vez de duplicar antepasados compartidos).
+const arbol = construirVistaFamilia(grafo, { centro: id, profundidad: 2 });
 
 const retratos = new Map(
 	(arbol?.nodos ?? []).map((n) => {
@@ -40,7 +43,9 @@ const retratos = new Map(
 		return [n.id, e ? resolverRetrato(grafo, e) : undefined];
 	}),
 );
-const posiciones = new Map((arbol?.nodos ?? []).map((n) => [n.clave, n]));
+const posiciones = new Map(
+	[...(arbol?.nodos ?? []), ...(arbol?.uniones ?? [])].map((n) => [n.id, n]),
+);
 ---
 
 <Base titulo={`Árbol — ${entidad.nombre}`} materiaSlug={materia}>
@@ -60,15 +65,24 @@ const posiciones = new Map((arbol?.nodos ?? []).map((n) => [n.clave, n]));
               height={arbol.alto}
               viewBox={`0 0 ${arbol.ancho} ${arbol.alto}`}
             >
+              {arbol.filas.slice(0, -1).map((y, i) => {
+                const mitad = (y + arbol.filas[i + 1]) / 2;
+                return <line class="fila-divisor" x1={0} y1={mitad} x2={arbol.ancho} y2={mitad} />;
+              })}
               {arbol.enlaces.map((enlace) => {
                 const desde = posiciones.get(enlace.desde);
                 const hasta = posiciones.get(enlace.hasta);
                 if (!desde || !hasta) return null;
-                return <line x1={desde.x} y1={desde.y} x2={hasta.x} y2={hasta.y} />;
+                return (
+                  <line x1={desde.x} y1={desde.y} x2={hasta.x} y2={hasta.y} stroke={enlace.color} />
+                );
               })}
+              {arbol.uniones.map((u) => (
+                <circle class="union" cx={u.x} cy={u.y} r="3.5" />
+              ))}
             </svg>
             {arbol.nodos.map((n) => (
-              <div class="nodo" style={`left:${n.x}px; top:${n.y}px`} data-raiz={n.esRaiz}>
+              <div class="nodo" style={`left:${n.x}px; top:${n.y}px`} data-raiz={n.id === id}>
                 <a href={rutaEntidad(materia, n.id)} class="nodo-enlace">
                   <div class="nodo-casilla">
                     <Casilla nombre={n.nombre} tipo={n.tipo} retrato={retratos.get(n.id)} />
@@ -127,8 +141,20 @@ const posiciones = new Map((arbol?.nodos ?? []).map((n) => [n.clave, n]));
   }
 
   .enlaces line {
-    stroke: var(--color-tarjeta-borde);
     stroke-width: 2;
+  }
+
+  .enlaces line.fila-divisor {
+    stroke: var(--color-tarjeta-borde);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    opacity: 0.5;
+  }
+
+  .enlaces circle.union {
+    fill: var(--color-fondo-pantalla);
+    stroke: var(--color-tarjeta-borde);
+    stroke-width: 1.5;
   }
 
   .nodo {

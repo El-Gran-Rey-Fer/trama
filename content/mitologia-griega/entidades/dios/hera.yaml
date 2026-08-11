@@ -15,5 +15,8 @@ atributos:
 relaciones:
   - tipo: consorte_de
     destino: zeus
+  - tipo: madre_de
+    destino: ares
+    fuente: teogonia
   - tipo: habita
     destino: monte-olimpo

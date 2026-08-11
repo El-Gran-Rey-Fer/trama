@@ -16,6 +16,11 @@ relaciones:
     destino: metis
   - tipo: padre_de
     destino: atenea
+  - tipo: padre_de
+    destino: ares
+    fuente: teogonia
+  - tipo: padre_de
+    destino: hefesto
   - tipo: encierra_a
     destino: titanes
   - tipo: mutila_a

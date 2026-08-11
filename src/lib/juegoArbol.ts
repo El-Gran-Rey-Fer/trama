@@ -1,5 +1,5 @@
-import { construirArbolGenealogico, TIPOS_GENEALOGIA } from "./arbol";
-import { construirGrafo, type Grafo } from "./grafo";
+import { construirGrafo, type Grafo, TIPOS_GENEALOGIA } from "./grafo";
+import { construirVistaFamilia } from "./grafoCompleto";
 
 // Juego "completar el árbol", pedido después de A7: mismo árbol de ego a
 // profundidad 2 que ya usa la ficha (/e/[id]/arbol/), pero con un nodo oculto
@@ -11,7 +11,7 @@ export interface RondaArbol {
 	// disponible en aventura solo si TODAS están en lo leído).
 	ids: string[];
 	nodos: {
-		clave: string;
+		id: string;
 		nombre: string;
 		tipo: string;
 		x: number;
@@ -19,7 +19,8 @@ export interface RondaArbol {
 		esHueco: boolean;
 		esRaiz: boolean;
 	}[];
-	enlaces: { desde: string; hasta: string }[];
+	uniones: { id: string; x: number; y: number }[];
+	enlaces: { desde: string; hasta: string; color: string }[];
 	ancho: number;
 	alto: number;
 	opciones: { id: string; nombre: string }[];
@@ -43,24 +44,29 @@ function barajar<T>(arr: T[]): T[] {
 // reutiliza `candidatosNoConectados` porque esa función excluye por UN tipo
 // de relación y su inversa; aquí hay que excluir por los tres a la vez
 // (padre_de/madre_de/hijo_de), y `entidad.relaciones` ya trae las tres
-// direcciones fusionadas (autoría + inferidas).
+// direcciones fusionadas (autoría + inferidas). `anclaIds` trae dos ids
+// cuando el hueco cuelga de un nodo de unión (los dos progenitores, ver
+// `UnionGrafo.padres` en grafoCompleto.ts) — se excluye lo conectado a
+// cualquiera de los dos, para no ofrecer un distractor emparentado con uno
+// de ellos aunque no lo esté con el otro.
 function distractoresGenealogia(
 	grafo: Grafo,
-	anclaId: string,
+	anclaIds: string[],
 	tipoEntidad: string,
 	excluidos: Set<string>,
 ) {
-	const ancla = grafo.entidades.get(anclaId);
-	const conectados = new Set(
-		(ancla?.relaciones ?? [])
-			.filter((r) => TIPOS_GENEALOGIA.includes(r.tipo))
-			.map((r) => r.destino),
-	);
+	const conectados = new Set<string>();
+	for (const anclaId of anclaIds) {
+		const ancla = grafo.entidades.get(anclaId);
+		for (const r of ancla?.relaciones ?? []) {
+			if (TIPOS_GENEALOGIA.includes(r.tipo)) conectados.add(r.destino);
+		}
+	}
 	return [...grafo.entidades.values()].filter(
 		(e) =>
 			e.kind === "entidad" &&
 			e.tipo === tipoEntidad &&
-			e.id !== anclaId &&
+			!anclaIds.includes(e.id) &&
 			!conectados.has(e.id) &&
 			!excluidos.has(e.id),
 	);
@@ -79,25 +85,34 @@ export async function generarRondasArbol(
 	for (const raiz of raices) {
 		if (rondas.length >= LIMITE_CANDIDATOS) break;
 
-		const arbol = construirArbolGenealogico(grafo, raiz.id);
-		if (!arbol) continue;
+		const vista = construirVistaFamilia(grafo, {
+			centro: raiz.id,
+			profundidad: 2,
+		});
+		if (!vista) continue;
 
-		const claveANodo = new Map(arbol.nodos.map((n) => [n.clave, n]));
-		const anclaDe = new Map<string, string>(); // clave del hueco -> id del ancla
-		for (const enlace of arbol.enlaces) {
-			const nodoAncla = claveANodo.get(enlace.desde);
-			if (nodoAncla) anclaDe.set(enlace.hasta, nodoAncla.id);
+		// Ancla de cada hueco potencial: la entidad (o las dos, si la arista
+		// entrante viene de un nodo de unión) que lo señala directamente. Las
+		// aristas que terminan en un nodo de unión (padre → unión) no cuentan:
+		// el hueco tiene que ser una entidad real, adivinable.
+		const entidadPorId = new Map(vista.nodos.map((n) => [n.id, n]));
+		const unionPorId = new Map(vista.uniones.map((u) => [u.id, u]));
+		const anclaDe = new Map<string, string[]>();
+		for (const enlace of vista.enlaces) {
+			if (!entidadPorId.has(enlace.hasta)) continue;
+			const union = unionPorId.get(enlace.desde);
+			anclaDe.set(enlace.hasta, union ? union.padres : [enlace.desde]);
 		}
 
-		for (const nodo of arbol.nodos) {
-			if (nodo.esRaiz) continue;
-			const anclaId = anclaDe.get(nodo.clave);
-			if (!anclaId) continue;
+		for (const nodo of vista.nodos) {
+			if (nodo.id === raiz.id) continue;
+			const anclaIds = anclaDe.get(nodo.id);
+			if (!anclaIds) continue;
 
-			const idsDelArbol = arbol.nodos.map((n) => n.id);
-			const excluidos = new Set([...idsDelArbol]);
+			const idsDelArbol = vista.nodos.map((n) => n.id);
+			const excluidos = new Set(idsDelArbol);
 			const distractores = barajar(
-				distractoresGenealogia(grafo, anclaId, nodo.tipo, excluidos),
+				distractoresGenealogia(grafo, anclaIds, nodo.tipo, excluidos),
 			).slice(0, MAX_DISTRACTORES);
 			if (distractores.length === 0) continue;
 
@@ -108,18 +123,23 @@ export async function generarRondasArbol(
 
 			rondas.push({
 				ids: [...new Set(idsDelArbol)],
-				nodos: arbol.nodos.map((n) => ({
-					clave: n.clave,
+				nodos: vista.nodos.map((n) => ({
+					id: n.id,
 					nombre: n.nombre,
 					tipo: n.tipo,
 					x: n.x,
 					y: n.y,
-					esHueco: n.clave === nodo.clave,
-					esRaiz: n.esRaiz,
+					esHueco: n.id === nodo.id,
+					esRaiz: n.id === raiz.id,
 				})),
-				enlaces: arbol.enlaces,
-				ancho: arbol.ancho,
-				alto: arbol.alto,
+				uniones: vista.uniones.map((u) => ({ id: u.id, x: u.x, y: u.y })),
+				enlaces: vista.enlaces.map((e) => ({
+					desde: e.desde,
+					hasta: e.hasta,
+					color: e.color,
+				})),
+				ancho: vista.ancho,
+				alto: vista.alto,
 				opciones,
 				correctaId: nodo.id,
 			});

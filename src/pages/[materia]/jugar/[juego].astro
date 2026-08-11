@@ -546,7 +546,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
         // de abajo no le aplica el trazo a las líneas y salen invisibles.
         if (ATRIBUTO_CID) svg.setAttribute(ATRIBUTO_CID, "");
 
-        const posiciones = new Map(ronda.nodos.map((n) => [n.clave, n]));
+        const posiciones = new Map([...ronda.nodos, ...ronda.uniones].map((n) => [n.id, n]));
         for (const enlace of ronda.enlaces) {
           const desde = posiciones.get(enlace.desde);
           const hasta = posiciones.get(enlace.hasta);
@@ -556,8 +556,18 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
           linea.setAttribute("y1", String(desde.y));
           linea.setAttribute("x2", String(hasta.x));
           linea.setAttribute("y2", String(hasta.y));
+          linea.setAttribute("stroke", enlace.color);
           if (ATRIBUTO_CID) linea.setAttribute(ATRIBUTO_CID, "");
           svg.appendChild(linea);
+        }
+        for (const union of ronda.uniones) {
+          const circulo = document.createElementNS(svgNS, "circle");
+          circulo.setAttribute("class", "arbol-juego-union");
+          circulo.setAttribute("cx", String(union.x));
+          circulo.setAttribute("cy", String(union.y));
+          circulo.setAttribute("r", "3.5");
+          if (ATRIBUTO_CID) circulo.setAttribute(ATRIBUTO_CID, "");
+          svg.appendChild(circulo);
         }
         lienzo.appendChild(svg);
 
@@ -1277,8 +1287,13 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
     }
 
     .arbol-juego-svg line {
-      stroke: var(--color-tarjeta-borde);
       stroke-width: 2;
+    }
+
+    .arbol-juego-union {
+      fill: var(--color-fondo-pantalla);
+      stroke: var(--color-tarjeta-borde);
+      stroke-width: 1.5;
     }
 
     .arbol-juego-nodo {
