@@ -411,24 +411,24 @@ capitulos:
     relatos: [ crono-devora-a-sus-hijos ]
     examen: { aciertos: 8, de: 10 }
 
-  - id: la-guerra-por-el-cosmos
-    nombre: La guerra por el cosmos
-    era: edad-de-los-titanes
-    orden: 200
-    resumen: Diez años de guerra entre titanes y olímpicos deciden quién gobierna el
-      mundo.
-    relatos: [ titanomaquia ]
-    entidades_extra: [ monte-otris ]
-    examen: { aciertos: 8, de: 10 }
-
   - id: la-creacion-de-los-mortales
     nombre: La creación de los mortales
     era: edad-de-los-titanes
-    orden: 300
+    orden: 200
     resumen: La primera estirpe de mortales vive bajo Crono sin trabajo ni vejez, y
       Prometeo la modela de barro en una tradición que no coincide con la
       primera en el cuándo.
     relatos: [ la-raza-de-oro, prometeo-modela-a-los-hombres ]
+    examen: { aciertos: 8, de: 10 }
+
+  - id: la-guerra-por-el-cosmos
+    nombre: La guerra por el cosmos
+    era: edad-de-los-titanes
+    orden: 300
+    resumen: Diez años de guerra entre titanes y olímpicos deciden quién gobierna el
+      mundo.
+    relatos: [ titanomaquia ]
+    entidades_extra: [ monte-otris ]
     examen: { aciertos: 8, de: 10 }
 
   # ─── edad de los olímpicos ─────────────────────────────────────
