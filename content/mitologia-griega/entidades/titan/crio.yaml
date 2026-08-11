@@ -2,3 +2,10 @@ id: crio
 nombre: Crío
 tipo: titan
 resumen: Titán sin mitos propios, presente en las listas de los doce y conocido solo por su lugar en la genealogía.
+relaciones:
+  - tipo: hijo_de
+    destino: urano
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: gea
+    fuente: teogonia

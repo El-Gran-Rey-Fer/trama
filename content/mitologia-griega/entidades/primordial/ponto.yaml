@@ -7,3 +7,6 @@ resumen: >
 relaciones:
   - tipo: hijo_de
     destino: gea
+  - tipo: consorte_de
+    destino: gea
+    fuente: teogonia

@@ -6,7 +6,7 @@ resumen: >
   la existencia de nada, pero hace que lo que ya existe se junte y produzca descendencia.
 atributos:
   dominio: amor y sexo
-  equivalente_romano: Amor
+  equivalente_romano: Cupido
 relaciones:
   - tipo: hijo_de
     destino: caos
