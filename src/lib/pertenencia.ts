@@ -53,7 +53,7 @@ export async function generarPertenencia(
 			continue;
 		}
 
-		if (definicion.pertenencia && definicion.conjunto) {
+		if (definicion.pertenencia && definicion.conjunto === true) {
 			const id = `${origenId}:${relacion.tipo}`;
 			const grupo = grupos.get(id) ?? {
 				anclaId: origenId,
@@ -65,7 +65,10 @@ export async function generarPertenencia(
 			grupos.set(id, grupo);
 		}
 
-		if (definicion.pertenencia_inversa && definicion.conjunto_inversa) {
+		if (
+			definicion.pertenencia_inversa &&
+			definicion.conjunto_inversa === true
+		) {
 			const id = `${relacion.destino}:${definicion.inversa}`;
 			const grupo = grupos.get(id) ?? {
 				anclaId: relacion.destino,

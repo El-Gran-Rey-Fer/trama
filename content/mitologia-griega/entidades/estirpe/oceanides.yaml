@@ -1,0 +1,12 @@
+id: oceanides
+nombre: Oceánides
+tipo: estirpe
+genero: femenino
+resumen: Las tres mil hijas de Océano y Tetis, ninfas que habitan manantiales y aguas dulces por toda la tierra.
+relaciones:
+  - tipo: hijo_de
+    destino: oceano
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: tetis-titanide
+    fuente: teogonia

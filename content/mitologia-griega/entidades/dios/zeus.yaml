@@ -41,7 +41,7 @@ relaciones:
     destino: tantalo
     fuente: descripcion-de-grecia
   - tipo: castiga_a
-    destino: pelope
+    destino: tantalo
     fuente: olimpicas
   - tipo: padre_de
     destino: ticio
@@ -49,9 +49,10 @@ relaciones:
   - tipo: padre_de
     destino: apolo
     fuente: teogonia
-  - tipo: madre_de
+  - tipo: padre_de
     destino: artemis
     fuente: teogonia
   - tipo: purifica_a
     destino: ixion
+    fuente: piticas
 retrato: jupiter-louvre-lens

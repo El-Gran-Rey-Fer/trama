@@ -110,7 +110,17 @@ const relatoSchema = z.object({
 	nombre: z.string(),
 	resumen: z.string(),
 	participantes: z.array(z.string()).optional(),
-	lugar: z.string().optional(),
+	// Casi siempre un solo sitio, pero un relato puede recorrer varios (p.ej.
+	// un delito en un lugar y un castigo eterno en otro): admite `string` suelto
+	// (lo que ya hay escrito, todo en singular) o `string[]`. Se normaliza a
+	// array aquí mismo, el punto de entrada más cercano al esquema, para que
+	// nada aguas abajo tenga que volver a distinguir los dos casos.
+	lugar: z
+		.union([z.string(), z.array(z.string())])
+		.optional()
+		.transform((valor) =>
+			valor === undefined ? undefined : Array.isArray(valor) ? valor : [valor],
+		),
 	// id de una entrada en `eras` (materia.yaml); `orden` es local a esa era, no global.
 	era: z.string().optional(),
 	orden: z.number().optional(),
@@ -148,8 +158,20 @@ const registroRelacionSchema = z.object({
 	// origen+tipo agrupadas en una sola tarjeta), no una tarjeta por arista.
 	// `tarjeta: false` desactiva la generación en esa dirección sin quitar la
 	// plantilla (por si documenta la pregunta igualmente).
-	conjunto: z.boolean().optional(),
-	conjunto_inversa: z.boolean().optional(),
+	//
+	// `"dinamico"` es un tercer estado, distinto de `true`/sin marca: decide por
+	// grupo origen+tipo (o destino+tipo, en la inversa) según la arity real de
+	// ESE grupo en el contenido — un solo destino sigue dando la tarjeta de
+	// valor único de siempre (con distractores); dos o más, tarjeta de conjunto.
+	// Pensado para relaciones donde la mayoría de los grupos son de un único
+	// destino pero alguno puede no serlo (ej. `ocurre_en`: casi todo relato pasa
+	// en un solo lugar, pero uno puede recorrer varios). No lo uses en una
+	// relación que ya sea `true` a propósito aunque hoy tenga grupos de arity 1
+	// (ej. `padre_de`): cambiar esos a `"dinamico"` movería tarjetas de formato
+	// conjunto a valor único, y los ids de tarjeta son permanentes a partir del
+	// bloque C (ver CLAUDE.md).
+	conjunto: z.union([z.boolean(), z.literal("dinamico")]).optional(),
+	conjunto_inversa: z.union([z.boolean(), z.literal("dinamico")]).optional(),
 	tarjeta: z.boolean().optional(),
 	tarjeta_inversa: z.boolean().optional(),
 	// Juego de pertenencia (plan de imágenes y álbum, paso A6): plantilla sí/no

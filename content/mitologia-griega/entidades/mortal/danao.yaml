@@ -5,6 +5,9 @@ resumen: Rey de Argos que huye por mar con sus cincuenta hijas y les entrega los
   puñales con los que matan a sus maridos.
 relaciones:
   - tipo: padre_de
+    destino: danaides
+    fuente: biblioteca
+  - tipo: padre_de
     destino: hipermnestra
     fuente: biblioteca
   - tipo: gobierna

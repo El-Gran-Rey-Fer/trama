@@ -1,0 +1,15 @@
+id: climene
+nombre: Clímene
+tipo: titan
+genero: femenino
+resumen: Oceánide, consorte de Jápeto y madre de los titanes que se enfrentan a Zeus por los mortales.
+relaciones:
+  - tipo: hijo_de
+    destino: oceano
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: tetis-titanide
+    fuente: teogonia
+  - tipo: consorte_de
+    destino: japeto
+    fuente: teogonia

@@ -3,9 +3,9 @@
 // de práctica (qué tarjetas están disponibles). Modo aventura, paso 3 y paso 4.
 export function conjuntoDeRelato(data: {
 	participantes?: string[];
-	lugar?: string;
+	lugar?: string[];
 }): string[] {
 	const ids = [...(data.participantes ?? [])];
-	if (data.lugar) ids.push(data.lugar);
+	ids.push(...(data.lugar ?? []));
 	return ids;
 }

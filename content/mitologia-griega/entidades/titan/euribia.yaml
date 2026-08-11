@@ -1,0 +1,15 @@
+id: euribia
+nombre: Euribia
+tipo: titan
+genero: femenino
+resumen: Hija de Ponto y Gea, de corazón inquebrantable según Hesíodo, consorte de Crío y madre de Perses.
+relaciones:
+  - tipo: hijo_de
+    destino: ponto
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: gea
+    fuente: teogonia
+  - tipo: consorte_de
+    destino: crio
+    fuente: teogonia

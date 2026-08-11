@@ -1,0 +1,15 @@
+id: filira
+nombre: Fílira
+tipo: titan
+genero: femenino
+resumen: Oceánide, consorte de Crono, con quien engendra a Quirón antes de transformarse por vergüenza.
+relaciones:
+  - tipo: hijo_de
+    destino: oceano
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: tetis-titanide
+    fuente: teogonia
+  - tipo: consorte_de
+    destino: crono
+    fuente: teogonia

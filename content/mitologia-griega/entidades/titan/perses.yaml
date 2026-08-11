@@ -1,0 +1,11 @@
+id: perses
+nombre: Perses
+tipo: titan
+resumen: Titán hijo de Crío y Euribia, consorte de Asteria y padre de Hécate, sin mitos propios.
+relaciones:
+  - tipo: hijo_de
+    destino: crio
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: euribia
+    fuente: teogonia

@@ -51,13 +51,10 @@ const participantes = (entrada.data.participantes ?? []).map((pid) => {
 		retrato: nodo ? resolverRetrato(grafo, nodo) : undefined,
 	};
 });
-const lugar = entrada.data.lugar
-	? {
-			id: entrada.data.lugar,
-			nombre:
-				obtenerEntidad(grafo, entrada.data.lugar)?.nombre ?? entrada.data.lugar,
-		}
-	: null;
+const lugares = (entrada.data.lugar ?? []).map((lugarId) => ({
+	id: lugarId,
+	nombre: obtenerEntidad(grafo, lugarId)?.nombre ?? lugarId,
+}));
 
 // Un relato no conoce su capítulo (la relación vive al revés, en
 // materia.yaml: capitulos[].relatos) — se resuelve aquí para el back-link y
@@ -90,7 +87,7 @@ for (const p of participantes) {
   materiaSlug={materia}
   era={era}
   participantes={participantes}
-  lugar={lugar}
+  lugares={lugares}
   capituloId={capituloPadre?.id}
   capituloNombre={capituloPadre?.nombre}
   cadenaCapitulos={cadena}

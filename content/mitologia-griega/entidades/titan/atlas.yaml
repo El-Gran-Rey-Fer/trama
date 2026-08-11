@@ -1,0 +1,11 @@
+id: atlas
+nombre: Atlas
+tipo: titan
+resumen: Titán hijo de Jápeto y Clímene, condenado tras la Titanomaquia a sostener el cielo sobre sus hombros.
+relaciones:
+  - tipo: hijo_de
+    destino: japeto
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: climene
+    fuente: teogonia

@@ -12,7 +12,12 @@ nombre: Mitología griega
 # arista, ej. "¿quién es el padre de Zeus?" -> un solo nombre) y cuál es de respuesta en
 # conjunto (todas las aristas origen+tipo agrupadas en una sola tarjeta con todos los destinos,
 # ej. "¿de quién es padre Crono?" -> los cuatro hijos en una tarjeta, no cuatro tarjetas).
-# Por defecto, sin la marca, es de respuesta única.
+# Por defecto, sin la marca, es de respuesta única. Un tercer valor, `dinamico`, decide por
+# grupo origen+tipo según su arity real en el contenido en vez de fijarlo para toda la
+# relación: úsalo solo cuando la mayoría de los grupos son de un único destino y alguno
+# puede no serlo (ver `ocurre_en`, más abajo) — nunca en una relación que ya sea `true` a
+# propósito, porque cambiarla movería tarjetas de formato y los ids son permanentes a
+# partir del bloque C (ver CLAUDE.md).
 #
 # `pertenencia`/`pertenencia_inversa` (plan de imágenes y álbum, paso A6): plantilla sí/no
 # para el lado `conjunto`/`conjunto_inversa` de la misma relación, donde la opción múltiple
@@ -92,6 +97,9 @@ relaciones:
     inversa: escenario_de
     pregunta: "¿Dónde ocurre {origen}?"
     pregunta_inversa: "¿Qué relato ocurre en {destino}?"
+    conjunto: dinamico # casi todo relato pasa en un solo lugar (tarjeta de valor único,
+    # con distractores); el que recorra varios (ver Tántalo, Ticio, las Danaides) pasa a
+    # tarjeta de conjunto solo. src/lib/tarjetas.ts decide por relato, no aquí.
     conjunto_inversa: true # un lugar puede ser escenario de varios relatos
     pertenencia_inversa: "¿Ocurre {candidato} en {destino}?"
   escenario_de:

@@ -91,7 +91,7 @@ function main() {
 	const usadas = new Set();
 	for (const { datos } of relatos) {
 		for (const p of datos.participantes ?? []) usadas.add(p);
-		if (datos.lugar) usadas.add(datos.lugar);
+		for (const lugarId of [].concat(datos.lugar ?? [])) usadas.add(lugarId);
 	}
 	for (const cap of materia.capitulos ?? []) {
 		for (const id of cap.entidades_extra ?? []) usadas.add(id);

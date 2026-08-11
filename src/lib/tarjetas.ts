@@ -1,7 +1,7 @@
 import { getEntry } from "astro:content";
 import { relatosDeMateria } from "./contenidoPorMateria";
 import { conjuntoDeRelato } from "./desbloqueo";
-import { construirGrafo, type Entidad, type Grafo } from "./grafo";
+import { type Arista, construirGrafo, type Entidad, type Grafo } from "./grafo";
 
 export interface Tarjeta {
 	id: string;
@@ -130,6 +130,44 @@ function distractoresDeEpiteto(grafo: Grafo, respuesta: Entidad): string[] {
 		.map((e) => e.nombre);
 }
 
+// Arity real de cada grupo origen+tipo (o destino+tipo, para la dirección
+// inversa) en TODO el grafo, sin filtrar por `soloIds` — es una propiedad del
+// contenido, no del progreso de lectura. La usa `decideConjunto` para las
+// relaciones marcadas `conjunto: dinamico`/`conjunto_inversa: dinamico` en el
+// registro: si un grupo así nunca tiene más de una arista, sigue generando la
+// tarjeta de valor único de siempre (con distractores, en el juego de
+// emparejar); en cuanto algún grupo alcanza dos o más (ej. un relato con dos
+// `lugar`), esa tarjeta concreta pasa a ser de conjunto — sin afectar a
+// ninguna relación que no lleve esa marca.
+function contarPorClave(
+	aristas: Arista[],
+	clave: (a: Arista) => string,
+): Map<string, number> {
+	const conteo = new Map<string, number>();
+	for (const arista of aristas) {
+		const k = clave(arista);
+		conteo.set(k, (conteo.get(k) ?? 0) + 1);
+	}
+	return conteo;
+}
+
+// Conjunto solo si hace falta: `true` en el registro siempre agrupa (sin
+// tocar ninguna relación ya declarada así, aunque algún grupo suyo tenga hoy
+// una sola arista — cambiarle el comportamiento le cambiaría el id de
+// tarjeta, y esos son permanentes a partir del bloque C). Sin marca, sigue
+// sin agrupar nunca, exactamente como hasta ahora. `"dinamico"` es el tercer
+// estado, opt-in: decide por la arity real de ESE grupo. Misma función para
+// las dos direcciones, así una relación futura con el mismo problema que
+// `ocurre_en` solo necesita declarar `"dinamico"`, sin tocar este fichero.
+function decideConjunto(
+	flag: boolean | "dinamico" | undefined,
+	conteo: Map<string, number>,
+	clave: string,
+): boolean {
+	if (flag === "dinamico") return (conteo.get(clave) ?? 0) > 1;
+	return flag === true;
+}
+
 export async function generarTarjetas(
 	materiaId: string,
 	// Restringe a las aristas/entidades cuyos ids estén en el conjunto
@@ -144,6 +182,15 @@ export async function generarTarjetas(
 	// destino porque la respuesta no es un único destino, es todos ellos.
 	const grupos = new Map<string, Grupo>();
 
+	const conteoOrigenTipo = contarPorClave(
+		grafo.aristas,
+		({ origenId, relacion }) => `${origenId}:${relacion.tipo}`,
+	);
+	const conteoDestinoTipo = contarPorClave(
+		grafo.aristas,
+		({ relacion }) => `${relacion.destino}:${relacion.tipo}`,
+	);
+
 	for (const { origenId, relacion } of grafo.aristas) {
 		if (soloIds && (!soloIds.has(origenId) || !soloIds.has(relacion.destino))) {
 			continue;
@@ -156,8 +203,9 @@ export async function generarTarjetas(
 
 		if (definicion.pregunta && definicion.tarjeta !== false) {
 			const pregunta = definicion.pregunta.replace("{origen}", origen.nombre);
-			if (definicion.conjunto) {
-				const id = `${origenId}:${relacion.tipo}`;
+			const claveOrigen = `${origenId}:${relacion.tipo}`;
+			if (decideConjunto(definicion.conjunto, conteoOrigenTipo, claveOrigen)) {
+				const id = claveOrigen;
 				const grupo = grupos.get(id) ?? {
 					pregunta,
 					respuestas: [],
@@ -191,7 +239,14 @@ export async function generarTarjetas(
 				"{destino}",
 				destino.nombre,
 			);
-			if (definicion.conjunto_inversa) {
+			const claveDestino = `${relacion.destino}:${relacion.tipo}`;
+			if (
+				decideConjunto(
+					definicion.conjunto_inversa,
+					conteoDestinoTipo,
+					claveDestino,
+				)
+			) {
 				const id = `${relacion.destino}:${definicion.inversa}`;
 				const grupo = grupos.get(id) ?? {
 					pregunta,

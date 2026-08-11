@@ -38,8 +38,8 @@ export interface RegistroRelacion {
 	simetrica?: boolean;
 	pregunta?: string;
 	pregunta_inversa?: string;
-	conjunto?: boolean;
-	conjunto_inversa?: boolean;
+	conjunto?: boolean | "dinamico";
+	conjunto_inversa?: boolean | "dinamico";
 	tarjeta?: boolean;
 	tarjeta_inversa?: boolean;
 	pertenencia?: string;
@@ -170,14 +170,14 @@ export async function construirGrafo(materiaId: string): Promise<Grafo> {
 	}
 
 	for (const entrada of entradasRelatos) {
-		// `lugar` es azúcar sintáctico sobre el mismo mecanismo de relaciones: se
-		// convierte aquí en una arista `ocurre_en` más (el relato es el origen:
-		// "este relato ocurre_en aquel lugar"), para no tener dos formas
+		// `lugar` es azúcar sintáctico sobre el mismo mecanismo de relaciones: cada
+		// id se convierte aquí en su propia arista `ocurre_en` (el relato es el
+		// origen: "este relato ocurre_en aquel lugar"), para no tener dos formas
 		// distintas de declarar lo mismo. `participantes` se trata aparte, más
 		// abajo, porque su arista va en sentido contrario (ver ese bloque).
-		const relacionesDerivadas: RelacionCruda[] = entrada.data.lugar
-			? [{ tipo: "ocurre_en", destino: entrada.data.lugar }]
-			: [];
+		const relacionesDerivadas: RelacionCruda[] = (entrada.data.lugar ?? []).map(
+			(lugarId) => ({ tipo: "ocurre_en", destino: lugarId }),
+		);
 		indexar(
 			entrada.id,
 			"relato",

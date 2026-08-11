@@ -11,5 +11,7 @@ relaciones:
     fuente: biblioteca
   - tipo: purificado_por
     destino: atenea
+    fuente: biblioteca
   - tipo: purificado_por
     destino: hermes
+    fuente: biblioteca

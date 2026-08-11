@@ -1,0 +1,11 @@
+id: menecio
+nombre: Menecio
+tipo: titan
+resumen: Titán hijo de Jápeto y Clímene, fulminado por Zeus durante la Titanomaquia y arrojado al Érebo por su desmesura.
+relaciones:
+  - tipo: hijo_de
+    destino: japeto
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: climene
+    fuente: teogonia

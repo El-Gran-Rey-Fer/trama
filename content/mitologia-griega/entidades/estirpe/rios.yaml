@@ -1,0 +1,11 @@
+id: rios
+nombre: Los Ríos
+tipo: estirpe
+resumen: Los tres mil hijos de Océano y Tetis, personificación masculina de los ríos que recorren el mundo.
+relaciones:
+  - tipo: hijo_de
+    destino: oceano
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: tetis-titanide
+    fuente: teogonia

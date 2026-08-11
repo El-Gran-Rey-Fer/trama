@@ -137,7 +137,7 @@ function relacionesDe(entrada) {
 // build (src/components/E.astro).
 function extraerIdsCitados(datosRelato, cuerpo) {
 	const ids = new Set(datosRelato.participantes ?? []);
-	if (datosRelato.lugar) ids.add(datosRelato.lugar);
+	for (const lugarId of [].concat(datosRelato.lugar ?? [])) ids.add(lugarId);
 	for (const m of cuerpo.matchAll(/<E\s+id\s*=\s*["']([^"']+)["']/g)) {
 		ids.add(m[1]);
 	}

@@ -19,7 +19,7 @@ interface Props {
 	materiaSlug: string;
 	era?: string | null;
 	participantes: Participante[];
-	lugar: { id: string; nombre: string } | null;
+	lugares: { id: string; nombre: string }[];
 	capituloId?: string;
 	capituloNombre?: string;
 	// Muro de aventura (bloque W): la cadena completa de capítulos activos y
@@ -39,7 +39,7 @@ const {
 	materiaSlug,
 	era,
 	participantes,
-	lugar,
+	lugares,
 	capituloId,
 	capituloNombre,
 	cadenaCapitulos,
@@ -82,9 +82,15 @@ const relatosCapitulo =
     </div>
 
     {
-      lugar && (
+      lugares.length > 0 && (
         <p class="lugar">
-          Lugar: <a href={rutaEntidad(materiaSlug, lugar.id)}>{lugar.nombre}</a>
+          {lugares.length > 1 ? "Lugares: " : "Lugar: "}
+          {lugares.map((lugar, i) => (
+            <>
+              {i > 0 && ", "}
+              <a href={rutaEntidad(materiaSlug, lugar.id)}>{lugar.nombre}</a>
+            </>
+          ))}
         </p>
       )
     }
