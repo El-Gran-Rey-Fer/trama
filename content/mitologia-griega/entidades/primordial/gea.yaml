@@ -11,6 +11,9 @@ atributos:
   culto: oráculos antiguos, entre ellos Delfos antes de Apolo
   equivalente_romano: Tellus
 relaciones:
+  - tipo: hijo_de
+    destino: caos
+    fuente: teogonia
   - tipo: madre_de
     destino: crono
     fuente: teogonia
@@ -60,4 +63,8 @@ relaciones:
   - tipo: madre_de
     destino: equidna
     fuente: biblioteca
+    principal: false
+  - tipo: madre_de
+    destino: ticio
+    fuente: odisea
     principal: false

@@ -4,8 +4,8 @@ nombre: Poseidón
 resumen: >
   Dios del mar, hermano de Zeus y Hades.
 generacion: 3
-etiquetas: [olimpico]
-epitetos: [El que sacude la tierra, Señor de los caballos]
+etiquetas: [ olimpico ]
+epitetos: [ El que sacude la tierra, Señor de los caballos ]
 atributos:
   simbolo: el tridente
   dominio: el mar y los terremotos
@@ -16,3 +16,6 @@ relaciones:
     destino: minos
   - tipo: encierra_a
     destino: titanes
+  - tipo: rapta_a
+    destino: pelope
+    fuente: olimpicas

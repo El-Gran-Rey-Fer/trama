@@ -1,0 +1,13 @@
+id: tantalo
+tipo: mortal
+nombre: Tántalo
+resumen: Rey de Lidia admitido a la mesa de los dioses, castigado con un hambre
+  y una sed que no se sacian nunca.
+etiquetas: [ castigo-divino ]
+relaciones:
+  - tipo: padre_de
+    destino: pelope
+    fuente: biblioteca
+  - tipo: mata_a
+    destino: pelope
+    fuente: biblioteca

@@ -1,0 +1,10 @@
+id: apolo
+tipo: dios
+nombre: Apolo
+resumen: Dios del arco, la profecía y la música, dueño del oráculo de Delfos y
+  hermano gemelo de Ártemis.
+etiquetas: [ olimpico ]
+relaciones:
+  - tipo: mata_a
+    destino: ticio
+    fuente: biblioteca

@@ -4,6 +4,9 @@ nombre: Tártaro
 resumen: >
   Sima profunda bajo las raíces de la tierra, cárcel de los titanes vencidos.
 relaciones:
+  - tipo: hijo_de
+    destino: caos
+    fuente: teogonia
   - tipo: padre_de
     destino: tifon
     fuente: teogonia
@@ -11,3 +14,5 @@ relaciones:
     destino: equidna
     fuente: biblioteca
     principal: false
+  - tipo: dentro_de
+    destino: inframundo

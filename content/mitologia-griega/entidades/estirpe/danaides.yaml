@@ -1,0 +1,15 @@
+id: danaides
+tipo: estirpe
+nombre: Danaides
+genero: femenino
+resumen: Las cincuenta hijas de Dánao, que matan a sus maridos la noche de bodas
+  y acarrean agua en el inframundo en una vasija que no se llena.
+etiquetas: [ castigo-divino ]
+relaciones:
+  - tipo: mata_a
+    destino: egiptiadas
+    fuente: biblioteca
+  - tipo: purificado_por
+    destino: atenea
+  - tipo: purificado_por
+    destino: hermes

@@ -1,0 +1,11 @@
+id: elara
+tipo: mortal
+nombre: Elara
+genero: femenino
+resumen: Mujer amada por Zeus a la que él esconde bajo tierra por miedo a Hera,
+  madre del gigante Ticio.
+etiquetas: [ zeus-amores ]
+relaciones:
+  - tipo: madre_de
+    destino: ticio
+    fuente: biblioteca

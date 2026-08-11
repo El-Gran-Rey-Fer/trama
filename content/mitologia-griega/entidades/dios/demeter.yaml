@@ -1,9 +1,10 @@
 id: demeter
 tipo: dios
 nombre: Deméter
+genero: femenino
 resumen: >
   Diosa de la agricultura y las cosechas, hija de Crono y Rea.
-epitetos: [Legisladora]
+epitetos: [ Legisladora ]
 atributos:
   simbolo: las espigas de trigo
   dominio: la agricultura y las cosechas
@@ -12,3 +13,6 @@ atributos:
 relaciones:
   - tipo: habita
     destino: monte-olimpo
+  - tipo: devora_a
+    destino: pelope
+    fuente: biblioteca

@@ -4,3 +4,6 @@ nombre: Cnosos
 resumen: >
   Ciudad donde desembarcan los catorce jóvenes del tributo ateniense y donde
   Ariadna se enamora de Teseo.
+relaciones:
+  - tipo: dentro_de
+    destino: creta

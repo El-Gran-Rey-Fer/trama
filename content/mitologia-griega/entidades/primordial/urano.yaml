@@ -8,6 +8,9 @@ atributos:
   dominio: cielo
   equivalente_romano: Caelus
 relaciones:
+  - tipo: hijo_de
+    destino: gea
+    fuente: teogonia
   - tipo: padre_de
     destino: crono
     fuente: teogonia

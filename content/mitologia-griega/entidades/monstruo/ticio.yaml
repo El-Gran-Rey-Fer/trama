@@ -1,0 +1,10 @@
+id: ticio
+tipo: monstruo
+nombre: Ticio
+resumen: Gigante que asalta a Leto y queda tendido en el inframundo mientras dos
+  buitres le comen el hígado.
+etiquetas: [ castigo-divino ]
+relaciones:
+  - tipo: agrede_a
+    destino: leto
+    fuente: odisea

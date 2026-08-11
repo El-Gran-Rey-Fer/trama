@@ -1,0 +1,12 @@
+id: artemis
+tipo: dios
+nombre: Artemis
+genero: femenino
+resumen: Diosa virgen de la caza y de los animales salvajes, hermana gemela de
+  Apolo y tan certera con el arco como él.
+etiquetas: [ olimpico ]
+relaciones:
+  - tipo: mata_a
+    destino: ticio
+    fuente: piticas
+    principal: false

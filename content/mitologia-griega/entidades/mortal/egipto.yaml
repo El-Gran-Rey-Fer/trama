@@ -1,0 +1,9 @@
+id: egipto
+tipo: mortal
+nombre: Egipto
+resumen: Hermano de Dánao y padre de cincuenta hijos, que da su nombre al país
+  que somete.
+relaciones:
+  - tipo: padre_de
+    destino: egiptiadas
+    fuente: biblioteca

@@ -1,0 +1,12 @@
+id: leto
+tipo: titan
+nombre: Leto
+genero: femenino
+resumen: Titánide hija de Ceo y Febe, madre de Apolo y de Ártemis.
+relaciones:
+  - tipo: madre_de
+    destino: apolo
+    fuente: teogonia
+  - tipo: madre_de
+    destino: artemis
+    fuente: teogonia

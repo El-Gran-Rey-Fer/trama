@@ -220,6 +220,29 @@ relaciones:
     conjunto_inversa: true
   liberado_por:
     inversa: libera_a
+  dentro_de:
+    inversa: contiene_a
+    pregunta: "¿Qué se encuentra dentro de {origen}?"
+    pregunta_inversa: "¿Dónde está {destino}?"
+    conjunto: true
+  contiene_a:
+    inversa: dentro_de
+  agrede_a:
+    inversa: agredido_por
+    pregunta: "¿A quién agrede {origen}?"
+    pregunta_inversa: "¿Quién es agredido por {destino}?"
+    conjunto: true
+    conjunto_inversa: true
+  agredido_por:
+    inversa: agrede_a
+  purifica_a:
+    inversa: purificado_por
+    pregunta: "¿A quién purifica {origen}?"
+    pregunta_inversa: "¿Quién es purificado por {destino}?"
+    conjunto: true
+    conjunto_inversa: true
+  purificado_por:
+    inversa: purifica_a
 
 fuentes:
   teogonia: { autor: "Hesíodo", obra: "Teogonía" }
@@ -231,12 +254,13 @@ fuentes:
   olimpicas: { autor: "Píndaro", obra: "Olímpicas" }
   himno-homerico-atenea: { obra: "Himno homérico a Atenea" }
   himno-homerico-demeter: { obra: "Himno homérico a Deméter" }
-  odisea: {autor: "Homero", obra: "Odisea"}
-  piticas: {autor: "Píndaro", obra: "Píticas"}
-  eneida: {autor: "Virgilio", obra: "Eneida"}
-  elegias: {autor: "Teognis", obra: "Elegías"}
-  descripcion-de-grecia: {autor: "Pausanias", obra: "Descripción de Grecia"}
-  escolios-iliada: {autor: "Ferécides", obra: "Escolios a la Ilíada"}
+  odisea: { autor: "Homero", obra: "Odisea" }
+  piticas: { autor: "Píndaro", obra: "Píticas" }
+  eneida: { autor: "Virgilio", obra: "Eneida" }
+  elegias: { autor: "Teognis", obra: "Elegías" }
+  descripcion-de-grecia: { autor: "Pausanias", obra: "Descripción de Grecia" }
+  escolios-iliada: { autor: "Ferécides", obra: "Escolios a la Ilíada" }
+  gorgias: { autor: "Platón", obra: "Gorgias" }
 
 # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (fuera del
 # alcance de A5: no está en su lista de comprobaciones).
@@ -436,14 +460,19 @@ capitulos:
     era: edad-de-los-olimpicos
     orden: 400
     relatos: [ sisifo-engana-a-la-muerte, ixion-y-la-rueda ]
-    entidades_extra: [estigia]
+    entidades_extra: [ estigia ]
     examen: { aciertos: 8, de: 10 }
 
   - id: los-castigos-eternos
     nombre: Los castigos eternos
     era: edad-de-los-olimpicos
     orden: 500
-    relatos: [ tantalo, ticio, las-danaides ]
+    relatos:
+      [
+        tantalo-y-la-mesa-de-los-dioses,
+        ticio-y-los-buitres,
+        el-agua-de-las-danaides
+      ]
     examen: { aciertos: 8, de: 10 }
 
   - id: atenea-y-la-ciudad

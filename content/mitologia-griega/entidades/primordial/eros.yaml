@@ -4,3 +4,10 @@ nombre: Eros
 resumen: >
   Fuerza primordial del deseo, anterior a los dioses y sin padres. No provoca por sí mismo
   la existencia de nada, pero hace que lo que ya existe se junte y produzca descendencia.
+atributos:
+  dominio: amor y sexo
+  equivalente_romano: Amor
+relaciones:
+  - tipo: hijo_de
+    destino: caos
+    fuente: teogonia
