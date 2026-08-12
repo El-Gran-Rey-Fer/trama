@@ -39,9 +39,10 @@ const posiciones = new Map(
         const desde = posiciones.get(enlace.desde);
         const hasta = posiciones.get(enlace.hasta);
         if (!desde || !hasta) return null;
-        return (
-          <line x1={desde.x} y1={desde.y} x2={hasta.x} y2={hasta.y} stroke={enlace.color} />
-        );
+        const puntos = [desde, ...(enlace.puntos ?? []), hasta]
+          .map((p) => `${p.x},${p.y}`)
+          .join(" ");
+        return <polyline points={puntos} stroke={enlace.color} />;
       })}
       {arbol.uniones.map((u) => (
         <circle class="union" cx={u.x} cy={u.y} r="3.5" />
@@ -76,8 +77,10 @@ const posiciones = new Map(
     overflow: visible;
   }
 
-  .enlaces line {
+  .enlaces line,
+  .enlaces polyline {
     stroke-width: 2;
+    fill: none;
   }
 
   .enlaces line.fila-divisor {

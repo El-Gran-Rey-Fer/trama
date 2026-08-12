@@ -86,9 +86,11 @@ export interface EnlaceGrafo {
 	hasta: string;
 	tipo: string;
 	color: string;
-	// Línea fina discontinua entre dos copias del mismo hub duplicado (§3):
-	// no es una relación de parentesco, solo señala "es la misma entidad".
-	discontinuo?: boolean;
+	// Puntos de quiebro intermedios (sin incluir los extremos, que son las
+	// posiciones de `desde`/`hasta`) para dibujar el conector en ángulo
+	// recto en vez de una diagonal — ver `elk.edgeRouting` en
+	// `calcularPosiciones`. Ausente si el tramo es recto (sin quiebro).
+	puntos?: { x: number; y: number }[];
 }
 
 export interface UnionGrafo {
@@ -366,8 +368,7 @@ interface UnionDetectada {
 	capa: number;
 }
 
-// Cuando un hijo tiene sus dos progenitores en la misma capa (el caso
-// normal: padre y madre son de la misma generación), se sustituyen sus dos
+// Cuando un hijo tiene dos progenitores conocidos, se sustituyen sus dos
 // líneas directas por un nodo de unión: líneas cortas de cada progenitor a
 // la unión (con su color de padre/madre) y una sola línea neutra de la
 // unión a cada hijo compartido, en vez de dos líneas por hijo que se cruzan
@@ -395,15 +396,8 @@ function detectarUniones(
 	for (const [hijoId, padres] of porHijo) {
 		const capaA = padres[0] && capa.get(padres[0].padreId);
 		const capaB = padres[1] && capa.get(padres[1].padreId);
-		if (
-			padres.length !== 2 ||
-			capaA === undefined ||
-			capaB === undefined ||
-			capaA !== capaB
-		) {
-			// Un solo progenitor conocido, o datos que no caen en la misma
-			// capa (no debería pasar con genealogía bien formada): sin
-			// fusión, línea directa por cada progenitor conocido.
+		if (padres.length !== 2 || capaA === undefined || capaB === undefined) {
+			// Un solo progenitor conocido: sin fusión, línea directa.
 			for (const p of padres) {
 				enlaces.push({
 					desde: p.padreId,
@@ -415,6 +409,15 @@ function detectarUniones(
 			continue;
 		}
 
+		// Los dos progenitores no siempre caen en la misma capa: un
+		// progenitor puede ser a la vez hijo y pareja del otro (relato
+		// real de la materia, no dato mal formado), así que el camino más
+		// largo desde las raíces los deja en capas distintas aunque tengan
+		// hijos en común. Fusionar solo cuando coinciden dejaba sin unión
+		// a generaciones enteras. La unión se coloca en la capa del
+		// progenitor más profundo (el hijo de un padre siempre está en una
+		// capa posterior a la de sus dos progenitores, se cumpla o no la
+		// igualdad, así que `max` nunca invade la fila de los hijos).
 		const [a, b] = padres;
 		const clave = [a.padreId, b.padreId].sort().join("+");
 		let union = unionPorPareja.get(clave);
@@ -422,7 +425,7 @@ function detectarUniones(
 			union = {
 				id: `union:${clave}`,
 				padres: [a.padreId, b.padreId],
-				capa: capaA,
+				capa: Math.max(capaA, capaB),
 			};
 			unionPorPareja.set(clave, union);
 			uniones.push(union);
@@ -513,28 +516,14 @@ function aplicarDuplicados(
 		};
 	});
 
-	// Conector visual entre copias consecutivas de un mismo hub (cadena, no
-	// todas-contra-todas: con dos uniones basta una línea, y no escala mal
-	// si algún día una entidad acumula media docena).
-	const conectores: EnlaceGrafo[] = [];
-	for (const [id, us] of unionesPorPadre) {
-		if (us.length < 2) continue;
-		const ordenadas = [...us].sort((a, b) => a.id.localeCompare(b.id));
-		for (let i = 0; i < ordenadas.length - 1; i++) {
-			const desde = copiaPorUnion.get(`${id}|${ordenadas[i].id}`);
-			const hasta = copiaPorUnion.get(`${id}|${ordenadas[i + 1].id}`);
-			if (!desde || !hasta) continue;
-			conectores.push({
-				desde,
-				hasta,
-				tipo: "misma_entidad",
-				color: "var(--color-tarjeta-borde)",
-				discontinuo: true,
-			});
-		}
-	}
+	// Sin línea conectora entre copias de un mismo hub: con el criterio de
+	// unión ya sin exigir la misma capa (ver `detectarUniones`), una
+	// entidad muy prolífica reparte sus copias por grupos de descendencia
+	// muy distintos y lejanos entre sí — la línea acababa cruzando medio
+	// lienzo, más ruido del que quitaba. El borde punteado de cada copia
+	// (§3, en el marcado) ya basta para leer "esto es un duplicado".
 
-	return { nodos, enlaces: [...enlacesReescritos, ...conectores] };
+	return { nodos, enlaces: enlacesReescritos };
 }
 
 // Tamaño nominal de cada nodo para elk: el layout siempre ha tratado los
@@ -555,7 +544,10 @@ async function calcularPosiciones(
 	uniones: UnionDetectada[],
 	enlaces: EnlaceGrafo[],
 	capa: Map<string, number>,
-): Promise<Map<string, { x: number; y: number }>> {
+): Promise<{
+	posiciones: Map<string, { x: number; y: number }>;
+	quiebres: Map<number, { x: number; y: number }[]>;
+}> {
 	// La ventana de ego usa capas con signo (centro en 0, ascendientes
 	// negativos) — elk solo necesita el orden relativo, así que se normaliza
 	// aquí sin tocar el `capa` de dominio que usa el resto del código.
@@ -595,6 +587,9 @@ async function calcularPosiciones(
 			"elk.partitioning.activate": "true",
 			"elk.spacing.nodeNode": String(ESPACIO_HERMANOS),
 			"elk.layered.spacing.nodeNodeBetweenLayers": String(ESPACIO_GENERACION),
+			// Conectores en ángulo recto (§1 del doc de spec): más fáciles de
+			// seguir que una diagonal cuando hay muchos cruces potenciales.
+			"elk.edgeRouting": "ORTHOGONAL",
 		},
 		children: nodosElk,
 		edges: edgesElk,
@@ -607,7 +602,24 @@ async function calcularPosiciones(
 			y: (nodo.y ?? 0) + TAMANO_NODO_ELK / 2,
 		});
 	}
-	return posiciones;
+
+	// Solo los quiebres intermedios: los extremos los pone `posiciones` (el
+	// centro real de cada nodo, no el borde de la caja nominal de 8px que
+	// ve elk) para que el conector arranque y termine exactamente donde se
+	// pinta cada casilla.
+	const quiebres = new Map<number, { x: number; y: number }[]>();
+	for (const edge of resultado.edges ?? []) {
+		const indice = Number(edge.id.slice(1));
+		const puntos = edge.sections?.[0]?.bendPoints;
+		if (puntos && puntos.length > 0) {
+			quiebres.set(
+				indice,
+				puntos.map((p) => ({ x: p.x, y: p.y })),
+			);
+		}
+	}
+
+	return { posiciones, quiebres };
 }
 
 export async function construirVistaFamilia(
@@ -678,12 +690,16 @@ export async function construirVistaFamilia(
 			}
 		: aplicarDuplicados(ids, unionesDetectadas, enlacesBase);
 
-	const posiciones = await calcularPosiciones(
+	const { posiciones, quiebres } = await calcularPosiciones(
 		nodoPlan,
 		unionesDetectadas,
 		enlaces,
 		capa,
 	);
+	for (const [indice, puntos] of quiebres) {
+		const enlace = enlaces[indice];
+		if (enlace) enlace.puntos = puntos;
+	}
 
 	const nodos: NodoGrafo[] = nodoPlan
 		.map((n): NodoGrafo | undefined => {
@@ -701,6 +717,12 @@ export async function construirVistaFamilia(
 		})
 		.filter((n): n is NodoGrafo => n !== undefined);
 
+	// La posición de la unión la pone elk igual que la de cualquier otro
+	// nodo del grafo — recolocarla a mano (p.ej. al punto medio de sus dos
+	// progenitores) rompería la consistencia con los quiebres en ángulo
+	// recto que elk ya calculó para ESA posición: el último tramo saltaría
+	// en diagonal para alcanzar el punto nuevo, justo el ruido visual que
+	// el enrutado ortogonal existe para evitar.
 	const uniones: UnionGrafo[] = unionesDetectadas
 		.map((u) => {
 			const pos = posiciones.get(u.id);
@@ -723,6 +745,13 @@ export async function construirVistaFamilia(
 	for (const u of uniones) {
 		u.x = u.x - minX + MARGEN;
 		u.y = u.y - minY + MARGEN;
+	}
+	for (const e of enlaces) {
+		if (!e.puntos) continue;
+		e.puntos = e.puntos.map((p) => ({
+			x: p.x - minX + MARGEN,
+			y: p.y - minY + MARGEN,
+		}));
 	}
 
 	const filas = [...new Set(nodos.map((n) => n.y))].sort((a, b) => a - b);

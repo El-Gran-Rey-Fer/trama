@@ -80,16 +80,10 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
                 const desde = posiciones.get(enlace.desde);
                 const hasta = posiciones.get(enlace.hasta);
                 if (!desde || !hasta) return null;
-                return (
-                  <line
-                    x1={desde.x}
-                    y1={desde.y}
-                    x2={hasta.x}
-                    y2={hasta.y}
-                    stroke={enlace.color}
-                    stroke-dasharray={enlace.discontinuo ? "3 3" : undefined}
-                  />
-                );
+                const puntos = [desde, ...(enlace.puntos ?? []), hasta]
+                  .map((p) => `${p.x},${p.y}`)
+                  .join(" ");
+                return <polyline points={puntos} stroke={enlace.color} />;
               })}
               {vista.uniones.map((u) => (
                 <circle class="union" cx={u.x} cy={u.y} r="3.5" />
@@ -257,8 +251,10 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     overflow: visible;
   }
 
-  .enlaces line {
+  .enlaces line,
+  .enlaces polyline {
     stroke-width: 2;
+    fill: none;
   }
 
   .enlaces line.fila-divisor {
