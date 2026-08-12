@@ -269,6 +269,8 @@ fuentes:
   descripcion-de-grecia: { autor: "Pausanias", obra: "Descripción de Grecia" }
   escolios-iliada: { autor: "Ferécides", obra: "Escolios a la Ilíada" }
   gorgias: { autor: "Platón", obra: "Gorgias" }
+  himno-homerico-apolo: { obra: "Himno homérico a Apolo" }
+  himno-a-delos: { autor: "Calímaco", obra: "Himno a Delos" }
 
 # tipos de entidad en uso. Registro descriptivo, sin validación de build todavía (fuera del
 # alcance de A5: no está en su lista de comprobaciones).

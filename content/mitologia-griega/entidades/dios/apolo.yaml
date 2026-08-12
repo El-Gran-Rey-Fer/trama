@@ -8,3 +8,6 @@ relaciones:
   - tipo: mata_a
     destino: ticio
     fuente: biblioteca
+  - tipo: gobierna
+    destino: delfos
+    fuente: biblioteca

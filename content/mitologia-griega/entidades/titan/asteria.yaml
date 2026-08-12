@@ -2,7 +2,8 @@ id: asteria
 nombre: Asteria
 tipo: titan
 genero: femenino
-resumen: Titánide hija de Ceo y Febe, hermana de Leto, consorte de Perses y madre de Hécate.
+resumen: Titánide hija de Ceo y Febe, hermana de Leto, consorte de Perses y
+  madre de Hécate.
 relaciones:
   - tipo: hijo_de
     destino: ceo
@@ -13,3 +14,6 @@ relaciones:
   - tipo: consorte_de
     destino: perses
     fuente: teogonia
+  - tipo: se_convierte_en
+    destino: delos
+    fuente: himno-a-delos
