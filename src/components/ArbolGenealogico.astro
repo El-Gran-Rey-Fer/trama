@@ -112,9 +112,14 @@ const posiciones = new Map(
     width: 64px;
   }
 
-  .nodo[data-raiz="true"] .nodo-casilla .casilla {
+  /* En `.nodo-casilla` (de este fichero), no en `.casilla` de
+     Casilla.astro: el CSS con scope de Astro añade su hash a cada clase
+     del selector, y `.casilla` lleva el hash del componente hijo, no el
+     de este — el selector nunca casaba y el marcador no se veía. */
+  .nodo[data-raiz="true"] .nodo-casilla {
     outline: 2px solid var(--color-acento);
     outline-offset: 2px;
+    border-radius: var(--radio);
   }
 
   .nodo-nombre {
