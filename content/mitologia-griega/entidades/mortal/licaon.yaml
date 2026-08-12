@@ -1,0 +1,12 @@
+id: licaon
+tipo: mortal
+nombre: Licaon
+resumen: Rey legendario de Arcadia que pone a prueba la divinidad de Zeus con un
+  banquete de carne humana y es transformado en lobo como castigo.
+relaciones:
+  - tipo: gobierna
+    destino: arcadia
+    fuente: metamorfosis
+  - tipo: agrede_a
+    destino: zeus
+    fuente: metamorfosis

@@ -55,4 +55,10 @@ relaciones:
   - tipo: purifica_a
     destino: ixion
     fuente: piticas
+  - tipo: castiga_a
+    destino: licaon
+    fuente: metamorfosis
+  - tipo: mata_a
+    destino: humanidad
+    fuente: metamorfosis
 retrato: jupiter-louvre-lens

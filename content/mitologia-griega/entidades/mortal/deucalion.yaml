@@ -1,0 +1,18 @@
+id: deucalion
+tipo: mortal
+nombre: Deucalion
+resumen: Hijo de Prometeo que sobrevive al diluvio universal junto a su mujer
+  Pirra y repuebla la tierra arrojando piedras que se convierten en hombres.
+relaciones:
+  - tipo: hijo_de
+    destino: prometeo
+    fuente: biblioteca
+  - tipo: consorte_de
+    destino: pirra
+    fuente: metamorfosis
+  - tipo: construye
+    destino: arca-de-deucalion
+    fuente: biblioteca
+  - tipo: modela_a
+    destino: humanidad
+    fuente: metamorfosis

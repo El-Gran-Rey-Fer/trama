@@ -176,8 +176,10 @@ relaciones:
     inversa: modelado_por
     pregunta: "¿A quién modela {origen}?"
     pregunta_inversa: "¿Quién modela a {destino}?"
+    conjunto: true
   modelado_por:
     inversa: modela_a
+    conjunto: true
   forja:
     inversa: forjado_por
     pregunta: "¿Qué forja {origen}?"
@@ -620,7 +622,7 @@ capitulos:
     nombre: El diluvio
     era: edad-de-los-olimpicos
     orden: 2100
-    relatos: [ licaon, deucalion-y-pirra ]
+    relatos: [ el-banquete-de-licaon, deucalion-y-pirra ]
     examen: { aciertos: 8, de: 10 }
 
   - id: zeus-y-los-linajes

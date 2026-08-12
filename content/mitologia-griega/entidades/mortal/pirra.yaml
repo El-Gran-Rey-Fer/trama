@@ -1,0 +1,14 @@
+id: pirra
+tipo: mortal
+nombre: Pirra
+genero: femenino
+resumen: Mujer de Deucalión, con quien sobrevive al diluvio universal y repuebla
+  la tierra arrojando piedras que se convierten en mujeres.
+relaciones:
+  - tipo: modela_a
+    destino: humanidad
+    fuente: metamorfosis
+  - tipo: hijo_de
+    destino: epimeteo
+  - tipo: hijo_de
+    destino: pandora
