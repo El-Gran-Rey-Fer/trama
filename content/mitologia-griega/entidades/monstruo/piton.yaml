@@ -1,0 +1,9 @@
+id: piton
+tipo: monstruo
+nombre: Piton
+genero: femenino
+resumen: Serpiente guardiana del oráculo de Delfos, muerta por Apolo
+relaciones:
+  - tipo: matado_por
+    destino: apolo
+    fuente: biblioteca

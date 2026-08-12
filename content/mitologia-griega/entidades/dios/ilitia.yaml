@@ -1,0 +1,15 @@
+id: ilitia
+tipo: dios
+nombre: Ilitia
+genero: femenino
+resumen: Diosa que asiste los partos, retenida por Hera para retrasar el nacimiento
+relaciones:
+  - tipo: hijo_de
+    destino: zeus
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: hera
+    fuente: teogonia
+  - tipo: encerrado_por
+    destino: hera
+    fuente: biblioteca
