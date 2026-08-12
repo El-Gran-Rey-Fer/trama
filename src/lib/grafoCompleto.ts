@@ -526,13 +526,18 @@ function aplicarDuplicados(
 	return { nodos, enlaces: enlacesReescritos };
 }
 
-// Tamaño nominal de cada nodo para elk: el layout siempre ha tratado los
-// nodos como puntos (el tamaño visual real lo decide la casilla en CSS,
-// sobre las coordenadas ya resueltas aquí), así que basta un tamaño pequeño
-// y uniforme — el espaciado real lo dan las opciones `elk.spacing.*` de
-// abajo, pensadas para reproducir el ritmo visual de siempre
-// (`ESPACIO_HERMANOS`/`ESPACIO_GENERACION`).
-const TAMANO_NODO_ELK = 8;
+// Tamaño nominal de cada nodo para elk. Antes del enrutado ortogonal esto
+// daba igual (las líneas eran rectas entre centros, ajenas al tamaño real
+// de la casilla en CSS) y bastaba un punto de 8px — pero `ORTHOGONAL` sí
+// usa el tamaño declarado para decidir por dónde caben los tramos rectos,
+// así que un nodo "de mentira" mucho más pequeño que la casilla real
+// (44-64px según la vista) deja hueco de sobra donde no lo hay de verdad,
+// y el conector acaba cruzando por encima de un vecino. Con un tamaño
+// realista, `ESPACIO_HERMANOS`/`ESPACIO_GENERACION` (pensadas como
+// distancia centro-a-centro) se pasan a elk como el hueco borde-a-borde
+// que le falta descontar, para no ensanchar el lienzo de más.
+const TAMANO_NODO_ELK = 56;
+const ESPACIO_MINIMO_ELK = 16;
 
 // Delega en elk (algoritmo `layered`, un Sugiyama real) el orden horizontal
 // dentro de cada capa y la minimización de cruces — la propia capa
@@ -585,11 +590,19 @@ async function calcularPosiciones(
 			"elk.algorithm": "layered",
 			"elk.direction": "DOWN",
 			"elk.partitioning.activate": "true",
-			"elk.spacing.nodeNode": String(ESPACIO_HERMANOS),
-			"elk.layered.spacing.nodeNodeBetweenLayers": String(ESPACIO_GENERACION),
+			"elk.spacing.nodeNode": String(
+				Math.max(ESPACIO_MINIMO_ELK, ESPACIO_HERMANOS - TAMANO_NODO_ELK),
+			),
+			"elk.layered.spacing.nodeNodeBetweenLayers": String(
+				Math.max(ESPACIO_MINIMO_ELK, ESPACIO_GENERACION - TAMANO_NODO_ELK),
+			),
 			// Conectores en ángulo recto (§1 del doc de spec): más fáciles de
 			// seguir que una diagonal cuando hay muchos cruces potenciales.
 			"elk.edgeRouting": "ORTHOGONAL",
+			// Colchón explícito entre un tramo y un nodo ajeno por el que
+			// pasa cerca — sin esto un conector puede rozar visualmente la
+			// casilla de un vecino aunque no la atraviese del todo.
+			"elk.spacing.edgeNode": String(ESPACIO_MINIMO_ELK),
 		},
 		children: nodosElk,
 		edges: edgesElk,
