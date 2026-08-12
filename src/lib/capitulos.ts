@@ -1,6 +1,6 @@
 import { getEntry } from "astro:content";
 import { relatosDeMateria } from "./contenidoPorMateria";
-import { conjuntoDeRelato } from "./desbloqueo";
+import { conjuntoDeRelato, mencionesDeRelato } from "./desbloqueo";
 import type { CapituloResumen, RelatoResumen } from "./estado";
 
 export interface Capitulo {
@@ -24,6 +24,11 @@ export interface Capitulo {
 	// aquí salen las tarjetas y el examen del capítulo — no se lista a mano lo
 	// que el grafo deriva, y nunca incluye nada de un relato que no existe.
 	conjunto: Set<string>;
+	// `conjunto` más cualquier `<E id="..." />` citado en el cuerpo de esos
+	// mismos relatos, curado o no. Decide si un enlace de prosa está
+	// desbloqueado (`capitulosQueDesbloquean`); nunca alimenta tarjetas ni
+	// examen, que siguen leyendo `conjunto` a secas.
+	conjuntoAccesible: Set<string>;
 	// `relatosEscritos` con nombre — para la cadena de mensajes del muro (modo
 	// aventura, bloque W), sin releer `relatosDeMateria` en cada página.
 	relatosResumen: RelatoResumen[];
@@ -36,6 +41,7 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 	const capitulosCrudos = materiaEntry?.data.capitulos ?? [];
 	const relatos = await relatosDeMateria(materiaId);
 	const relatosPorId = new Map(relatos.map((r) => [r.id, r.data]));
+	const cuerposPorId = new Map(relatos.map((r) => [r.id, r.body ?? ""]));
 
 	const idsVistos = new Set<string>();
 	const relatosAsignados = new Set<string>();
@@ -70,6 +76,12 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 			if (!data) continue;
 			for (const p of conjuntoDeRelato(data)) conjunto.add(p);
 		}
+		const conjuntoAccesible = new Set(conjunto);
+		for (const relatoId of relatosEscritos) {
+			const cuerpo = cuerposPorId.get(relatoId);
+			if (!cuerpo) continue;
+			for (const id of mencionesDeRelato(cuerpo)) conjuntoAccesible.add(id);
+		}
 		const relatosResumen: RelatoResumen[] = relatosEscritos.map((id) => ({
 			id,
 			nombre: relatosPorId.get(id)?.nombre ?? id,
@@ -86,6 +98,7 @@ export async function cargarCapitulos(materiaId: string): Promise<Capitulo[]> {
 			examen: c.examen,
 			activo: relatosEscritos.length > 0,
 			conjunto,
+			conjuntoAccesible,
 			relatosResumen,
 		};
 	});
@@ -109,10 +122,11 @@ export function construirCadena(capitulos: Capitulo[]): CapituloResumen[] {
 		.map((c) => ({ id: c.id, nombre: c.nombre, relatos: c.relatosResumen }));
 }
 
-// Los capítulos cuyo `conjunto` (o, para un relato, cuya lista de relatos
-// escritos) contienen este id — con eso decide el cliente si es accesible en
-// aventura (`entidadAccesible` en estado.ts). Vacío = no pertenece a ningún
-// capítulo declarado: nunca accesible en aventura, sea cual sea el progreso.
+// Los capítulos cuyo `conjuntoAccesible` (o, para un relato, cuya lista de
+// relatos escritos) contienen este id — con eso decide el cliente si es
+// accesible en aventura (`entidadAccesible` en estado.ts). Vacío = no
+// pertenece a ningún capítulo declarado: nunca accesible en aventura, sea
+// cual sea el progreso.
 export function capitulosQueDesbloquean(
 	capitulos: Capitulo[],
 	id: string,
@@ -122,5 +136,5 @@ export function capitulosQueDesbloquean(
 		const capitulo = capitulos.find((c) => c.relatosEscritos.includes(id));
 		return capitulo ? [capitulo.id] : [];
 	}
-	return capitulos.filter((c) => c.conjunto.has(id)).map((c) => c.id);
+	return capitulos.filter((c) => c.conjuntoAccesible.has(id)).map((c) => c.id);
 }
