@@ -1,0 +1,9 @@
+id: minias
+tipo: mortal
+nombre: Minias
+resumen: >
+  Rey y fundador de Orcómeno, padre de las dinastías beocias. Tenía tales ingresos que aventajó en riqueza a sus predecesores. Fue el primero de los hombres que conocemos que construyó un tesoro para acoger sus riquezas.
+  Diferentes relatos le dan diferentes padres, pero en la mayoría es hijo de Poseidón.
+relaciones:
+  - tipo: hijo_de
+    destino: poseidon

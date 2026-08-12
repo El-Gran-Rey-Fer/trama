@@ -10,3 +10,9 @@ relaciones:
   - tipo: madre_de
     destino: artemis
     fuente: teogonia
+  - tipo: hijo_de
+    destino: ceo
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: febe
+    fuente: teogonia
