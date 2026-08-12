@@ -27,13 +27,17 @@ const vista = await construirVistaFamilia(grafo);
 
 const retratos = new Map(
 	(vista?.nodos ?? []).map((n) => {
-		const e = grafo.entidades.get(n.id);
-		return [n.id, e ? resolverRetrato(grafo, e) : undefined];
+		const e = grafo.entidades.get(n.idEntidad);
+		return [n.idEntidad, e ? resolverRetrato(grafo, e) : undefined];
 	}),
 );
 const posiciones = new Map(
 	[...(vista?.nodos ?? []), ...(vista?.uniones ?? [])].map((n) => [n.id, n]),
 );
+// Un hub duplicado (§3) mete varias copias en `vista.nodos` — para el
+// contador de la cabecera se cuentan entidades reales, no copias.
+const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
+	.size;
 ---
 
 <Base titulo={`Árbol — ${materia}`} materiaSlug={materia} anchoCompleto>
@@ -41,7 +45,7 @@ const posiciones = new Map(
     <header class="cabecera-juego">
       <h1>Árbol genealógico</h1>
       <p class="subtitulo">
-        {vista ? `${vista.enlaces.length} relaciones, ${vista.nodos.length} entidades` : "Sin datos todavía"}
+        {vista ? `${vista.enlaces.length} relaciones, ${totalEntidades} entidades` : "Sin datos todavía"}
       </p>
     </header>
 
@@ -83,6 +87,7 @@ const posiciones = new Map(
                     x2={hasta.x}
                     y2={hasta.y}
                     stroke={enlace.color}
+                    stroke-dasharray={enlace.discontinuo ? "3 3" : undefined}
                   />
                 );
               })}
@@ -91,10 +96,10 @@ const posiciones = new Map(
               ))}
             </svg>
             {vista.nodos.map((n) => (
-              <div class="nodo" style={`left:${n.x}px; top:${n.y}px`}>
-                <a href={rutaEntidad(materia, n.id)} class="nodo-enlace">
+              <div class="nodo" style={`left:${n.x}px; top:${n.y}px`} data-duplicado={n.duplicado}>
+                <a href={rutaEntidad(materia, n.idEntidad)} class="nodo-enlace">
                   <div class="nodo-casilla">
-                    <Casilla nombre={n.nombre} tipo={n.tipo} retrato={retratos.get(n.id)} />
+                    <Casilla nombre={n.nombre} tipo={n.tipo} retrato={retratos.get(n.idEntidad)} />
                   </div>
                   <span class="nodo-nombre">{n.nombre}</span>
                 </a>
@@ -211,6 +216,19 @@ const posiciones = new Map(
     font-size: 10px;
     text-align: center;
     line-height: 1.15;
+  }
+
+  /* Copia de un hub multi-unión (§3): borde punteado para distinguirla de
+     una entidad normal, sin tocar el color de tipo ni el retrato — sigue
+     siendo la misma entidad, solo repartida en varias posiciones. En
+     `.nodo-casilla` (de este fichero), no en `.casilla` de Casilla.astro:
+     el CSS con scope de Astro añade su hash a cada clase del selector, y
+     `.casilla` lleva el hash del componente hijo, no el de esta página —
+     el selector nunca casaría. */
+  .nodo[data-duplicado="true"] .nodo-casilla {
+    outline: 2px dashed var(--color-texto-muted);
+    outline-offset: 2px;
+    border-radius: var(--radio);
   }
 
   .sin-datos {

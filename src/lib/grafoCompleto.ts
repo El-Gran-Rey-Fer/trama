@@ -66,6 +66,15 @@ export function colorDeTipo(familia: FamiliaRelacion, tipo: string): string {
 
 export interface NodoGrafo {
 	id: string;
+	// Id de la entidad real que representa este nodo — igual a `id` salvo en
+	// una copia de hub duplicado (§3, ver `aplicarDuplicados`), donde `id`
+	// es sintético (`entidad#union:...`) e `idEntidad` es el id real, el que
+	// hace falta para enlazar a la ficha o resolver el retrato.
+	idEntidad: string;
+	// Hub con varias uniones relevantes en esta vista, repartido en una
+	// copia por unión en vez de concentrar todas sus líneas en un único
+	// nodo. Solo puede darse en la vista de toda la materia.
+	duplicado?: boolean;
 	nombre: string;
 	tipo: string;
 	x: number;
@@ -77,6 +86,9 @@ export interface EnlaceGrafo {
 	hasta: string;
 	tipo: string;
 	color: string;
+	// Línea fina discontinua entre dos copias del mismo hub duplicado (§3):
+	// no es una relación de parentesco, solo señala "es la misma entidad".
+	discontinuo?: boolean;
 }
 
 export interface UnionGrafo {
@@ -438,6 +450,93 @@ function detectarUniones(
 	return { uniones, enlaces };
 }
 
+interface NodoPlan {
+	id: string;
+	idEntidad: string;
+	duplicado: boolean;
+}
+
+// Reparte un hub (entidad con 2+ uniones relevantes en esta vista — un
+// progenitor con hijos de varias parejas distintas) en una copia por unión,
+// en vez de una única posición con todas las líneas convergiendo (§3 del
+// doc de spec).
+// Solo se llama desde la vista de toda la materia: las ventanas de ego
+// (ficha, árbol por-entidad, juego de completar el árbol) ya están acotadas
+// por profundidad y `MAX_HIJOS_LINEA_DIRECTA`, así que en la práctica no
+// acumulan suficientes uniones para que el problema aparezca ahí — y evita
+// tener que enseñar a esos consumidores (que comparan ids de nodo con ids
+// de entidad reales) a resolver copias.
+function aplicarDuplicados(
+	idsBase: Set<string>,
+	uniones: UnionDetectada[],
+	enlaces: EnlaceGrafo[],
+): { nodos: NodoPlan[]; enlaces: EnlaceGrafo[] } {
+	const unionesPorPadre = new Map<string, UnionDetectada[]>();
+	for (const u of uniones) {
+		agregar(unionesPorPadre, u.padres[0], u);
+		agregar(unionesPorPadre, u.padres[1], u);
+	}
+
+	// Copia elegida para todo lo que no pertenece a ninguna unión en
+	// concreto (la arista que trae al propio hub como hijo de su capa
+	// anterior, o un hijo suyo con un solo progenitor conocido): la primera
+	// por orden de id de unión, determinista entre builds.
+	const copiaPrimaria = new Map<string, string>();
+	const copiaPorUnion = new Map<string, string>(); // clave `${hub}|${union.id}`
+	const nodos: NodoPlan[] = [];
+
+	for (const id of idsBase) {
+		const us = unionesPorPadre.get(id);
+		if (!us || us.length < 2) {
+			nodos.push({ id, idEntidad: id, duplicado: false });
+			continue;
+		}
+		const ordenadas = [...us].sort((a, b) => a.id.localeCompare(b.id));
+		ordenadas.forEach((u, i) => {
+			const copiaId = `${id}#${u.id}`;
+			copiaPorUnion.set(`${id}|${u.id}`, copiaId);
+			if (i === 0) copiaPrimaria.set(id, copiaId);
+			nodos.push({ id: copiaId, idEntidad: id, duplicado: true });
+		});
+	}
+
+	const enlacesReescritos = enlaces.map((e) => {
+		const copiaDesde = copiaPorUnion.get(`${e.desde}|${e.hasta}`);
+		if (copiaDesde) return { ...e, desde: copiaDesde };
+		const primariaDesde = copiaPrimaria.get(e.desde);
+		const primariaHasta = copiaPrimaria.get(e.hasta);
+		if (!primariaDesde && !primariaHasta) return e;
+		return {
+			...e,
+			desde: primariaDesde ?? e.desde,
+			hasta: primariaHasta ?? e.hasta,
+		};
+	});
+
+	// Conector visual entre copias consecutivas de un mismo hub (cadena, no
+	// todas-contra-todas: con dos uniones basta una línea, y no escala mal
+	// si algún día una entidad acumula media docena).
+	const conectores: EnlaceGrafo[] = [];
+	for (const [id, us] of unionesPorPadre) {
+		if (us.length < 2) continue;
+		const ordenadas = [...us].sort((a, b) => a.id.localeCompare(b.id));
+		for (let i = 0; i < ordenadas.length - 1; i++) {
+			const desde = copiaPorUnion.get(`${id}|${ordenadas[i].id}`);
+			const hasta = copiaPorUnion.get(`${id}|${ordenadas[i + 1].id}`);
+			if (!desde || !hasta) continue;
+			conectores.push({
+				desde,
+				hasta,
+				tipo: "misma_entidad",
+				color: "var(--color-tarjeta-borde)",
+				discontinuo: true,
+			});
+		}
+	}
+
+	return { nodos, enlaces: [...enlacesReescritos, ...conectores] };
+}
+
 // Tamaño nominal de cada nodo para elk: el layout siempre ha tratado los
 // nodos como puntos (el tamaño visual real lo decide la casilla en CSS,
 // sobre las coordenadas ya resueltas aquí), así que basta un tamaño pequeño
@@ -452,7 +551,7 @@ const TAMANO_NODO_ELK = 8;
 // ego precalculada; elk solo decide "quién va al lado de quién" dentro de
 // cada fila que ya le fijamos con `elk.partitioning`.
 async function calcularPosiciones(
-	ids: Set<string>,
+	nodoPlan: NodoPlan[],
 	uniones: UnionDetectada[],
 	enlaces: EnlaceGrafo[],
 	capa: Map<string, number>,
@@ -465,12 +564,12 @@ async function calcularPosiciones(
 	const particion = (c: number) => String(c - minCapa);
 
 	const nodosElk: ElkNode[] = [
-		...[...ids].map((id) => ({
-			id,
+		...nodoPlan.map((n) => ({
+			id: n.id,
 			width: TAMANO_NODO_ELK,
 			height: TAMANO_NODO_ELK,
 			layoutOptions: {
-				"elk.partitioning.partition": particion(capa.get(id) ?? 0),
+				"elk.partitioning.partition": particion(capa.get(n.idEntidad) ?? 0),
 			},
 		})),
 		...uniones.map((u) => ({
@@ -563,23 +662,42 @@ export async function construirVistaFamilia(
 			return capaPorAlcance(ids, hijosDe, padresDe);
 		})();
 
-	const { uniones: unionesDetectadas, enlaces } = detectarUniones(
+	const { uniones: unionesDetectadas, enlaces: enlacesBase } = detectarUniones(
 		aristas,
 		capa,
 	);
+
+	// La duplicación de hubs (§3) solo aplica a la vista de toda la materia
+	// — ver el comentario de `aplicarDuplicados`.
+	const { nodos: nodoPlan, enlaces } = ventana
+		? {
+				nodos: [...ids].map(
+					(id): NodoPlan => ({ id, idEntidad: id, duplicado: false }),
+				),
+				enlaces: enlacesBase,
+			}
+		: aplicarDuplicados(ids, unionesDetectadas, enlacesBase);
+
 	const posiciones = await calcularPosiciones(
-		ids,
+		nodoPlan,
 		unionesDetectadas,
 		enlaces,
 		capa,
 	);
 
-	const nodos: NodoGrafo[] = [...ids]
-		.map((id) => {
-			const entidad = obtenerEntidad(grafo, id);
-			const pos = posiciones.get(id);
+	const nodos: NodoGrafo[] = nodoPlan
+		.map((n): NodoGrafo | undefined => {
+			const entidad = obtenerEntidad(grafo, n.idEntidad);
+			const pos = posiciones.get(n.id);
 			if (!entidad || !pos) return undefined;
-			return { id, nombre: entidad.nombre, tipo: entidad.tipo, ...pos };
+			return {
+				id: n.id,
+				idEntidad: n.idEntidad,
+				duplicado: n.duplicado,
+				nombre: entidad.nombre,
+				tipo: entidad.tipo,
+				...pos,
+			};
 		})
 		.filter((n): n is NodoGrafo => n !== undefined);
 
