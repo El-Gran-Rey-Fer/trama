@@ -98,6 +98,15 @@ export interface VentanaEgo {
 	// un progenitor); esta variante solo continúa ascendiendo desde
 	// ascendientes y descendiendo desde descendientes, nunca cruza al lado.
 	soloLineaDirecta?: boolean;
+	// Profundidad de descenso, si es distinta de `profundidad` (que entonces
+	// solo rige la subida). La ficha embebida solo tiene sitio para los hijos
+	// directos, no dos generaciones enteras de descendientes — con un
+	// progenitor prolífico (Gea y sus ~20 hijos entre varias parejas), incluso
+	// recortados a `MAX_HIJOS_LINEA_DIRECTA` cada uno, dos generaciones de
+	// descendientes siguen siendo un revoltijo en un hueco tan pequeño. El
+	// reto de completar el árbol sí tiene pantalla completa y no la usa (se
+	// queda con `profundidad` en los dos sentidos).
+	profundidadDescendientes?: number;
 }
 
 export interface VistaGrafo {
@@ -235,7 +244,8 @@ const MAX_HIJOS_LINEA_DIRECTA = 6;
 function subgrafoLineaDirecta(
 	aristasGenealogicas: Arista[],
 	centro: string,
-	profundidad: number,
+	profundidadArriba: number,
+	profundidadAbajo: number,
 	importancia: Map<string, number>,
 ): { aristas: Arista[]; capa: Map<string, number> } {
 	const porPadre = new Map<string, Arista[]>();
@@ -251,7 +261,7 @@ function subgrafoLineaDirecta(
 	const aristas: Arista[] = [];
 
 	let fronteraArriba = [centro];
-	for (let paso = 0; paso < profundidad; paso++) {
+	for (let paso = 0; paso < profundidadArriba; paso++) {
 		const siguiente: string[] = [];
 		for (const id of fronteraArriba) {
 			const c = capa.get(id) ?? 0;
@@ -271,7 +281,7 @@ function subgrafoLineaDirecta(
 	}
 
 	let fronteraAbajo = [centro];
-	for (let paso = 0; paso < profundidad; paso++) {
+	for (let paso = 0; paso < profundidadAbajo; paso++) {
 		const siguiente: string[] = [];
 		for (const id of fronteraAbajo) {
 			const c = capa.get(id) ?? 0;
@@ -562,6 +572,7 @@ export function construirVistaFamilia(
 					todasGenealogicas,
 					ventana.centro,
 					ventana.profundidad,
+					ventana.profundidadDescendientes ?? ventana.profundidad,
 					importancia,
 				)
 			: subgrafoEgo(todasGenealogicas, ventana.centro, ventana.profundidad);

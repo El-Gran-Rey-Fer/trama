@@ -42,11 +42,16 @@ const nodos = new Map(
 const retrato = resolverRetrato(grafo, entidad);
 
 // Genealogía embebida (línea directa, sin hermanos ni tíos/primos — ver
-// `soloLineaDirecta` en grafoCompleto.ts): mismo recorte que usa el reto de
-// completar el árbol, para que quepa en la ficha sin desplazamiento lateral.
+// `soloLineaDirecta` en grafoCompleto.ts): dos generaciones hacia arriba
+// (progenitores bien acotados, como mucho dos por generación), pero solo una
+// hacia abajo — a diferencia del reto de completar el árbol, este hueco es
+// pequeño y un progenitor prolífico con dos generaciones de descendientes
+// (Gea y sus ~20 hijos entre varias parejas) sigue siendo un revoltijo
+// aunque cada nivel ya vaya recortado por importancia.
 const arbol = construirVistaFamilia(grafo, {
 	centro: id,
 	profundidad: 2,
+	profundidadDescendientes: 1,
 	soloLineaDirecta: true,
 });
 const retratosArbol = new Map(
