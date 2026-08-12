@@ -232,7 +232,7 @@ function renderArbol(
 			nombreEl.textContent = "?";
 			hueco = { nodo, caja, nombreEl };
 		} else {
-			caja = crearCasilla(nodo.nombre, nodo.tipo, null);
+			caja = crearCasilla(nodo.nombre, nodo.tipo, nodo.retrato);
 			caja.classList.add("arbol-juego-casilla");
 			nombreEl.textContent = nodo.nombre;
 		}
@@ -272,7 +272,7 @@ function renderArbol(
 				const casillaRevelada = crearCasilla(
 					hueco.nodo.nombre,
 					hueco.nodo.tipo,
-					null,
+					hueco.nodo.retrato,
 				);
 				casillaRevelada.classList.add(
 					"arbol-juego-casilla",

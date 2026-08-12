@@ -586,7 +586,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
             nombreEl.textContent = "?";
             hueco = { nodo, caja, nombreEl };
           } else {
-            caja = crearCasilla(nodo.nombre, nodo.tipo, null);
+            caja = crearCasilla(nodo.nombre, nodo.tipo, nodo.retrato);
             caja.classList.add("arbol-juego-casilla");
             nombreEl.textContent = nodo.nombre;
           }
@@ -614,7 +614,7 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
               else if (otro === boton) marcarOpcion(otro, "fallo");
             }
             if (hueco) {
-              const casillaRevelada = crearCasilla(hueco.nodo.nombre, hueco.nodo.tipo, null);
+              const casillaRevelada = crearCasilla(hueco.nodo.nombre, hueco.nodo.tipo, hueco.nodo.retrato);
               casillaRevelada.classList.add("arbol-juego-casilla", correcta ? "acierto" : "fallo");
               hueco.caja.replaceWith(casillaRevelada);
               hueco.nombreEl.textContent = hueco.nodo.nombre;
@@ -1337,13 +1337,13 @@ const titulo = TITULOS[juego ?? ""] ?? juego;
       font-weight: 700;
     }
 
-    .arbol-juego-casilla.acierto .casilla-inicial {
+    .arbol-juego-casilla.acierto .casilla {
       outline: 2px solid var(--color-acierto);
       outline-offset: -2px;
       animation: destello-acierto 0.3s ease;
     }
 
-    .arbol-juego-casilla.fallo .casilla-inicial {
+    .arbol-juego-casilla.fallo .casilla {
       outline: 2px solid var(--color-fallo);
       outline-offset: -2px;
       animation: agitar-fallo 0.3s ease;

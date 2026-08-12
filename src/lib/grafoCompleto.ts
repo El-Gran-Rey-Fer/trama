@@ -218,15 +218,25 @@ function subgrafoEgo(
 	return { aristas, capa };
 }
 
+// Tope de hijos que se expanden por nodo en la línea directa: sin él, un
+// progenitor prolífico (Gea, con más de veinte hijos entre varias parejas)
+// desborda igual el ancho compacto, solo que por debajo en vez de al lado.
+// No hace falta tope simétrico al ascender: un id tiene como mucho dos
+// aristas de entrada (padre_de + madre_de).
+const MAX_HIJOS_LINEA_DIRECTA = 6;
+
 // Como `subgrafoEgo`, pero la ascendencia solo asciende (nunca vuelve a
 // bajar a otros hijos de un progenitor) y el descenso solo desciende —
 // así que un progenitor con una camada numerosa no cuela a los hermanos del
 // centro, y un hijo con dos progenitores solo trae la arista del progenitor
-// que sí es línea directa del centro, no a su pareja.
+// que sí es línea directa del centro, no a su pareja. Además, al descender,
+// cada nodo se queda con como mucho `MAX_HIJOS_LINEA_DIRECTA` hijos (los de
+// mayor `importancia`): el resto se ve en "Ver árbol completo".
 function subgrafoLineaDirecta(
 	aristasGenealogicas: Arista[],
 	centro: string,
 	profundidad: number,
+	importancia: Map<string, number>,
 ): { aristas: Arista[]; capa: Map<string, number> } {
 	const porPadre = new Map<string, Arista[]>();
 	const porHijo = new Map<string, Arista[]>();
@@ -265,12 +275,20 @@ function subgrafoLineaDirecta(
 		const siguiente: string[] = [];
 		for (const id of fronteraAbajo) {
 			const c = capa.get(id) ?? 0;
-			for (const a of porPadre.get(id) ?? []) {
+			const hijos = (porPadre.get(id) ?? [])
+				.map((a) => ({ arista: a, hijoId: normalizarRol(a).hijoId }))
+				.sort(
+					(x, y) =>
+						(importancia.get(y.hijoId) ?? 0) -
+							(importancia.get(x.hijoId) ?? 0) ||
+						x.hijoId.localeCompare(y.hijoId),
+				)
+				.slice(0, MAX_HIJOS_LINEA_DIRECTA);
+			for (const { arista: a, hijoId } of hijos) {
 				if (!vistas.has(a)) {
 					vistas.add(a);
 					aristas.push(a);
 				}
-				const { hijoId } = normalizarRol(a);
 				if (!capa.has(hijoId)) {
 					capa.set(hijoId, c + 1);
 					siguiente.push(hijoId);
@@ -544,6 +562,7 @@ export function construirVistaFamilia(
 					todasGenealogicas,
 					ventana.centro,
 					ventana.profundidad,
+					importancia,
 				)
 			: subgrafoEgo(todasGenealogicas, ventana.centro, ventana.profundidad);
 		aristas = sub.aristas;

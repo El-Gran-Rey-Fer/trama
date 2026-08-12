@@ -1,5 +1,12 @@
-import { construirGrafo, type Grafo, TIPOS_GENEALOGIA } from "./grafo";
+import type { DatosRetrato } from "./casillaCliente";
+import {
+	construirGrafo,
+	type Grafo,
+	obtenerEntidad,
+	TIPOS_GENEALOGIA,
+} from "./grafo";
 import { construirVistaFamilia } from "./grafoCompleto";
+import { resolverRetrato } from "./retrato";
 
 // Juego "completar el árbol", pedido después de A7: árbol de ego a
 // profundidad 2, línea directa (sin hermanos ni tíos/primos — mismo recorte
@@ -19,6 +26,7 @@ export interface RondaArbol {
 		y: number;
 		esHueco: boolean;
 		esRaiz: boolean;
+		retrato: DatosRetrato | null;
 	}[];
 	uniones: { id: string; x: number; y: number }[];
 	enlaces: { desde: string; hasta: string; color: string }[];
@@ -73,6 +81,29 @@ function distractoresGenealogia(
 	);
 }
 
+// Mismo retrato que usan la ficha y la página de árbol completo
+// (resolverRetrato), aplanado a la forma que espera crearCasilla en cliente.
+// Con caché: cada id se resuelve como mucho una vez aunque aparezca en
+// muchas rondas (una por cada raíz que lo tiene en su ventana de ego).
+function crearResolverRetrato(grafo: Grafo) {
+	const cache = new Map<string, DatosRetrato | null>();
+	return (id: string): DatosRetrato | null => {
+		const cacheado = cache.get(id);
+		if (cacheado !== undefined) return cacheado;
+		const entidad = obtenerEntidad(grafo, id);
+		const resuelto = entidad && resolverRetrato(grafo, entidad);
+		const datos: DatosRetrato | null = resuelto
+			? {
+					archivo: resuelto.imagen.archivo,
+					alt: resuelto.imagen.alt,
+					foco: resuelto.foco,
+				}
+			: null;
+		cache.set(id, datos);
+		return datos;
+	};
+}
+
 export async function generarRondasArbol(
 	materiaId: string,
 ): Promise<RondaArbol[]> {
@@ -80,6 +111,7 @@ export async function generarRondasArbol(
 	const raices = [...grafo.entidades.values()]
 		.filter((e) => e.kind === "entidad")
 		.sort((a, b) => a.id.localeCompare(b.id));
+	const retratoDe = crearResolverRetrato(grafo);
 
 	const rondas: RondaArbol[] = [];
 
@@ -133,6 +165,7 @@ export async function generarRondasArbol(
 					y: n.y,
 					esHueco: n.id === nodo.id,
 					esRaiz: n.id === raiz.id,
+					retrato: retratoDe(n.id),
 				})),
 				uniones: vista.uniones.map((u) => ({ id: u.id, x: u.x, y: u.y })),
 				enlaces: vista.enlaces.map((e) => ({

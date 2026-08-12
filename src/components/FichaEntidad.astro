@@ -436,6 +436,11 @@ const esStub =
 
     .ficha:has(.imagen) .cuerpo {
       padding: 0;
+      /* Sin min-width:0, un item de grid nunca se encoge por debajo del
+         ancho intrínseco de su contenido: el árbol embebido (ancho fijo en
+         píxeles, potencialmente mayor que la columna) desbordaría toda la
+         ficha en vez de quedarse contenido en su propio scroll horizontal. */
+      min-width: 0;
     }
 
     .ficha:has(.imagen) .tipo {
