@@ -89,6 +89,15 @@ export interface UnionGrafo {
 export interface VentanaEgo {
 	centro: string;
 	profundidad: number;
+	// Versión "simplificada" pedida para la ficha y el reto de completar el
+	// árbol: solo la línea directa de `centro` (sus progenitores y los
+	// progenitores de estos, sus hijos y los hijos de estos), sin hermanos ni
+	// tíos/primos. `subgrafoEgo` sube y baja desde CUALQUIER nodo visitado, así
+	// que una familia numerosa en cualquier generación mete de rebote a todos
+	// sus hijos (docenas de hermanos del centro, si el que tiene la camada es
+	// un progenitor); esta variante solo continúa ascendiendo desde
+	// ascendientes y descendiendo desde descendientes, nunca cruza al lado.
+	soloLineaDirecta?: boolean;
 }
 
 export interface VistaGrafo {
@@ -206,6 +215,71 @@ function subgrafoEgo(
 		}
 		frontera = siguiente;
 	}
+	return { aristas, capa };
+}
+
+// Como `subgrafoEgo`, pero la ascendencia solo asciende (nunca vuelve a
+// bajar a otros hijos de un progenitor) y el descenso solo desciende —
+// así que un progenitor con una camada numerosa no cuela a los hermanos del
+// centro, y un hijo con dos progenitores solo trae la arista del progenitor
+// que sí es línea directa del centro, no a su pareja.
+function subgrafoLineaDirecta(
+	aristasGenealogicas: Arista[],
+	centro: string,
+	profundidad: number,
+): { aristas: Arista[]; capa: Map<string, number> } {
+	const porPadre = new Map<string, Arista[]>();
+	const porHijo = new Map<string, Arista[]>();
+	for (const a of aristasGenealogicas) {
+		const rol = normalizarRol(a);
+		agregar(porPadre, rol.padreId, a);
+		agregar(porHijo, rol.hijoId, a);
+	}
+
+	const capa = new Map<string, number>([[centro, 0]]);
+	const vistas = new Set<Arista>();
+	const aristas: Arista[] = [];
+
+	let fronteraArriba = [centro];
+	for (let paso = 0; paso < profundidad; paso++) {
+		const siguiente: string[] = [];
+		for (const id of fronteraArriba) {
+			const c = capa.get(id) ?? 0;
+			for (const a of porHijo.get(id) ?? []) {
+				if (!vistas.has(a)) {
+					vistas.add(a);
+					aristas.push(a);
+				}
+				const { padreId } = normalizarRol(a);
+				if (!capa.has(padreId)) {
+					capa.set(padreId, c - 1);
+					siguiente.push(padreId);
+				}
+			}
+		}
+		fronteraArriba = siguiente;
+	}
+
+	let fronteraAbajo = [centro];
+	for (let paso = 0; paso < profundidad; paso++) {
+		const siguiente: string[] = [];
+		for (const id of fronteraAbajo) {
+			const c = capa.get(id) ?? 0;
+			for (const a of porPadre.get(id) ?? []) {
+				if (!vistas.has(a)) {
+					vistas.add(a);
+					aristas.push(a);
+				}
+				const { hijoId } = normalizarRol(a);
+				if (!capa.has(hijoId)) {
+					capa.set(hijoId, c + 1);
+					siguiente.push(hijoId);
+				}
+			}
+		}
+		fronteraAbajo = siguiente;
+	}
+
 	return { aristas, capa };
 }
 
@@ -465,11 +539,13 @@ export function construirVistaFamilia(
 	let aristas = todasGenealogicas;
 	let capaPrecalculada: Map<string, number> | undefined;
 	if (ventana) {
-		const sub = subgrafoEgo(
-			todasGenealogicas,
-			ventana.centro,
-			ventana.profundidad,
-		);
+		const sub = ventana.soloLineaDirecta
+			? subgrafoLineaDirecta(
+					todasGenealogicas,
+					ventana.centro,
+					ventana.profundidad,
+				)
+			: subgrafoEgo(todasGenealogicas, ventana.centro, ventana.profundidad);
 		aristas = sub.aristas;
 		capaPrecalculada = sub.capa;
 		if (capaPrecalculada.size <= 1) return undefined; // sin antepasados ni descendientes conocidos

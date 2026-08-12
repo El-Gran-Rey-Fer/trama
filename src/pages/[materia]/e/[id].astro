@@ -10,6 +10,7 @@ import {
 } from "../../../lib/capitulos";
 import { entidadesDeMateria } from "../../../lib/contenidoPorMateria";
 import { construirGrafo, obtenerEntidad } from "../../../lib/grafo";
+import { construirVistaFamilia } from "../../../lib/grafoCompleto";
 import { resolverRetrato } from "../../../lib/retrato";
 
 export async function getStaticPaths() {
@@ -40,6 +41,21 @@ const nodos = new Map(
 );
 const retrato = resolverRetrato(grafo, entidad);
 
+// Genealogía embebida (línea directa, sin hermanos ni tíos/primos — ver
+// `soloLineaDirecta` en grafoCompleto.ts): mismo recorte que usa el reto de
+// completar el árbol, para que quepa en la ficha sin desplazamiento lateral.
+const arbol = construirVistaFamilia(grafo, {
+	centro: id,
+	profundidad: 2,
+	soloLineaDirecta: true,
+});
+const retratosArbol = new Map(
+	(arbol?.nodos ?? []).map((n) => {
+		const e = obtenerEntidad(grafo, n.id);
+		return [n.id, e ? resolverRetrato(grafo, e) : undefined];
+	}),
+);
+
 // Muro de aventura (bloque W): esta ficha la desbloquea cualquier capítulo
 // cuyo conjunto la contenga. `destinos` cubre además cada id que la propia
 // ficha enlaza (relaciones + "aparece en"), para que FichaEntidad pueda
@@ -67,6 +83,8 @@ for (const destinoId of idsDestino) {
       materiaSlug={grafo.slug}
       nodos={nodos}
       retrato={retrato}
+      arbol={arbol}
+      retratosArbol={retratosArbol}
       destinos={destinos}
       cadena={cadena}
     />

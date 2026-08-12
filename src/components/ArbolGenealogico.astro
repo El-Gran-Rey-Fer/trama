@@ -1,0 +1,139 @@
+---
+import type { VistaGrafo } from "../lib/grafoCompleto";
+import type { RetratoResuelto } from "../lib/retrato";
+import { rutaEntidad } from "../lib/rutas";
+import Casilla from "./Casilla.astro";
+
+// Dibujo compartido del árbol de parentesco (motor único en
+// grafoCompleto.ts): lo usan tanto la página de árbol por-entidad (vista
+// completa, ±2 generaciones) como la ficha (vista embebida, solo línea
+// directa). `compacto` reduce nodo y tipografía para que quepa dentro de la
+// ficha sin dominarla.
+interface Props {
+	arbol: VistaGrafo;
+	retratos: Map<string, RetratoResuelto | undefined>;
+	materiaSlug: string;
+	idRaiz: string;
+	compacto?: boolean;
+}
+const { arbol, retratos, materiaSlug, idRaiz, compacto } = Astro.props;
+
+const posiciones = new Map(
+	[...arbol.nodos, ...arbol.uniones].map((n) => [n.id, n]),
+);
+---
+
+<div class="lienzo-scroll" data-compacto={compacto}>
+  <div class="lienzo" style={`width:${arbol.ancho}px; height:${arbol.alto}px`}>
+    <svg
+      class="enlaces"
+      width={arbol.ancho}
+      height={arbol.alto}
+      viewBox={`0 0 ${arbol.ancho} ${arbol.alto}`}
+    >
+      {arbol.filas.slice(0, -1).map((y, i) => {
+        const mitad = (y + arbol.filas[i + 1]) / 2;
+        return <line class="fila-divisor" x1={0} y1={mitad} x2={arbol.ancho} y2={mitad} />;
+      })}
+      {arbol.enlaces.map((enlace) => {
+        const desde = posiciones.get(enlace.desde);
+        const hasta = posiciones.get(enlace.hasta);
+        if (!desde || !hasta) return null;
+        return (
+          <line x1={desde.x} y1={desde.y} x2={hasta.x} y2={hasta.y} stroke={enlace.color} />
+        );
+      })}
+      {arbol.uniones.map((u) => (
+        <circle class="union" cx={u.x} cy={u.y} r="3.5" />
+      ))}
+    </svg>
+    {arbol.nodos.map((n) => (
+      <div class="nodo" style={`left:${n.x}px; top:${n.y}px`} data-raiz={n.id === idRaiz}>
+        <a href={rutaEntidad(materiaSlug, n.id)} class="nodo-enlace">
+          <div class="nodo-casilla">
+            <Casilla nombre={n.nombre} tipo={n.tipo} retrato={retratos.get(n.id)} />
+          </div>
+          <span class="nodo-nombre">{n.nombre}</span>
+        </a>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .lienzo-scroll {
+    overflow-x: auto;
+  }
+
+  .lienzo {
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .enlaces {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+
+  .enlaces line {
+    stroke-width: 2;
+  }
+
+  .enlaces line.fila-divisor {
+    stroke: var(--color-tarjeta-borde);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    opacity: 0.5;
+  }
+
+  .enlaces circle.union {
+    fill: var(--color-fondo-pantalla);
+    stroke: var(--color-tarjeta-borde);
+    stroke-width: 1.5;
+  }
+
+  .nodo {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 64px;
+  }
+
+  .nodo-enlace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    color: var(--color-texto);
+  }
+
+  .nodo-casilla {
+    width: 64px;
+  }
+
+  .nodo[data-raiz="true"] .nodo-casilla .casilla {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+  }
+
+  .nodo-nombre {
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  /* Vista embebida en la ficha (línea directa): nodo más pequeño, sin
+     margen propio — el contenedor de la ficha ya pone el suyo. */
+  .lienzo-scroll[data-compacto="true"] .nodo {
+    width: 48px;
+  }
+
+  .lienzo-scroll[data-compacto="true"] .nodo-casilla {
+    width: 48px;
+  }
+
+  .lienzo-scroll[data-compacto="true"] .nodo-nombre {
+    font-size: 10px;
+  }
+</style>

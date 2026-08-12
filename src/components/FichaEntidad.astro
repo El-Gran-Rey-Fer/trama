@@ -1,6 +1,7 @@
 ---
 import type { CapituloResumen } from "../lib/estado";
-import { type Entidad, TIPOS_GENEALOGIA, type TipoNodo } from "../lib/grafo";
+import type { Entidad, TipoNodo } from "../lib/grafo";
+import type { VistaGrafo } from "../lib/grafoCompleto";
 import { calcularAspectRatio, type RetratoResuelto } from "../lib/retrato";
 import {
 	rutaActivo,
@@ -9,6 +10,7 @@ import {
 	rutaMateria,
 	rutaRelato,
 } from "../lib/rutas";
+import ArbolGenealogico from "./ArbolGenealogico.astro";
 import E from "./E.astro";
 import Fuente from "./Fuente.astro";
 
@@ -17,6 +19,12 @@ interface Props {
 	materiaSlug: string;
 	nodos: Map<string, { nombre: string; kind: TipoNodo }>;
 	retrato?: RetratoResuelto;
+	// Árbol genealógico simplificado (solo línea directa, ver
+	// `soloLineaDirecta` en grafoCompleto.ts) para embeber en la ficha sin
+	// navegar a la página aparte. Ausente si la entidad no tiene parentesco
+	// conocido.
+	arbol?: VistaGrafo;
+	retratosArbol?: Map<string, RetratoResuelto | undefined>;
 	// Modo aventura, bloque W: para cada id que esta ficha enlaza (relaciones
 	// + "aparece en"), los capítulos que lo desbloquean — no el `conjunto`
 	// completo de la materia, solo lo que hace falta para ESTA ficha. Sin
@@ -26,7 +34,16 @@ interface Props {
 	destinos?: Record<string, string[]>;
 	cadena?: CapituloResumen[];
 }
-const { entidad, materiaSlug, nodos, retrato, destinos, cadena } = Astro.props;
+const {
+	entidad,
+	materiaSlug,
+	nodos,
+	retrato,
+	arbol,
+	retratosArbol,
+	destinos,
+	cadena,
+} = Astro.props;
 
 function rutaNodo(id: string): string {
 	return nodos.get(id)?.kind === "relato"
@@ -37,12 +54,6 @@ function rutaNodo(id: string): string {
 const relatos = entidad.relaciones.filter((r) => r.tipo === "participa_en");
 const relaciones = entidad.relaciones.filter((r) => r.tipo !== "participa_en");
 const Prosa = entidad.prosa;
-
-// Árbol genealógico (plan de imágenes y álbum, paso A7): solo se enlaza
-// cuando la entidad tiene al menos una arista de parentesco.
-const tieneGenealogia = entidad.relaciones.some((r) =>
-	TIPOS_GENEALOGIA.includes(r.tipo),
-);
 
 // La propia obra muestra su imagen entera (sin foco: aquí no se recorta a
 // una figura, se ve la pieza completa). Cualquier otra entidad muestra su
@@ -135,10 +146,20 @@ const esStub =
     }
 
     {
-      tieneGenealogia && (
-        <p class="ver-arbol">
-          <a href={rutaArbol(materiaSlug, entidad.id)}>Ver árbol genealógico &rsaquo;</a>
-        </p>
+      arbol && (
+        <section class="genealogia">
+          <h2 class="etiqueta-seccion">Genealogía</h2>
+          <ArbolGenealogico
+            arbol={arbol}
+            retratos={retratosArbol ?? new Map()}
+            materiaSlug={materiaSlug}
+            idRaiz={entidad.id}
+            compacto
+          />
+          <p class="ver-arbol">
+            <a href={rutaArbol(materiaSlug, entidad.id)}>Ver árbol completo &rsaquo;</a>
+          </p>
+        </section>
       )
     }
 
@@ -256,8 +277,19 @@ const esStub =
     color: var(--color-texto-muted);
   }
 
+  .genealogia {
+    margin: 0 0 18px;
+  }
+
+  .genealogia :global(.lienzo-scroll) {
+    background: var(--color-tarjeta-fondo);
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    padding: 10px;
+  }
+
   .ver-arbol {
-    margin: 0 0 14px;
+    margin: 8px 0 0;
   }
 
   .ver-arbol a {

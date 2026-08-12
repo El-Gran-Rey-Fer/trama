@@ -1,10 +1,11 @@
 import { construirGrafo, type Grafo, TIPOS_GENEALOGIA } from "./grafo";
 import { construirVistaFamilia } from "./grafoCompleto";
 
-// Juego "completar el árbol", pedido después de A7: mismo árbol de ego a
-// profundidad 2 que ya usa la ficha (/e/[id]/arbol/), pero con un nodo oculto
-// y una tanda de opciones para adivinarlo. La posición en el árbol es la
-// pista principal; el nombre no se revela hasta responder.
+// Juego "completar el árbol", pedido después de A7: árbol de ego a
+// profundidad 2, línea directa (sin hermanos ni tíos/primos — mismo recorte
+// que la vista embebida en la ficha), con un nodo oculto y una tanda de
+// opciones para adivinarlo. La posición en el árbol es la pista principal; el
+// nombre no se revela hasta responder.
 export interface RondaArbol {
 	// Todas las entidades del árbol de esta ronda, para el filtro de
 	// disponibilidad (mismo contrato que Tarjeta/TarjetaPertenencia:
@@ -88,6 +89,7 @@ export async function generarRondasArbol(
 		const vista = construirVistaFamilia(grafo, {
 			centro: raiz.id,
 			profundidad: 2,
+			soloLineaDirecta: true,
 		});
 		if (!vista) continue;
 
