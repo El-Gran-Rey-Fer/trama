@@ -427,6 +427,7 @@ capitulos:
       Prometeo la modela de barro en una tradición que no coincide con la
       primera en el cuándo.
     relatos: [ la-raza-de-oro, prometeo-modela-a-los-hombres ]
+    entidades_extra: [ japeto ]
     examen: { aciertos: 8, de: 10 }
 
   - id: la-guerra-por-el-cosmos
