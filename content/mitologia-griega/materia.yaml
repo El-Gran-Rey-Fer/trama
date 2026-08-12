@@ -251,6 +251,27 @@ relaciones:
     conjunto_inversa: true
   purificado_por:
     inversa: purifica_a
+  roba_a:
+    inversa: robado_por
+    pregunta: "¿A quién roba {origen}?"
+    pregunta_inversa: "¿Quién roba a {destino}?"
+    conjunto: true
+  robado_por:
+    inversa: roba_a
+  engana_a:
+    inversa: enganado_por
+    pregunta: "¿A quién engaña {origen}?"
+    pregunta_inversa: "¿Quién engaña a {destino}?"
+    conjunto: true
+    conjunto_inversa: true
+  enganado_por:
+    inversa: engana_a
+  abre_a:
+    inversa: abierto_por
+    pregunta: "¿Qué abre {origen}?"
+    pregunta_inversa: "¿Quién abre {destino}?"
+  abierto_por:
+    inversa: abre_a
 
 fuentes:
   teogonia: { autor: "Hesíodo", obra: "Teogonía" }
@@ -438,7 +459,7 @@ capitulos:
     orden: 300
     resumen: Diez años de guerra entre titanes y olímpicos deciden quién gobierna el
       mundo.
-    relatos: [ titanomaquia ]
+    relatos: [ titanomaquia, el-castigo-de-los-vencidos ]
     entidades_extra: [ monte-otris ]
     examen: { aciertos: 8, de: 10 }
 
@@ -592,7 +613,7 @@ capitulos:
     nombre: El fuego y la mujer
     era: edad-de-los-olimpicos
     orden: 2000
-    relatos: [ prometeo-y-el-fuego, pandora ]
+    relatos: [ prometeo-y-el-fuego, pandora-y-el-pitos ]
     examen: { aciertos: 8, de: 10 }
 
   - id: el-diluvio

@@ -17,3 +17,6 @@ relaciones:
   - tipo: consorte_de
     destino: zeus
     fuente: teogonia
+  - tipo: madre_de
+    destino: atenea
+    fuente: teogonia

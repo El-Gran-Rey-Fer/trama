@@ -2,10 +2,13 @@ id: titanes
 tipo: estirpe
 nombre: Titanes
 resumen: >
-  Los doce hijos de Urano y Gea, la primera generación de grandes dioses, derrocada por Zeus
-  y sus hermanos.
+  Los doce hijos de Urano y Gea, la primera generación de grandes dioses,
+  derrocada por Zeus y sus hermanos.
 relaciones:
   - tipo: hijo_de
     destino: urano
   - tipo: hijo_de
     destino: gea
+  - tipo: encerrado_por
+    destino: zeus
+    fuente: teogonia

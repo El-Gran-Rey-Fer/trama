@@ -1,0 +1,10 @@
+id: pandora
+tipo: mortal
+nombre: Pandora
+genero: femenino
+resumen: Primera mujer mortal, modelada por orden de Zeus como regalo envenenado
+  para los hombres, y quien libera los males guardados en un pitos
+relaciones:
+  - tipo: abre_a
+    destino: pitos
+    fuente: trabajos-y-dias
