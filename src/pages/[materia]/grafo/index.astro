@@ -34,6 +34,10 @@ const retratos = new Map(
 const posiciones = new Map(
 	[...(vista?.nodos ?? []), ...(vista?.uniones ?? [])].map((n) => [n.id, n]),
 );
+// Aparte de `posiciones` (nodos + uniones mezclados): para saber si el
+// destino de un enlace es un hijo colapsado (§4) hace falta el tipo
+// concreto de `NodoGrafo` — las uniones no tienen `colapsadoEn`.
+const nodosPorId = new Map((vista?.nodos ?? []).map((n) => [n.id, n]));
 // Un hub duplicado (§3) mete varias copias en `vista.nodos` — para el
 // contador de la cabecera se cuentan entidades reales, no copias.
 const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
@@ -90,14 +94,29 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
                 const puntos = [desde, ...(enlace.puntos ?? []), hasta]
                   .map((p) => `${p.x},${p.y}`)
                   .join(" ");
-                return <polyline points={puntos} stroke={enlace.color} />;
+                const grupo = nodosPorId.get(enlace.hasta)?.colapsadoEn;
+                return (
+                  <polyline
+                    points={puntos}
+                    stroke={enlace.color}
+                    data-grosor={enlace.grosor}
+                    data-grupo={grupo}
+                    style={grupo ? "display:none" : undefined}
+                  />
+                );
               })}
               {vista.uniones.map((u) => (
                 <circle class="union" cx={u.x} cy={u.y} r="3.5" />
               ))}
             </svg>
             {vista.nodos.map((n) => (
-              <div class="nodo" style={`left:${n.x}px; top:${n.y}px`} data-duplicado={n.duplicado}>
+              <div
+                class="nodo"
+                style={`left:${n.x}px; top:${n.y}px${n.colapsadoEn ? "; display:none" : ""}`}
+                data-duplicado={n.duplicado}
+                data-peso={n.peso}
+                data-grupo={n.colapsadoEn}
+              >
                 <a href={rutaEntidad(materia, n.idEntidad)} class="nodo-enlace">
                   <div class="nodo-casilla">
                     <Casilla nombre={n.nombre} tipo={n.tipo} retrato={retratos.get(n.idEntidad)} />
@@ -105,6 +124,17 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
                   <span class="nodo-nombre">{n.nombre}</span>
                 </a>
               </div>
+            ))}
+            {vista.grupos.map((g) => (
+              <button
+                type="button"
+                class="grupo-colapsado"
+                style={`left:${g.x}px; top:${g.y}px`}
+                data-grupo-toggle={g.id}
+                data-cantidad={g.cantidad}
+              >
+                ▸ {g.cantidad} hijos
+              </button>
             ))}
           </div>
           </div>
@@ -235,6 +265,25 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
       { passive: false },
     );
   }
+
+  // Colapso de ramas densas (§4): los nodos/enlaces agrupados ya están en
+  // el HTML (`display:none` desde el propio servidor, sin parpadeo al
+  // cargar) — expandir es solo mostrarlos, no hay nada que pedir ni
+  // recalcular. Sin persistencia entre cargas (el doc solo pide que
+  // sobreviva a un re-render, no entre sesiones): cada visita empieza
+  // colapsada.
+  document.querySelectorAll<HTMLButtonElement>(".grupo-colapsado").forEach((boton) => {
+    const id = boton.dataset.grupoToggle;
+    if (!id) return;
+    const relacionados = document.querySelectorAll<HTMLElement>(
+      `[data-grupo="${CSS.escape(id)}"]`,
+    );
+    boton.addEventListener("click", () => {
+      const abierto = boton.classList.toggle("abierto");
+      for (const el of relacionados) el.style.display = abierto ? "" : "none";
+      boton.textContent = abierto ? "▾ ocultar" : `▸ ${boton.dataset.cantidad} hijos`;
+    });
+  });
 </script>
 
 <style>
@@ -319,6 +368,18 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     fill: none;
   }
 
+  /* Peso visual (§4): tronco vs. ramas laterales — ver `NodoGrafo.peso` /
+     `EnlaceGrafo.grosor` en grafoCompleto.ts. Sin regla para "normal": ya es
+     el stroke-width de base de arriba. */
+  .enlaces polyline[data-grosor="grueso"] {
+    stroke-width: 3.5;
+  }
+
+  .enlaces polyline[data-grosor="fino"] {
+    stroke-width: 1.3;
+    opacity: 0.75;
+  }
+
   .enlaces line.fila-divisor {
     stroke: var(--color-tarjeta-borde);
     stroke-width: 1;
@@ -357,6 +418,29 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     line-height: 1.15;
   }
 
+  /* Peso visual (§4): tronco vs. ramas laterales — ver `NodoGrafo.peso` en
+     grafoCompleto.ts. Sin regla para "normal": ya son los tamaños de base
+     de arriba (`.nodo` / `.nodo-casilla`). */
+  .nodo[data-peso="grande"] {
+    width: 76px;
+  }
+
+  .nodo[data-peso="grande"] .nodo-casilla {
+    width: 60px;
+  }
+
+  .nodo[data-peso="pequeno"] {
+    width: 46px;
+  }
+
+  .nodo[data-peso="pequeno"] .nodo-casilla {
+    width: 32px;
+  }
+
+  .nodo[data-peso="pequeno"] .nodo-nombre {
+    font-size: 9px;
+  }
+
   /* Copia de un hub multi-unión (§3): borde punteado para distinguirla de
      una entidad normal, sin tocar el color de tipo ni el retrato — sigue
      siendo la misma entidad, solo repartida en varias posiciones. En
@@ -368,6 +452,29 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     outline: 2px dashed var(--color-texto-muted);
     outline-offset: 2px;
     border-radius: var(--radio);
+  }
+
+  /* Marcador de rama densa colapsada (§4): mismo idioma visual que un nodo
+     (posición absoluta, centrado en x/y) pero como botón, no como casilla —
+     no representa una entidad, así que no lleva su lenguaje visual (color
+     de tipo, retrato). */
+  .grupo-colapsado {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    padding: 3px 10px;
+    border: 1px dashed var(--color-tarjeta-borde);
+    border-radius: 999px;
+    background: var(--color-fondo-pantalla);
+    color: var(--color-texto-muted);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .grupo-colapsado:hover {
+    border-color: var(--color-acento);
+    color: var(--color-texto);
   }
 
   .sin-datos {

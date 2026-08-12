@@ -75,6 +75,15 @@ export interface NodoGrafo {
 	// copia por unión en vez de concentrar todas sus líneas en un único
 	// nodo. Solo puede darse en la vista de toda la materia.
 	duplicado?: boolean;
+	// Peso visual (§4 del doc de spec): tronco vs. ramas laterales, según
+	// `importancia` (`contarRelaciones`) — no hay tier de importancia en el
+	// contenido, así que se deriva del propio grafo. Ausente en la ventana
+	// de ego (todas las entidades se dibujan igual ahí, la vista ya está
+	// acotada de por sí).
+	peso?: "grande" | "normal" | "pequeno";
+	// Id del grupo de "rama densa" (§4) que oculta este nodo por defecto —
+	// ver `agruparRamasDensas`. Ausente si el nodo se ve siempre.
+	colapsadoEn?: string;
 	nombre: string;
 	tipo: string;
 	x: number;
@@ -91,6 +100,10 @@ export interface EnlaceGrafo {
 	// recto en vez de una diagonal — ver `elk.edgeRouting` en
 	// `calcularPosiciones`. Ausente si el tramo es recto (sin quiebro).
 	puntos?: { x: number; y: number }[];
+	// Grosor visual (§4): toma el peso del extremo que es una entidad real
+	// (el progenitor si el enlace sale de él, el hijo si sale de una
+	// unión — ver `calcularGrosor`). Ausente en la ventana de ego.
+	grosor?: "grueso" | "normal" | "fino";
 }
 
 export interface UnionGrafo {
@@ -125,11 +138,24 @@ export interface VentanaEgo {
 	profundidadDescendientes?: number;
 }
 
+// Marcador de "rama densa" colapsada por defecto (§4): sustituye a los
+// hijos poco relevantes de un progenitor/unión con muchos hijos. Los nodos
+// y enlaces reales siguen en `VistaGrafo.nodos`/`enlaces` (nada se pierde,
+// solo se empieza oculto — `NodoGrafo.colapsadoEn` referencia este id), así
+// que expandir es un cambio de visibilidad en el cliente, no un recálculo.
+export interface GrupoColapsado {
+	id: string;
+	x: number;
+	y: number;
+	cantidad: number;
+}
+
 export interface VistaGrafo {
 	familia: FamiliaRelacion;
 	nodos: NodoGrafo[];
 	uniones: UnionGrafo[];
 	enlaces: EnlaceGrafo[];
+	grupos: GrupoColapsado[];
 	// Coordenada `y` de cada generación presente, de arriba a abajo — para
 	// dibujar divisores entre filas.
 	filas: number[];
@@ -710,6 +736,115 @@ async function calcularPosiciones(
 	return { posiciones, quiebres };
 }
 
+// Cortes por percentil, no por valor absoluto: `importancia` no tiene una
+// escala fija (depende de cuántas relaciones de cualquier tipo tenga cada
+// entidad en el grafo completo de la materia), así que un umbral fijo se
+// desajustaría según crezca el contenido. Con percentiles el tronco es
+// siempre "el 15% más conectado de esta vista", sin recalibrar a mano.
+function calcularPesos(
+	idsVista: Set<string>,
+	importancia: Map<string, number>,
+): Map<string, "grande" | "normal" | "pequeno"> {
+	const valores = [...idsVista]
+		.map((id) => importancia.get(id) ?? 0)
+		.sort((a, b) => a - b);
+	const percentil = (p: number) =>
+		valores[Math.min(valores.length - 1, Math.floor(p * valores.length))] ?? 0;
+	const corteGrande = percentil(0.85);
+	const cortePequeno = percentil(0.5);
+
+	const pesos = new Map<string, "grande" | "normal" | "pequeno">();
+	for (const id of idsVista) {
+		const v = importancia.get(id) ?? 0;
+		pesos.set(
+			id,
+			v >= corteGrande ? "grande" : v <= cortePequeno ? "pequeno" : "normal",
+		);
+	}
+	return pesos;
+}
+
+// El grosor de un enlace toma el peso de quien de los dos extremos es una
+// entidad real (nunca el de la unión, que es un punto sintético sin peso
+// propio): el progenitor si el enlace sale de él hacia una unión o un hijo
+// directo, el hijo si el enlace sale de una unión.
+const GROSOR_POR_PESO = {
+	grande: "grueso",
+	normal: "normal",
+	pequeno: "fino",
+} as const;
+
+function calcularGrosor(
+	enlaces: EnlaceGrafo[],
+	nodoPorId: Map<string, NodoGrafo>,
+): void {
+	for (const e of enlaces) {
+		const refId = e.tipo === "union_de" ? e.hasta : e.desde;
+		const peso = nodoPorId.get(refId)?.peso ?? "normal";
+		e.grosor = GROSOR_POR_PESO[peso];
+	}
+}
+
+// Hijos visibles por defecto antes de agrupar el resto (§4): mismo orden de
+// magnitud que `MAX_HIJOS_LINEA_DIRECTA`, la cifra ya establecida en este
+// fichero para "cuántos hijos caben sin abrumar". Un resto de 1-2 no
+// justifica un grupo (el ahorro visual es menor que el propio marcador), así
+// que si no llega a `MIN_GRUPO_COLAPSO` se deja tal cual, sin colapsar.
+const UMBRAL_COLAPSO = 6;
+const MIN_GRUPO_COLAPSO = 3;
+
+// Reparte los hijos de cada progenitor/unión con demasiados en "visibles"
+// (los de mayor `peso`) y "colapsados" (el resto, agrupados tras un
+// marcador `▸ N hijos` — ver `GrupoColapsado`). Se llama con `nodos` y
+// `enlaces` ya en sus posiciones finales: la posición del marcador es el
+// centroide de los hijos que agrupa, así que necesita que esas posiciones
+// ya sean definitivas.
+function agruparRamasDensas(
+	nodos: NodoGrafo[],
+	enlaces: EnlaceGrafo[],
+): GrupoColapsado[] {
+	const nodoPorId = new Map(nodos.map((n) => [n.id, n]));
+
+	const hijosPorOrigen = new Map<string, EnlaceGrafo[]>();
+	for (const e of enlaces) {
+		// Un enlace "cuenta como hijo" cuando su destino es un nodo real de
+		// esta vista (progenitor→hijo directo o unión→hijo) — un enlace
+		// progenitor→unión no añade densidad propia, la unión no se dibuja
+		// como una casilla más.
+		if (nodoPorId.has(e.hasta)) agregar(hijosPorOrigen, e.desde, e);
+	}
+
+	const grupos: GrupoColapsado[] = [];
+	for (const [origen, hijos] of hijosPorOrigen) {
+		if (hijos.length <= UMBRAL_COLAPSO) continue;
+
+		const orden = ["grande", "normal", "pequeno"] as const;
+		const ordenados = [...hijos].sort((a, b) => {
+			const pa = nodoPorId.get(a.hasta)?.peso ?? "normal";
+			const pb = nodoPorId.get(b.hasta)?.peso ?? "normal";
+			return (
+				orden.indexOf(pa) - orden.indexOf(pb) || a.hasta.localeCompare(b.hasta)
+			);
+		});
+		const resto = ordenados.slice(UMBRAL_COLAPSO);
+		if (resto.length < MIN_GRUPO_COLAPSO) continue;
+
+		const grupoId = `colapso:${origen}`;
+		const posiciones = resto
+			.map((e) => nodoPorId.get(e.hasta))
+			.filter((n): n is NodoGrafo => n !== undefined);
+		for (const n of posiciones) n.colapsadoEn = grupoId;
+
+		grupos.push({
+			id: grupoId,
+			x: posiciones.reduce((s, n) => s + n.x, 0) / posiciones.length,
+			y: posiciones.reduce((s, n) => s + n.y, 0) / posiciones.length,
+			cantidad: posiciones.length,
+		});
+	}
+	return grupos;
+}
+
 export async function construirVistaFamilia(
 	grafo: Grafo,
 	ventana?: VentanaEgo,
@@ -789,6 +924,10 @@ export async function construirVistaFamilia(
 		if (enlace) enlace.puntos = puntos;
 	}
 
+	// Peso visual (§4) solo en la vista de toda la materia — ver el
+	// comentario de `NodoGrafo.peso`.
+	const pesos = ventana ? undefined : calcularPesos(ids, importancia);
+
 	const nodos: NodoGrafo[] = nodoPlan
 		.map((n): NodoGrafo | undefined => {
 			const entidad = obtenerEntidad(grafo, n.idEntidad);
@@ -798,6 +937,7 @@ export async function construirVistaFamilia(
 				id: n.id,
 				idEntidad: n.idEntidad,
 				duplicado: n.duplicado,
+				peso: pesos?.get(n.idEntidad),
 				nombre: entidad.nombre,
 				tipo: entidad.tipo,
 				...pos,
@@ -805,12 +945,10 @@ export async function construirVistaFamilia(
 		})
 		.filter((n): n is NodoGrafo => n !== undefined);
 
-	// La posición de la unión la pone elk igual que la de cualquier otro
-	// nodo del grafo — recolocarla a mano (p.ej. al punto medio de sus dos
-	// progenitores) rompería la consistencia con los quiebres en ángulo
-	// recto que elk ya calculó para ESA posición: el último tramo saltaría
-	// en diagonal para alcanzar el punto nuevo, justo el ruido visual que
-	// el enrutado ortogonal existe para evitar.
+	// La posición de la unión sale de elk como la de cualquier otro nodo,
+	// salvo que sus dos progenitores estén resueltos — en ese caso ya se
+	// recolocó a mano en `calcularPosiciones` (con su propio tramo en
+	// ángulo recto reconstruido a la vez, para no romper la consistencia).
 	const uniones: UnionGrafo[] = unionesDetectadas
 		.map((u) => {
 			const pos = posiciones.get(u.id);
@@ -842,6 +980,16 @@ export async function construirVistaFamilia(
 		}));
 	}
 
+	// Grosor de enlace y colapso de ramas densas (§4): igual que el peso de
+	// nodo, solo en la vista de toda la materia — y solo tiene sentido una
+	// vez que `nodos` está en sus posiciones finales (el marcador de grupo
+	// se coloca en el centroide de lo que oculta).
+	const grupos: GrupoColapsado[] = [];
+	if (!ventana) {
+		calcularGrosor(enlaces, new Map(nodos.map((n) => [n.id, n])));
+		grupos.push(...agruparRamasDensas(nodos, enlaces));
+	}
+
 	const filas = [...new Set(nodos.map((n) => n.y))].sort((a, b) => a - b);
 
 	return {
@@ -849,6 +997,7 @@ export async function construirVistaFamilia(
 		nodos,
 		uniones,
 		enlaces,
+		grupos,
 		filas,
 		ancho: maxX - minX + MARGEN * 2,
 		alto: maxY - minY + MARGEN * 2,
