@@ -1,0 +1,20 @@
+id: belo
+tipo: mortal
+nombre: Belo
+resumen: Padre de Danao y Egipto.
+relaciones:
+  - tipo: padre_de
+    destino: danao
+    fuente: biblioteca
+  - tipo: padre_de
+    destino: egipto
+    fuente: biblioteca
+  - tipo: hijo_de
+    destino: poseidon
+    fuente: biblioteca
+  - tipo: consorte_de
+    destino: anquinoe
+    fuente: biblioteca
+  - tipo: hijo_de
+    destino: libia
+    fuente: biblioteca

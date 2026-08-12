@@ -1,0 +1,13 @@
+id: io
+tipo: ninfa
+nombre: Ío
+genero: femenino
+resumen: >
+  Náyade hija del río Ínaco y sacerdotisa de Hera. Hera la transforma en vaca, pero las caricias de Zeus la devuelven a su forma humana.
+relaciones:
+  - tipo: hijo_de
+    destino: rios
+    fuente: biblioteca
+  - tipo: hijo_de
+    destino: oceanides
+    fuente: biblioteca

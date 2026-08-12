@@ -1,0 +1,13 @@
+id: libia
+tipo: mortal
+nombre: Libia
+genero: femenino
+resumen: >
+  Personificación de las tierras del norte de África. Reina y heroína.
+relaciones:
+  - tipo: hijo_de
+    destino: epafo
+    fuente: biblioteca
+  - tipo: hijo_de
+    destino: menfis
+    fuente: biblioteca

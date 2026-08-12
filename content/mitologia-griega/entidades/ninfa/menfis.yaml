@@ -1,0 +1,10 @@
+id: menfis
+tipo: ninfa
+nombre: menfis
+genero: femenino
+resumen: >
+  Náyade hija del dios fluvial Nilo.
+relaciones:
+  - tipo: hijo_de
+    destino: rios
+    fuente: biblioteca

@@ -1,0 +1,16 @@
+id: anquinoe
+tipo: ninfa
+nombre: Anquinoe
+genero: femenino
+resumen: >
+  Náyade hija del dios fluvial Nilo.
+relaciones:
+  - tipo: hijo_de
+    destino: rios
+    fuente: biblioteca
+  - tipo: madre_de
+    destino: danao
+    fuente: biblioteca
+  - tipo: madre_de
+    destino: egipto
+    fuente: biblioteca

@@ -1,0 +1,14 @@
+id: epafo
+tipo: mortal
+nombre: Épafo
+resumen: Rey de Egipto e hijo de Zeus e Ío. Nacido a las orillas del Nilo, la celosa Hera ordenó su secuestro.
+relaciones:
+  - tipo: hijo_de
+    destino: zeus
+    fuente: biblioteca
+  - tipo: hijo_de
+    destino: io
+    fuente: biblioteca
+  - tipo: consorte_de
+    destino: menfis
+    fuente: biblioteca
