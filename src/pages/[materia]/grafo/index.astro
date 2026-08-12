@@ -65,6 +65,13 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     {
       vista ? (
         <div class="lienzo-scroll">
+          <div
+            class="lienzo-zoom"
+            id="lienzo-zoom"
+            data-ancho={vista.ancho}
+            data-alto={vista.alto}
+            style={`width:${vista.ancho}px; height:${vista.alto}px`}
+          >
           <div class="lienzo" style={`width:${vista.ancho}px; height:${vista.alto}px`}>
             <svg
               class="enlaces"
@@ -99,6 +106,7 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
                 </a>
               </div>
             ))}
+          </div>
           </div>
         </div>
       ) : (
@@ -177,6 +185,56 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
       true,
     );
   }
+
+  // Zoom con la rueda del ratón (§5, adelantado a petición del usuario):
+  // en un grafo de decenas de entidades el nivel por defecto rara vez es
+  // el cómodo para leer una zona concreta ni para ver el conjunto a la
+  // vez. Se escala el lienzo entero, no el contenedor — así que hace
+  // falta ajustar a mano el tamaño del envoltorio (`lienzo-zoom`) para que
+  // el área de scroll del contenedor crezca/encoja con el zoom, y
+  // corregir `scrollLeft/scrollTop` para que el punto bajo el cursor no
+  // "salte" al cambiar de escala.
+  const zoom = document.querySelector<HTMLElement>("#lienzo-zoom");
+  const lienzo = zoom?.querySelector<HTMLElement>(".lienzo");
+  if (contenedor && zoom && lienzo) {
+    const anchoBase = Number(zoom.dataset.ancho);
+    const altoBase = Number(zoom.dataset.alto);
+    const ESCALA_MIN = 0.25;
+    const ESCALA_MAX = 2.5;
+    let escala = 1;
+
+    // El envoltorio (`zoom`) fija el tamaño de la caja — es lo que el
+    // contenedor usa para calcular su área de scroll. El lienzo de dentro,
+    // a su tamaño real sin escalar, se transforma para rellenar
+    // visualmente esa caja: así el scroll del contenedor siempre coincide
+    // con el tamaño visible, sin depender de si el navegador recalcula el
+    // overflow de un descendiente transformado.
+    const aplicarEscala = () => {
+      zoom.style.width = `${anchoBase * escala}px`;
+      zoom.style.height = `${altoBase * escala}px`;
+      lienzo.style.transform = `scale(${escala})`;
+    };
+
+    contenedor.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const rect = contenedor.getBoundingClientRect();
+        // Posición del cursor en coordenadas del lienzo sin escalar, para
+        // recolocarla exactamente igual tras cambiar `escala`.
+        const puntoX = (contenedor.scrollLeft + e.clientX - rect.left) / escala;
+        const puntoY = (contenedor.scrollTop + e.clientY - rect.top) / escala;
+
+        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        escala = Math.min(ESCALA_MAX, Math.max(ESCALA_MIN, escala * factor));
+        aplicarEscala();
+
+        contenedor.scrollLeft = puntoX * escala - (e.clientX - rect.left);
+        contenedor.scrollTop = puntoY * escala - (e.clientY - rect.top);
+      },
+      { passive: false },
+    );
+  }
 </script>
 
 <style>
@@ -240,9 +298,13 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     user-select: none;
   }
 
+  .lienzo-zoom {
+    margin: 0 auto;
+  }
+
   .lienzo {
     position: relative;
-    margin: 0 auto;
+    transform-origin: 0 0;
   }
 
   .enlaces {

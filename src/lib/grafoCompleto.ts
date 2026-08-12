@@ -603,6 +603,16 @@ async function calcularPosiciones(
 			// pasa cerca — sin esto un conector puede rozar visualmente la
 			// casilla de un vecino aunque no la atraviese del todo.
 			"elk.spacing.edgeNode": String(ESPACIO_MINIMO_ELK),
+			// Sin esto, cada arista que sale de un mismo nodo (p.ej. una
+			// unión con media docena de hijos) recibe su propio punto de
+			// salida repartido a lo ancho del nodo — y como el punto que de
+			// verdad se dibuja es el centro exacto de la casilla (más abajo,
+			// `posiciones`), el primer tramo entre ese centro y el punto de
+			// salida real de elk queda en diagonal: un "pico" saliendo de
+			// cada nodo con varias líneas. Fusionando las aristas que
+			// comparten origen o destino, todas salen del mismo punto (el
+			// centro) y el primer tramo compartido sí es recto.
+			"elk.layered.mergeEdges": "true",
 		},
 		children: nodosElk,
 		edges: edgesElk,
