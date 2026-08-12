@@ -613,6 +613,19 @@ async function calcularPosiciones(
 			// comparten origen o destino, todas salen del mismo punto (el
 			// centro) y el primer tramo compartido sí es recto.
 			"elk.layered.mergeEdges": "true",
+			// Con el heurístico de colocación por defecto (Brandes-Köpf), un
+			// hijo de un solo progenitor podía acabar posicionado en medio de
+			// la descendencia de una pareja sin ninguna relación con él, solo
+			// porque esa columna daba un tramo más recto en algún otro punto
+			// del grafo — ilegible, dos familias sin parentesco pegadas visual-
+			// mente. `NETWORK_SIMPLEX` (busca el óptimo global de "cercanía",
+			// no solo tramos rectos) + más pasadas de `thoroughness` agrupan
+			// mucho mejor cada familia. El build tarda igual (~30s): el coste
+			// solo pesa en las ~440 llamadas con grafos pequeños de la ventana
+			// de ego, donde da igual, y una única llamada grande (grafo
+			// completo) no repite lo bastante como para notarse.
+			"elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+			"elk.layered.thoroughness": "30",
 		},
 		children: nodosElk,
 		edges: edgesElk,
@@ -640,6 +653,58 @@ async function calcularPosiciones(
 				puntos.map((p) => ({ x: p.x, y: p.y })),
 			);
 		}
+	}
+
+	// Elk minimiza cruces globales, no "que el nodo de unión quede centrado
+	// entre sus dos progenitores" — no tiene ese concepto, para elk es un
+	// nodo más. El resultado: la unión sale alineada bajo cualquiera de los
+	// dos (el que le da un tramo recto a elk), nunca entre ambos, y de paso
+	// puede acabar en la misma columna que la descendencia de un progenitor
+	// sin relación, como si fuera hermana suya. Se recoloca aquí a mano, en
+	// el punto medio de sus dos progenitores, y se reconstruye en ángulo
+	// recto el tramo de cada progenitor a la unión y de la unión a cada
+	// hijo — más simple y más predecible que perseguir a elk con opciones
+	// de layout para un caso tan local (siempre un salto de una capa).
+	const codo = (
+		a: { x: number; y: number },
+		b: { x: number; y: number },
+	): { x: number; y: number }[] => {
+		if (a.x === b.x) return [];
+		const y = a.y + (b.y - a.y) / 2;
+		return [
+			{ x: a.x, y },
+			{ x: b.x, y },
+		];
+	};
+
+	for (const u of uniones) {
+		const entrantes = enlaces
+			.map((e, i) => ({ e, i }))
+			.filter(({ e }) => e.hasta === u.id);
+		const posPadres = entrantes
+			.map(({ e }) => posiciones.get(e.desde))
+			.filter((p): p is { x: number; y: number } => p !== undefined);
+		if (posPadres.length !== 2) continue; // dato incompleto: se deja como salió de elk
+
+		const posUnion = posiciones.get(u.id);
+		if (!posUnion) continue;
+		const nuevaX = (posPadres[0].x + posPadres[1].x) / 2;
+		const nuevaPos = { x: nuevaX, y: posUnion.y };
+		posiciones.set(u.id, nuevaPos);
+
+		for (const { e, i } of entrantes) {
+			const posPadre = posiciones.get(e.desde);
+			if (!posPadre) continue;
+			quiebres.set(i, codo(posPadre, nuevaPos));
+		}
+		enlaces
+			.map((e, i) => ({ e, i }))
+			.filter(({ e }) => e.desde === u.id)
+			.forEach(({ e, i }) => {
+				const posHijo = posiciones.get(e.hasta);
+				if (!posHijo) return;
+				quiebres.set(i, codo(nuevaPos, posHijo));
+			});
 	}
 
 	return { posiciones, quiebres };
