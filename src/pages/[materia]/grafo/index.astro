@@ -116,6 +116,75 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
   </article>
 </Base>
 
+<script>
+  // Arrastrar para desplazar (bloque motor, pedido tras el §3): con 60-70
+  // entidades el lienzo es mucho más ancho y alto que la ventana, y las
+  // barras de scroll del navegador son incómodas para moverse por un mapa
+  // así. Solo ratón — el táctil ya desplaza de forma nativa arrastrando con
+  // el dedo, y capturar el puntero ahí competiría con ese gesto en vez de
+  // sumarse a él.
+  const contenedor = document.querySelector<HTMLElement>(".lienzo-scroll");
+  if (contenedor) {
+    let arrastrando = false;
+    let movido = false;
+    let inicioX = 0;
+    let inicioY = 0;
+    let scrollInicioX = 0;
+    let scrollInicioY = 0;
+
+    contenedor.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      arrastrando = true;
+      movido = false;
+      inicioX = e.clientX;
+      inicioY = e.clientY;
+      scrollInicioX = contenedor.scrollLeft;
+      scrollInicioY = contenedor.scrollTop;
+    });
+
+    contenedor.addEventListener("pointermove", (e) => {
+      if (!arrastrando) return;
+      const dx = e.clientX - inicioX;
+      const dy = e.clientY - inicioY;
+      // Umbral antes de considerarlo arrastre de verdad: un clic normal
+      // tiembla unos píxeles entre pointerdown y pointerup, y sin umbral
+      // ese temblor ya bastaría para cancelar la navegación del nodo. La
+      // captura del puntero se pide aquí, no en pointerdown: si se captura
+      // ya al pulsar, hasta un clic sin mover el ratón queda "capturado" y
+      // el evento click se retargeta al contenedor en vez de al enlace
+      // bajo el cursor — deja de navegar aunque no haya habido arrastre.
+      if (!movido && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+        movido = true;
+        contenedor.setPointerCapture(e.pointerId);
+        contenedor.classList.add("arrastrando");
+      }
+      if (!movido) return;
+      contenedor.scrollLeft = scrollInicioX - dx;
+      contenedor.scrollTop = scrollInicioY - dy;
+    });
+
+    const terminarArrastre = () => {
+      arrastrando = false;
+      contenedor.classList.remove("arrastrando");
+    };
+    contenedor.addEventListener("pointerup", terminarArrastre);
+    contenedor.addEventListener("pointercancel", terminarArrastre);
+
+    // Un arrastre real no debe además navegar al enlace del nodo bajo el
+    // puntero al soltar — en fase de captura, antes de que el enlace lo vea.
+    contenedor.addEventListener(
+      "click",
+      (e) => {
+        if (movido) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      },
+      true,
+    );
+  }
+</script>
+
 <style>
   .grafo-pagina {
     padding-bottom: 24px;
@@ -161,8 +230,20 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
   }
 
   .lienzo-scroll {
-    overflow-x: auto;
+    overflow: auto;
+    /* Caja acotada, no la altura de la página: con el árbol completo el
+       lienzo suele ser mucho más alto que la ventana, y sin un límite
+       aquí no hay "arrastrar para desplazar" posible en vertical — el
+       scroll pasaría a ser el de la página, fuera del alcance del script. */
+    height: min(78vh, 760px);
     padding: 16px 20px 20px;
+    cursor: grab;
+    overscroll-behavior: contain;
+  }
+
+  .lienzo-scroll.arrastrando {
+    cursor: grabbing;
+    user-select: none;
   }
 
   .lienzo {
