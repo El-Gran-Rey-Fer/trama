@@ -1,3 +1,5 @@
+import ELK from "elkjs";
+import type { ElkExtendedEdge, ElkNode } from "elkjs/lib/elk-api";
 import {
 	type Arista,
 	type Grafo,
@@ -27,7 +29,7 @@ import {
 //
 // `hermano_de` no se dibuja: desde que se deriva de la filiación compartida
 // (grafo.ts), dos hermanos siempre tienen ya un padre/madre común pintado en
-// esta misma vista (línea directa o nodo de unión — ver `fusionarUniones`),
+// esta misma vista (línea directa o nodo de unión — ver `detectarUniones`),
 // así que la línea de hermandad es pura redundancia visual. Con un
 // progenitor de familia numerosa esa redundancia crece en C(n,2): una
 // camada de una docena de hijos son 66 líneas cruzadas por nada.
@@ -346,147 +348,25 @@ function capaPorAlcance(
 	return capa;
 }
 
-// Layout por capas (generación): orden horizontal por baricentro de los
-// progenitores (con importancia y orden alfabético como desempate) más
-// agrupado de parejas contiguas, y una segunda pasada de abajo hacia
-// arriba que centra cada nodo sobre sus hijos. Sin `capaPrecalculada`, la
-// capa se calcula por alcance desde las raíces (vista de toda la
-// materia); con ella (ventana de ego — ver `subgrafoEgo`), se usa tal
-// cual, con signo — el resto del layout es agnóstico al rango de `capa`.
-function layoutJerarquico(
-	aristas: Arista[],
-	importancia: Map<string, number>,
-	capaPrecalculada?: Map<string, number>,
-): Map<string, { x: number; y: number }> {
-	const padreHijo = aristas.map(normalizarRol).map((r) => ({
-		padre: r.padreId,
-		hijo: r.hijoId,
-	}));
-
-	const ids = new Set<string>();
-	for (const a of aristas) {
-		ids.add(a.origenId);
-		ids.add(a.relacion.destino);
-	}
-
-	const hijosDe = new Map<string, string[]>();
-	const padresDe = new Map<string, string[]>();
-	for (const e of padreHijo) {
-		agregar(hijosDe, e.padre, e.hijo);
-		agregar(padresDe, e.hijo, e.padre);
-	}
-
-	// Pareja = comparte al menos un hijo con rol ya resuelto (`fusionarUniones`
-	// los fusiona en un solo nodo de unión). Si sus dos miembros no caen en
-	// columnas contiguas, ese nodo de unión aparece a medio camino de toda la
-	// fila, y sus líneas cruzan por encima de hermanos que no tienen nada que
-	// ver — así que aquí se agrupan antes de asignar x.
-	const parejas = new Map<string, string>();
-	{
-		const padresPorHijo = new Map<string, string[]>();
-		for (const { padre, hijo } of padreHijo)
-			agregar(padresPorHijo, hijo, padre);
-		for (const lista of padresPorHijo.values()) {
-			if (lista.length !== 2) continue;
-			const [a, b] = lista;
-			if (!parejas.has(a)) parejas.set(a, b);
-			if (!parejas.has(b)) parejas.set(b, a);
-		}
-	}
-
-	const capa = capaPrecalculada ?? capaPorAlcance(ids, hijosDe, padresDe);
-
-	const porCapa = new Map<number, string[]>();
-	for (const [id, l] of capa) agregar(porCapa, l, id);
-
-	const xPorId = new Map<string, number>();
-	function baricentro(id: string): number {
-		const padres = padresDe.get(id) ?? [];
-		if (padres.length === 0) return Number.POSITIVE_INFINITY;
-		return padres.reduce((s, p) => s + (xPorId.get(p) ?? 0), 0) / padres.length;
-	}
-
-	const ordenPorCapa = new Map<number, string[]>();
-	const capasOrdenadas = [...porCapa.keys()].sort((a, b) => a - b);
-	for (const l of capasOrdenadas) {
-		const nodos = [...(porCapa.get(l) ?? [])];
-		// Un único comparador para todas las capas: baricentro primero (sin
-		// progenitores conocidos en la ventana, ambos dan Infinity y se cae a
-		// importancia/alfabético — el caso de las raíces de la vista completa,
-		// o del extremo visible de una ventana de ego), importancia como
-		// desempate en vez del orden de inserción, id como último desempate
-		// para que el resultado sea determinista.
-		nodos.sort((a, b) => {
-			const ba = baricentro(a);
-			const bb = baricentro(b);
-			if (ba !== bb && (Number.isFinite(ba) || Number.isFinite(bb)))
-				return ba - bb;
-			return (
-				(importancia.get(b) ?? 0) - (importancia.get(a) ?? 0) ||
-				a.localeCompare(b)
-			);
-		});
-
-		const vistos = new Set<string>();
-		const agrupados: string[] = [];
-		for (const id of nodos) {
-			if (vistos.has(id)) continue;
-			vistos.add(id);
-			agrupados.push(id);
-			const parejaId = parejas.get(id);
-			if (parejaId && !vistos.has(parejaId) && capa.get(parejaId) === l) {
-				vistos.add(parejaId);
-				agrupados.push(parejaId);
-			}
-		}
-
-		ordenPorCapa.set(l, agrupados);
-		agrupados.forEach((id, idx) => {
-			xPorId.set(id, idx * ESPACIO_HERMANOS);
-		});
-	}
-
-	// Centrado de abajo hacia arriba: cada nodo se reposiciona (sin
-	// reordenar) sobre la media de sus hijos, de la capa más profunda a la
-	// más alta. Una sola pasada basta porque cada capa solo depende de la de
-	// abajo, ya recalculada. Cuando el hueco a la izquierda no alcanza para
-	// centrar del todo, `Math.max` empuja lo mínimo necesario en vez de
-	// romper el espaciado o el orden ya establecido.
-	for (const l of [...capasOrdenadas].reverse()) {
-		const orden = ordenPorCapa.get(l) ?? [];
-		let anterior = Number.NEGATIVE_INFINITY;
-		for (const id of orden) {
-			const hijos = hijosDe.get(id) ?? [];
-			const deseada =
-				hijos.length > 0
-					? hijos.reduce((s, h) => s + (xPorId.get(h) ?? 0), 0) / hijos.length
-					: (xPorId.get(id) ?? 0);
-			const x = Math.max(deseada, anterior + ESPACIO_HERMANOS);
-			xPorId.set(id, x);
-			anterior = x;
-		}
-	}
-
-	const posiciones = new Map<string, { x: number; y: number }>();
-	for (const id of ids) {
-		posiciones.set(id, {
-			x: xPorId.get(id) ?? 0,
-			y: (capa.get(id) ?? 0) * ESPACIO_GENERACION,
-		});
-	}
-	return posiciones;
+interface UnionDetectada {
+	id: string;
+	padres: [string, string];
+	capa: number;
 }
 
 // Cuando un hijo tiene sus dos progenitores en la misma capa (el caso
 // normal: padre y madre son de la misma generación), se sustituyen sus dos
-// líneas directas por un nodo de unión a medio camino entre ambos: líneas
-// cortas de cada progenitor a la unión (con su color de padre/madre) y una
-// sola línea neutra de la unión a cada hijo compartido, en vez de dos
-// líneas por hijo que se cruzan entre sí.
-function fusionarUniones(
+// líneas directas por un nodo de unión: líneas cortas de cada progenitor a
+// la unión (con su color de padre/madre) y una sola línea neutra de la
+// unión a cada hijo compartido, en vez de dos líneas por hijo que se cruzan
+// entre sí. Puramente estructural (capa, no posición todavía) para poder
+// decidirlo antes del layout: el nodo de unión entra como un nodo más en el
+// grafo que resuelve elk, y su cercanía a ambos progenitores la resuelve el
+// propio algoritmo de cruces — no hace falta forzarla a mano.
+function detectarUniones(
 	aristasGenealogicas: Arista[],
-	posiciones: Map<string, { x: number; y: number }>,
-): { uniones: UnionGrafo[]; enlaces: EnlaceGrafo[] } {
+	capa: Map<string, number>,
+): { uniones: UnionDetectada[]; enlaces: EnlaceGrafo[] } {
 	const porHijo = new Map<
 		string,
 		{ padreId: string; tipo: "padre_de" | "madre_de" }[]
@@ -496,14 +376,19 @@ function fusionarUniones(
 		agregar(porHijo, rol.hijoId, { padreId: rol.padreId, tipo: rol.tipo });
 	}
 
-	const uniones: UnionGrafo[] = [];
-	const unionPorPareja = new Map<string, UnionGrafo>();
+	const uniones: UnionDetectada[] = [];
+	const unionPorPareja = new Map<string, UnionDetectada>();
 	const enlaces: EnlaceGrafo[] = [];
 
 	for (const [hijoId, padres] of porHijo) {
-		const posA = padres[0] && posiciones.get(padres[0].padreId);
-		const posB = padres[1] && posiciones.get(padres[1].padreId);
-		if (padres.length !== 2 || !posA || !posB || posA.y !== posB.y) {
+		const capaA = padres[0] && capa.get(padres[0].padreId);
+		const capaB = padres[1] && capa.get(padres[1].padreId);
+		if (
+			padres.length !== 2 ||
+			capaA === undefined ||
+			capaB === undefined ||
+			capaA !== capaB
+		) {
 			// Un solo progenitor conocido, o datos que no caen en la misma
 			// capa (no debería pasar con genealogía bien formada): sin
 			// fusión, línea directa por cada progenitor conocido.
@@ -524,9 +409,8 @@ function fusionarUniones(
 		if (!union) {
 			union = {
 				id: `union:${clave}`,
-				x: (posA.x + posB.x) / 2,
-				y: posA.y,
 				padres: [a.padreId, b.padreId],
+				capa: capaA,
 			};
 			unionPorPareja.set(clave, union);
 			uniones.push(union);
@@ -554,10 +438,83 @@ function fusionarUniones(
 	return { uniones, enlaces };
 }
 
-export function construirVistaFamilia(
+// Tamaño nominal de cada nodo para elk: el layout siempre ha tratado los
+// nodos como puntos (el tamaño visual real lo decide la casilla en CSS,
+// sobre las coordenadas ya resueltas aquí), así que basta un tamaño pequeño
+// y uniforme — el espaciado real lo dan las opciones `elk.spacing.*` de
+// abajo, pensadas para reproducir el ritmo visual de siempre
+// (`ESPACIO_HERMANOS`/`ESPACIO_GENERACION`).
+const TAMANO_NODO_ELK = 8;
+
+// Delega en elk (algoritmo `layered`, un Sugiyama real) el orden horizontal
+// dentro de cada capa y la minimización de cruces — la propia capa
+// (generación) sigue siendo nuestra, vía `capaPorAlcance` o la ventana de
+// ego precalculada; elk solo decide "quién va al lado de quién" dentro de
+// cada fila que ya le fijamos con `elk.partitioning`.
+async function calcularPosiciones(
+	ids: Set<string>,
+	uniones: UnionDetectada[],
+	enlaces: EnlaceGrafo[],
+	capa: Map<string, number>,
+): Promise<Map<string, { x: number; y: number }>> {
+	// La ventana de ego usa capas con signo (centro en 0, ascendientes
+	// negativos) — elk solo necesita el orden relativo, así que se normaliza
+	// aquí sin tocar el `capa` de dominio que usa el resto del código.
+	const valores = [...capa.values()];
+	const minCapa = valores.length > 0 ? Math.min(...valores) : 0;
+	const particion = (c: number) => String(c - minCapa);
+
+	const nodosElk: ElkNode[] = [
+		...[...ids].map((id) => ({
+			id,
+			width: TAMANO_NODO_ELK,
+			height: TAMANO_NODO_ELK,
+			layoutOptions: {
+				"elk.partitioning.partition": particion(capa.get(id) ?? 0),
+			},
+		})),
+		...uniones.map((u) => ({
+			id: u.id,
+			width: TAMANO_NODO_ELK,
+			height: TAMANO_NODO_ELK,
+			layoutOptions: { "elk.partitioning.partition": particion(u.capa) },
+		})),
+	];
+
+	const edgesElk: ElkExtendedEdge[] = enlaces.map((e, i) => ({
+		id: `e${i}`,
+		sources: [e.desde],
+		targets: [e.hasta],
+	}));
+
+	const elk = new ELK();
+	const resultado = await elk.layout({
+		id: "raiz",
+		layoutOptions: {
+			"elk.algorithm": "layered",
+			"elk.direction": "DOWN",
+			"elk.partitioning.activate": "true",
+			"elk.spacing.nodeNode": String(ESPACIO_HERMANOS),
+			"elk.layered.spacing.nodeNodeBetweenLayers": String(ESPACIO_GENERACION),
+		},
+		children: nodosElk,
+		edges: edgesElk,
+	});
+
+	const posiciones = new Map<string, { x: number; y: number }>();
+	for (const nodo of resultado.children ?? []) {
+		posiciones.set(nodo.id, {
+			x: (nodo.x ?? 0) + TAMANO_NODO_ELK / 2,
+			y: (nodo.y ?? 0) + TAMANO_NODO_ELK / 2,
+		});
+	}
+	return posiciones;
+}
+
+export async function construirVistaFamilia(
 	grafo: Grafo,
 	ventana?: VentanaEgo,
-): VistaGrafo | undefined {
+): Promise<VistaGrafo | undefined> {
 	const familia = FAMILIA_PARENTESCO;
 	const todasGenealogicas = grafo.aristas.filter((a) =>
 		familia.tipos.includes(a.relacion.tipo),
@@ -593,7 +550,29 @@ export function construirVistaFamilia(
 		}
 	}
 
-	const posiciones = layoutJerarquico(aristas, importancia, capaPrecalculada);
+	const capa =
+		capaPrecalculada ??
+		(() => {
+			const hijosDe = new Map<string, string[]>();
+			const padresDe = new Map<string, string[]>();
+			for (const a of aristas) {
+				const rol = normalizarRol(a);
+				agregar(hijosDe, rol.padreId, rol.hijoId);
+				agregar(padresDe, rol.hijoId, rol.padreId);
+			}
+			return capaPorAlcance(ids, hijosDe, padresDe);
+		})();
+
+	const { uniones: unionesDetectadas, enlaces } = detectarUniones(
+		aristas,
+		capa,
+	);
+	const posiciones = await calcularPosiciones(
+		ids,
+		unionesDetectadas,
+		enlaces,
+		capa,
+	);
 
 	const nodos: NodoGrafo[] = [...ids]
 		.map((id) => {
@@ -604,7 +583,13 @@ export function construirVistaFamilia(
 		})
 		.filter((n): n is NodoGrafo => n !== undefined);
 
-	const { uniones, enlaces } = fusionarUniones(aristas, posiciones);
+	const uniones: UnionGrafo[] = unionesDetectadas
+		.map((u) => {
+			const pos = posiciones.get(u.id);
+			if (!pos) return undefined;
+			return { id: u.id, padres: u.padres, ...pos };
+		})
+		.filter((u): u is UnionGrafo => u !== undefined);
 
 	const xs = [...nodos.map((n) => n.x), ...uniones.map((u) => u.x)];
 	const ys = [...nodos.map((n) => n.y), ...uniones.map((u) => u.y)];

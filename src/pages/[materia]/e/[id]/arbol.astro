@@ -35,7 +35,10 @@ if (!entidad) throw new Error(`Entidad no encontrada: ${materiaId}/${id}`);
 // ego (±2 generaciones) que antes calculaba arbol.ts con d3-hierarchy,
 // pero con el motor único de grafoCompleto.ts (fusiona parejas en nodos de
 // unión en vez de duplicar antepasados compartidos).
-const arbol = construirVistaFamilia(grafo, { centro: id, profundidad: 2 });
+const arbol = await construirVistaFamilia(grafo, {
+	centro: id,
+	profundidad: 2,
+});
 
 const retratos = new Map(
 	(arbol?.nodos ?? []).map((n) => {

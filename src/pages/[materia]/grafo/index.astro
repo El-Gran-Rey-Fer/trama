@@ -23,7 +23,7 @@ const { materia } = Astro.params;
 const { materiaId } = Astro.props;
 
 const grafo = await construirGrafo(materiaId);
-const vista = construirVistaFamilia(grafo);
+const vista = await construirVistaFamilia(grafo);
 
 const retratos = new Map(
 	(vista?.nodos ?? []).map((n) => {

@@ -118,7 +118,7 @@ export async function generarRondasArbol(
 	for (const raiz of raices) {
 		if (rondas.length >= LIMITE_CANDIDATOS) break;
 
-		const vista = construirVistaFamilia(grafo, {
+		const vista = await construirVistaFamilia(grafo, {
 			centro: raiz.id,
 			profundidad: 2,
 			soloLineaDirecta: true,

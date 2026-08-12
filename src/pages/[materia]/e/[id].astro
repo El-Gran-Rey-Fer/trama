@@ -48,7 +48,7 @@ const retrato = resolverRetrato(grafo, entidad);
 // pequeño y un progenitor prolífico con dos generaciones de descendientes
 // (Gea y sus ~20 hijos entre varias parejas) sigue siendo un revoltijo
 // aunque cada nivel ya vaya recortado por importancia.
-const arbol = construirVistaFamilia(grafo, {
+const arbol = await construirVistaFamilia(grafo, {
 	centro: id,
 	profundidad: 2,
 	profundidadDescendientes: 1,
