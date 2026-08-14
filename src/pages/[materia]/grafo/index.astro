@@ -42,6 +42,24 @@ const nodosPorId = new Map((vista?.nodos ?? []).map((n) => [n.id, n]));
 // contador de la cabecera se cuentan entidades reales, no copias.
 const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
 	.size;
+
+// Fila = índice de generación (§5, filtro): `vista.filas` ya trae la `y` de
+// cada generación de arriba a abajo, esto solo invierte ese array a un mapa
+// para no buscar con indexOf por cada nodo.
+const filaDeY = new Map((vista?.filas ?? []).map((y, i) => [y, i]));
+
+// Minimapa (§5): tamaño en miniatura que cabe en 170x170 conservando la
+// proporción real del lienzo, para que el mapeo clic→posición del cliente
+// sea una simple regla de tres (sin CTM de SVG ni letterboxing que
+// calcular, ver el `<script>` más abajo).
+const MINIMAPA_MAX = 170;
+const escalaMini = vista ? MINIMAPA_MAX / Math.max(vista.ancho, vista.alto) : 1;
+const minimapaAncho = vista ? Math.round(vista.ancho * escalaMini) : 0;
+const minimapaAlto = vista ? Math.round(vista.alto * escalaMini) : 0;
+// Trazo/punto en unidades del viewBox (el lienzo real, no el tamaño en
+// pantalla del minimapa) que al escalar salen ~1.4px / ~2.2px visuales.
+const grosorMiniLinea = Math.max(1, 1.4 / escalaMini);
+const radioMiniNodo = Math.max(1.5, 2.2 / escalaMini);
 ---
 
 <Base titulo={`Árbol — ${materia}`} materiaSlug={materia} anchoCompleto>
@@ -67,7 +85,20 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     }
 
     {
+      vista && vista.filas.length > 1 && (
+        <div class="filtro-generaciones" role="group" aria-label="Filtrar por generación">
+          {vista.filas.map((_, i) => (
+            <button type="button" class="filtro-generacion activo" data-fila-toggle={i}>
+              {`Gen. ${i + 1}`}
+            </button>
+          ))}
+        </div>
+      )
+    }
+
+    {
       vista ? (
+        <div class="lienzo-envoltorio">
         <div class="lienzo-scroll">
           <div
             class="lienzo-zoom"
@@ -101,12 +132,21 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
                     stroke={enlace.color}
                     data-grosor={enlace.grosor}
                     data-grupo={grupo}
+                    data-desde={enlace.desde}
+                    data-hasta={enlace.hasta}
                     style={grupo ? "display:none" : undefined}
                   />
                 );
               })}
               {vista.uniones.map((u) => (
-                <circle class="union" cx={u.x} cy={u.y} r="3.5" />
+                <circle
+                  class="union"
+                  cx={u.x}
+                  cy={u.y}
+                  r="3.5"
+                  data-id={u.id}
+                  data-fila={filaDeY.get(u.y)}
+                />
               ))}
             </svg>
             {vista.nodos.map((n) => (
@@ -116,6 +156,8 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
                 data-duplicado={n.duplicado}
                 data-peso={n.peso}
                 data-grupo={n.colapsadoEn}
+                data-id={n.id}
+                data-fila={filaDeY.get(n.y)}
               >
                 <a href={rutaEntidad(materia, n.idEntidad)} class="nodo-enlace">
                   <div class="nodo-casilla">
@@ -132,12 +174,43 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
                 style={`left:${g.x}px; top:${g.y}px`}
                 data-grupo-toggle={g.id}
                 data-cantidad={g.cantidad}
+                data-fila={filaDeY.get(g.y)}
               >
                 ▸ {g.cantidad} hijos
               </button>
             ))}
           </div>
           </div>
+        </div>
+        <div
+          class="minimapa"
+          id="minimapa"
+          data-ancho={vista.ancho}
+          data-alto={vista.alto}
+          style={`width:${minimapaAncho}px; height:${minimapaAlto}px`}
+        >
+          <svg viewBox={`0 0 ${vista.ancho} ${vista.alto}`} preserveAspectRatio="none">
+            {vista.enlaces.map((enlace) => {
+              const desde = posiciones.get(enlace.desde);
+              const hasta = posiciones.get(enlace.hasta);
+              if (!desde || !hasta) return null;
+              return (
+                <line
+                  x1={desde.x}
+                  y1={desde.y}
+                  x2={hasta.x}
+                  y2={hasta.y}
+                  stroke={enlace.color}
+                  stroke-width={grosorMiniLinea}
+                />
+              );
+            })}
+            {vista.nodos.map((n) => (
+              <circle class="minimapa-nodo" cx={n.x} cy={n.y} r={radioMiniNodo} />
+            ))}
+            <rect id="minimapa-viewport" x="0" y="0" width={vista.ancho} height={vista.alto} />
+          </svg>
+        </div>
         </div>
       ) : (
         <p class="sin-datos">Todavía no hay relaciones de parentesco en el contenido.</p>
@@ -156,6 +229,25 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
   // el dedo, y capturar el puntero ahí competiría con ese gesto en vez de
   // sumarse a él.
   const contenedor = document.querySelector<HTMLElement>(".lienzo-scroll");
+
+  // Nivel de zoom actual (§5): variable compartida entre el zoom con rueda
+  // y el minimapa, que la necesita para traducir tamaño de pantalla a
+  // coordenadas del lienzo sin escalar.
+  let escala = 1;
+
+  // Minimapa (§5): el rectángulo de "qué se ve ahora" se recalcula aquí
+  // desde `scrollLeft/scrollTop/escala` — no hace falta guardar más estado,
+  // el contenedor ya es la fuente de verdad.
+  const minimapa = document.querySelector<HTMLElement>("#minimapa");
+  const viewportMini = document.querySelector<SVGRectElement>("#minimapa-viewport");
+  const actualizarMinimapa = () => {
+    if (!contenedor || !viewportMini) return;
+    viewportMini.setAttribute("x", String(contenedor.scrollLeft / escala));
+    viewportMini.setAttribute("y", String(contenedor.scrollTop / escala));
+    viewportMini.setAttribute("width", String(contenedor.clientWidth / escala));
+    viewportMini.setAttribute("height", String(contenedor.clientHeight / escala));
+  };
+
   if (contenedor) {
     let arrastrando = false;
     let movido = false;
@@ -193,6 +285,7 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
       if (!movido) return;
       contenedor.scrollLeft = scrollInicioX - dx;
       contenedor.scrollTop = scrollInicioY - dy;
+      actualizarMinimapa();
     });
 
     const terminarArrastre = () => {
@@ -231,7 +324,6 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     const altoBase = Number(zoom.dataset.alto);
     const ESCALA_MIN = 0.25;
     const ESCALA_MAX = 2.5;
-    let escala = 1;
 
     // El envoltorio (`zoom`) fija el tamaño de la caja — es lo que el
     // contenedor usa para calcular su área de scroll. El lienzo de dentro,
@@ -261,6 +353,7 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
 
         contenedor.scrollLeft = puntoX * escala - (e.clientX - rect.left);
         contenedor.scrollTop = puntoY * escala - (e.clientY - rect.top);
+        actualizarMinimapa();
       },
       { passive: false },
     );
@@ -284,6 +377,147 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
       boton.textContent = abierto ? "▾ ocultar" : `▸ ${boton.dataset.cantidad} hijos`;
     });
   });
+
+  // Minimapa (§5): sincroniza el rectángulo con cualquier forma de moverse
+  // por el lienzo (rueda del sistema, teclado, no solo arrastre/zoom
+  // propios) y permite saltar directamente a un punto con un clic.
+  if (contenedor && minimapa && viewportMini) {
+    contenedor.addEventListener("scroll", actualizarMinimapa);
+    window.addEventListener("resize", actualizarMinimapa);
+    actualizarMinimapa();
+
+    minimapa.addEventListener("click", (e) => {
+      const rect = minimapa.getBoundingClientRect();
+      const anchoTotal = Number(minimapa.dataset.ancho);
+      const altoTotal = Number(minimapa.dataset.alto);
+      // Regla de tres directa: el minimapa mide exactamente `anchoTotal ×
+      // escalaMini` (ver el cálculo de `minimapaAncho` en el frontmatter),
+      // sin letterboxing que compensar.
+      const puntoX = ((e.clientX - rect.left) / rect.width) * anchoTotal;
+      const puntoY = ((e.clientY - rect.top) / rect.height) * altoTotal;
+      contenedor.scrollLeft = puntoX * escala - contenedor.clientWidth / 2;
+      contenedor.scrollTop = puntoY * escala - contenedor.clientHeight / 2;
+      actualizarMinimapa();
+    });
+  }
+
+  // Foco al pasar el ratón (§5): resalta ascendientes + descendientes del
+  // nodo bajo el cursor, atenuando el resto. La adyacencia sale del propio
+  // HTML (`data-desde`/`data-hasta` de cada tramo) en vez de recibir un
+  // grafo aparte — es la misma información que ya hacía falta para
+  // dibujar las líneas, no hay razón para duplicarla en otro formato.
+  // Solo ratón, igual que el arrastre: en táctil el nodo ya navega al
+  // tocarlo, no hay "hover" que aprovechar aparte del propio clic.
+  const lienzoEl = document.querySelector<HTMLElement>(".lienzo");
+  if (lienzoEl) {
+    const arriba = new Map<string, string[]>();
+    const abajo = new Map<string, string[]>();
+    const agregar = (mapa: Map<string, string[]>, clave: string, valor: string) => {
+      const lista = mapa.get(clave);
+      if (lista) lista.push(valor);
+      else mapa.set(clave, [valor]);
+    };
+    lienzoEl.querySelectorAll<SVGLineElement>("polyline[data-desde]").forEach((p) => {
+      const { desde, hasta } = p.dataset;
+      if (!desde || !hasta) return;
+      agregar(abajo, desde, hasta);
+      agregar(arriba, hasta, desde);
+    });
+
+    const alcance = (id: string): Set<string> => {
+      const vistos = new Set([id]);
+      for (const mapa of [arriba, abajo]) {
+        let frontera = [id];
+        while (frontera.length > 0) {
+          const siguiente: string[] = [];
+          for (const actual of frontera) {
+            for (const vecino of mapa.get(actual) ?? []) {
+              if (!vistos.has(vecino)) {
+                vistos.add(vecino);
+                siguiente.push(vecino);
+              }
+            }
+          }
+          frontera = siguiente;
+        }
+      }
+      return vistos;
+    };
+
+    const marcables = lienzoEl.querySelectorAll<HTMLElement>("[data-id]");
+    const tramos = lienzoEl.querySelectorAll<SVGLineElement>("polyline[data-desde]");
+
+    const limpiarFoco = () => {
+      lienzoEl.classList.remove("con-foco");
+      marcables.forEach((el) => el.classList.remove("en-foco"));
+      tramos.forEach((p) => p.classList.remove("en-foco"));
+    };
+
+    marcables.forEach((el) => {
+      const id = el.dataset.id;
+      if (!id) return;
+      el.addEventListener("mouseenter", (e) => {
+        // Sin activar mientras se arrastra (el cursor pasa por encima de
+        // nodos de camino, no es una selección deliberada) ni en
+        // dispositivos sin puntero real de precisión.
+        if (e.buttons & 1) return;
+        if (matchMedia("(hover: none)").matches) return;
+        const alcanzados = alcance(id);
+        lienzoEl.classList.add("con-foco");
+        marcables.forEach((n) => n.classList.toggle("en-foco", alcanzados.has(n.dataset.id ?? "")));
+        tramos.forEach((p) => {
+          const { desde = "", hasta = "" } = p.dataset;
+          p.classList.toggle("en-foco", alcanzados.has(desde) && alcanzados.has(hasta));
+        });
+      });
+      el.addEventListener("mouseleave", limpiarFoco);
+    });
+  }
+
+  // Filtro por generación (§5): cada franja empieza visible, y cada botón
+  // apaga/enciende su propia fila — nodos, uniones y el marcador de grupo
+  // colapsado comparten el mismo `data-fila` (ver la plantilla), así que
+  // basta un selector de atributo para alcanzarlos a todos.
+  const botonesGeneracion = document.querySelectorAll<HTMLButtonElement>(".filtro-generacion");
+  if (botonesGeneracion.length > 0) {
+    const elementosConFila = document.querySelectorAll<HTMLElement>("[data-fila]");
+    const tramosConFila = document.querySelectorAll<SVGLineElement>("polyline[data-desde]");
+    const filaPorId = new Map<string, string>();
+    elementosConFila.forEach((el) => {
+      if (el.dataset.id && el.dataset.fila !== undefined) {
+        filaPorId.set(el.dataset.id, el.dataset.fila);
+      }
+    });
+
+    const ocultas = new Set<string>();
+    const aplicarFiltro = () => {
+      elementosConFila.forEach((el) => {
+        if (el.dataset.fila !== undefined) {
+          el.classList.toggle("fila-oculta", ocultas.has(el.dataset.fila));
+        }
+      });
+      tramosConFila.forEach((p) => {
+        const filaDesde = filaPorId.get(p.dataset.desde ?? "");
+        const filaHasta = filaPorId.get(p.dataset.hasta ?? "");
+        const oculto =
+          (filaDesde !== undefined && ocultas.has(filaDesde)) ||
+          (filaHasta !== undefined && ocultas.has(filaHasta));
+        p.classList.toggle("fila-oculta", oculto);
+      });
+    };
+
+    botonesGeneracion.forEach((boton) => {
+      boton.addEventListener("click", () => {
+        const fila = boton.dataset.filaToggle;
+        if (fila === undefined) return;
+        const encender = !boton.classList.contains("activo");
+        boton.classList.toggle("activo", encender);
+        if (encender) ocultas.delete(fila);
+        else ocultas.add(fila);
+        aplicarFiltro();
+      });
+    });
+  }
 </script>
 
 <style>
@@ -317,6 +551,33 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     color: var(--color-texto-muted);
   }
 
+  /* Filtro por generación (§5): mismo idioma de pill que el marcador de
+     grupo colapsado (§4), para que se lean como controles del mismo tipo. */
+  .filtro-generaciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 0;
+    padding: 0 20px;
+  }
+
+  .filtro-generacion {
+    padding: 3px 9px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-texto-muted);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .filtro-generacion.activo {
+    border-color: var(--color-acento);
+    background: var(--color-tarjeta-fondo);
+    color: var(--color-texto);
+  }
+
   .leyenda li {
     display: flex;
     align-items: center;
@@ -328,6 +589,13 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     height: 10px;
     border-radius: 999px;
     display: inline-block;
+  }
+
+  /* Ancla del minimapa (§5): posicionado absoluto sobre el propio
+     `.lienzo-scroll`, no dentro de él — así se queda fijo en la esquina en
+     vez de desplazarse con el contenido. */
+  .lienzo-envoltorio {
+    position: relative;
   }
 
   .lienzo-scroll {
@@ -391,6 +659,28 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
     fill: var(--color-fondo-pantalla);
     stroke: var(--color-tarjeta-borde);
     stroke-width: 1.5;
+  }
+
+  /* Filtro por generación (§5): oculta nodo/unión/marcador de grupo y
+     cualquier tramo que toque esa fila — ver el `<script>`. */
+  .fila-oculta {
+    display: none;
+  }
+
+  /* Foco al pasar el ratón (§5): con `.con-foco` activo en `.lienzo`, todo
+     lo que no forme parte de la rama bajo el cursor se atenúa en vez de
+     ocultarse — mantiene la vista de conjunto (el propio punto del doc). */
+  .lienzo.con-foco .nodo,
+  .lienzo.con-foco .enlaces circle.union,
+  .lienzo.con-foco .enlaces polyline[data-desde] {
+    opacity: 0.18;
+    transition: opacity 0.15s;
+  }
+
+  .lienzo.con-foco .nodo.en-foco,
+  .lienzo.con-foco .enlaces circle.union.en-foco,
+  .lienzo.con-foco .enlaces polyline[data-desde].en-foco {
+    opacity: 1;
   }
 
   .nodo {
@@ -475,6 +765,48 @@ const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
   .grupo-colapsado:hover {
     border-color: var(--color-acento);
     color: var(--color-texto);
+  }
+
+  /* Minimapa (§5): overlay fijo en la esquina, no dentro del scroll — ver
+     `.lienzo-envoltorio`. El tamaño real (ancho/alto en px) lo fija el
+     propio servidor conservando la proporción del lienzo (`minimapaAncho`
+     en el frontmatter), así el clic→posición del script es una regla de
+     tres directa sin letterboxing de `preserveAspectRatio` que compensar. */
+  .minimapa {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    border: 1px solid var(--color-tarjeta-borde);
+    border-radius: var(--radio);
+    background: var(--color-fondo-pantalla);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .minimapa svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .minimapa-nodo {
+    fill: var(--color-texto-muted);
+  }
+
+  #minimapa-viewport {
+    fill: var(--color-acento);
+    fill-opacity: 0.15;
+    stroke: var(--color-acento);
+    stroke-width: 6;
+  }
+
+  /* El táctil ya desplaza el lienzo grande arrastrando con el dedo — un
+     recuadro de 170px que además compite por el gesto no ayuda ahí. */
+  @media (max-width: 640px) {
+    .minimapa {
+      display: none;
+    }
   }
 
   .sin-datos {

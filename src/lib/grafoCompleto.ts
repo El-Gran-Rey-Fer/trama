@@ -990,7 +990,13 @@ export async function construirVistaFamilia(
 		grupos.push(...agruparRamasDensas(nodos, enlaces));
 	}
 
-	const filas = [...new Set(nodos.map((n) => n.y))].sort((a, b) => a - b);
+	// Incluye la `y` de las uniones, no solo la de `nodos`: en el caso raro
+	// donde una unión cae en una capa sin ningún nodo real propio (§5, filtro
+	// por generación — necesita una fila válida para cada elemento que
+	// filtra), su fila no debe quedar fuera de esta lista.
+	const filas = [
+		...new Set([...nodos.map((n) => n.y), ...uniones.map((u) => u.y)]),
+	].sort((a, b) => a - b);
 
 	return {
 		familia,
