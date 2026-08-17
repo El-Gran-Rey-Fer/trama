@@ -2,8 +2,12 @@ id: tetis-titanide
 nombre: Tetis
 tipo: titan
 genero: femenino
-resumen: Titánide esposa de Océano y madre de los ríos y de las ninfas de las aguas dulces.
+resumen: Titánide esposa de Océano y madre de los ríos y de las ninfas de las
+  aguas dulces.
 relaciones:
   - tipo: consorte_de
     destino: oceano
     fuente: teogonia
+  - tipo: cria_a
+    destino: hera
+    fuente: iliada

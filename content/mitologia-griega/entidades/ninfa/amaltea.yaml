@@ -3,8 +3,10 @@ tipo: ninfa
 nombre: Amaltea
 genero: femenino
 resumen: >
-  Nodriza que amamanta a Zeus recién nacido en Creta; unas versiones la
-  cuentan como cabra y otras como la ninfa que cuidaba de la cabra.
+  Nodriza que amamanta a Zeus recién nacido en Creta; unas versiones la cuentan
+  como cabra y otras como la ninfa que cuidaba de la cabra.
 relaciones:
   - tipo: amamanta_a
+    destino: zeus
+  - tipo: cria_a
     destino: zeus

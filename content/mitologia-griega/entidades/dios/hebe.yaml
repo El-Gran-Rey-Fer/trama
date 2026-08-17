@@ -1,0 +1,13 @@
+id: hebe
+tipo: dios
+nombre: Hebe
+genero: femenino
+resumen: Diosa de la juventud, hija legítima de Zeus y Hera, que escancia el
+  néctar a los dioses antes de casarse con Heracles.
+relaciones:
+  - tipo: hijo_de
+    destino: zeus
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: hera
+    fuente: teogonia

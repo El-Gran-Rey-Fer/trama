@@ -61,4 +61,10 @@ relaciones:
   - tipo: mata_a
     destino: humanidad
     fuente: metamorfosis
+  - tipo: engana_a
+    destino: hera
+    fuente: descripcion-de-grecia
+  - tipo: castiga_a
+    destino: hera
+    fuente: iliada
 retrato: jupiter-louvre-lens

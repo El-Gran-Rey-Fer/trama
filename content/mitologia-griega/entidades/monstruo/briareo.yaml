@@ -1,0 +1,15 @@
+id: briareo
+tipo: monstruo
+nombre: Briareo
+resumen: Hecatónquiro de cien brazos que se sienta junto a Zeus y disuade a los
+  dioses de encadenarlo, llamado Egeón por los hombres.
+relaciones:
+  - tipo: hijo_de
+    destino: urano
+    fuente: teogonia
+  - tipo: hijo_de
+    destino: gea
+    fuente: teogonia
+  - tipo: auxilia_a
+    destino: zeus
+    fuente: iliada

@@ -148,6 +148,11 @@ export interface GrupoColapsado {
 	x: number;
 	y: number;
 	cantidad: number;
+	// Nodo o unión del que cuelga el grupo — para que el filtro por tipo
+	// (§5) pueda ocultar también el marcador cuando lo que lo origina
+	// desaparece (si no, quedaría flotando sin ningún trazo que lo
+	// justifique).
+	origen: string;
 }
 
 export interface VistaGrafo {
@@ -840,6 +845,7 @@ function agruparRamasDensas(
 			x: posiciones.reduce((s, n) => s + n.x, 0) / posiciones.length,
 			y: posiciones.reduce((s, n) => s + n.y, 0) / posiciones.length,
 			cantidad: posiciones.length,
+			origen,
 		});
 	}
 	return grupos;

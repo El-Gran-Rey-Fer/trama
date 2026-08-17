@@ -2,9 +2,10 @@ id: crono
 tipo: titan
 nombre: Crono
 resumen: >
-  Titán que depuso a su padre Urano y gobernó hasta ser derrocado por su hijo Zeus.
+  Titán que depuso a su padre Urano y gobernó hasta ser derrocado por su hijo
+  Zeus.
 generacion: 2
-epitetos: [El de mente retorcida]
+epitetos: [ El de mente retorcida ]
 atributos:
   simbolo: la hoz
   dominio: el tiempo del reinado dorado; confundido después con Cronos, el tiempo
@@ -39,3 +40,5 @@ relaciones:
     destino: poseidon
   - tipo: devora_a
     destino: piedra-de-delfos
+  - tipo: conspira_contra
+    destino: urano

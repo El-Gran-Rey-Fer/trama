@@ -5,8 +5,8 @@ genero: femenino
 resumen: >
   Diosa del matrimonio y la familia, esposa y hermana de Zeus.
 generacion: 3
-etiquetas: [olimpico]
-epitetos: [Reina de los dioses]
+etiquetas: [ olimpico ]
+epitetos: [ Reina de los dioses ]
 atributos:
   simbolo: el pavo real
   dominio: el matrimonio y la familia
@@ -20,3 +20,6 @@ relaciones:
     fuente: teogonia
   - tipo: habita
     destino: monte-olimpo
+  - tipo: conspira_contra
+    destino: zeus
+    fuente: iliada

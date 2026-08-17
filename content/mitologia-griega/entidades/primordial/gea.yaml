@@ -68,3 +68,5 @@ relaciones:
     destino: ticio
     fuente: odisea
     principal: false
+  - tipo: conspira_contra
+    destino: urano

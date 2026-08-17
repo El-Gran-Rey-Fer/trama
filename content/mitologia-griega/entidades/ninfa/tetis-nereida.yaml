@@ -1,0 +1,10 @@
+id: tetis-nereida
+tipo: ninfa
+nombre: Tetis
+genero: femenino
+resumen: Nereida que salva el trono de Zeus llamando a un aliado suyo, y madre
+  de Aquiles.
+relaciones:
+  - tipo: auxilia_a
+    destino: zeus
+    fuente: iliada

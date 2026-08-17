@@ -274,8 +274,38 @@ relaciones:
     pregunta_inversa: "¿Quién abre {destino}?"
   abierto_por:
     inversa: abre_a
+  auxilia_a:
+    inversa: auxiliado_por
+    pregunta: "¿A quién auxilia {origen}?"
+    pregunta_inversa: "¿Quién es auxiliado por {destino}?"
+    conjunto: true
+    conjunto_inversa: true
+  auxiliado_por:
+    inversa: auxilia_a
+  conspira_contra:
+    inversa: sufre_conjura_de
+    pregunta: "¿Contra quién conspira {origen}?"
+    pregunta_inversa: "¿Quién conspira contra {destino}?"
+    conjunto: dinamico 
+    conjunto_inversa: true 
+    pertenencia_inversa: "¿Conspira {candidato} contra {destino}?"
+  sufre_conjura_de:
+    inversa: conspira_contra
+
+  cria_a:
+    inversa: criado_por
+    pregunta: "¿A quién cría {origen}?"
+    pregunta_inversa: "¿Quién cría a {destino}?"
+    conjunto: true 
+    conjunto_inversa: true 
+    pertenencia: "¿Cría {origen} a {candidato}?"
+    pertenencia_inversa: "¿Cría {candidato} a {destino}?"
+  criado_por:
+    inversa: cria_a
 
 fuentes:
+  aitia: { autor: "Calímaco", obra: "Aitia" }
+  biblioteca-historica: { autor: "Diodoro Sículo", obra: "Biblioteca histórica" }
   teogonia: { autor: "Hesíodo", obra: "Teogonía" }
   trabajos-y-dias: { autor: "Hesíodo", obra: "Trabajos y días", siglo: -8 }
   iliada: { autor: "Homero", obra: "Ilíada" }

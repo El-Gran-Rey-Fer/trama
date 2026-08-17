@@ -19,3 +19,6 @@ relaciones:
   - tipo: rapta_a
     destino: pelope
     fuente: olimpicas
+  - tipo: conspira_contra
+    destino: zeus
+    fuente: iliada
