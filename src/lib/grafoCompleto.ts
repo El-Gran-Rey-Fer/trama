@@ -717,10 +717,33 @@ async function calcularPosiciones(
 			.filter((p): p is { x: number; y: number } => p !== undefined);
 		if (posPadres.length !== 2) continue; // dato incompleto: se deja como salió de elk
 
+		const salientes = enlaces
+			.map((e, i) => ({ e, i }))
+			.filter(({ e }) => e.desde === u.id);
+		const posHijos = salientes
+			.map(({ e }) => posiciones.get(e.hasta))
+			.filter((p): p is { x: number; y: number } => p !== undefined);
+
 		const posUnion = posiciones.get(u.id);
 		if (!posUnion) continue;
+
 		const nuevaX = (posPadres[0].x + posPadres[1].x) / 2;
-		const nuevaPos = { x: nuevaX, y: posUnion.y };
+		// La `y` NO es la que le tocó a elk: elk obliga a la unión a caer
+		// justo una capa por debajo de sus progenitores (una arista no
+		// puede quedarse en la misma capa que su origen), aunque los hijos
+		// reales estén más lejos todavía por otro motivo — por ejemplo, si
+		// alcanzan esa generación por un camino más largo en otra rama del
+		// árbol, y su capa (Kahn, camino más largo desde la raíz) sale más
+		// profunda que "progenitores + 1". El resultado era una unión
+		// pegada a los progenitores con un tramo larguísimo y
+		// desproporcionado hasta los hijos, en vez de a medio camino entre
+		// ambas filas — se recalcula aquí con las posiciones reales.
+		const yPadres = (posPadres[0].y + posPadres[1].y) / 2;
+		const yHijos =
+			posHijos.length > 0
+				? posHijos.reduce((s, p) => s + p.y, 0) / posHijos.length
+				: posUnion.y;
+		const nuevaPos = { x: nuevaX, y: (yPadres + yHijos) / 2 };
 		posiciones.set(u.id, nuevaPos);
 
 		for (const { e, i } of entrantes) {
@@ -728,14 +751,11 @@ async function calcularPosiciones(
 			if (!posPadre) continue;
 			quiebres.set(i, codo(posPadre, nuevaPos));
 		}
-		enlaces
-			.map((e, i) => ({ e, i }))
-			.filter(({ e }) => e.desde === u.id)
-			.forEach(({ e, i }) => {
-				const posHijo = posiciones.get(e.hasta);
-				if (!posHijo) return;
-				quiebres.set(i, codo(nuevaPos, posHijo));
-			});
+		for (const { e, i } of salientes) {
+			const posHijo = posiciones.get(e.hasta);
+			if (!posHijo) continue;
+			quiebres.set(i, codo(nuevaPos, posHijo));
+		}
 	}
 
 	return { posiciones, quiebres };
