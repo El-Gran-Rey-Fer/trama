@@ -742,14 +742,13 @@ async function calcularPosiciones(
 		salientesPorUnion.set(u.id, salientes);
 
 		const nuevaX = (posPadres[0].x + posPadres[1].x) / 2;
-		// Caso normal (los dos progenitores comparten fila, p. ej. Crono y
-		// Rea): la unión es el punto de "pareja" y vive en esa misma fila —
-		// el tramo hasta los hijos lo recorre aparte el quiebro unión→hijo.
+		// Caso normal (los dos progenitores comparten fila): la unión es el
+		// punto de "pareja" y vive en esa misma fila — el tramo hasta los
+		// hijos lo recorre aparte el quiebro unión→hijo.
 		//
 		// Caso asimétrico (un progenitor llega por un camino mucho más
-		// largo que el otro — p. ej. Ío frente a Zeus, o Libia frente a
-		// Poseidón — y quedan a varias generaciones de distancia), O el
-		// punto "en la fila de los progenitores" coincide por casualidad
+		// largo que el otro y quedan a varias generaciones de distancia), O
+		// el punto "en la fila de los progenitores" coincide por casualidad
 		// con un nodo real ajeno (dos hermanos contiguos, un tercero puede
 		// acabar exactamente en medio): no hay una fila segura única, así
 		// que la unión se reparte a medio camino entre progenitores E
