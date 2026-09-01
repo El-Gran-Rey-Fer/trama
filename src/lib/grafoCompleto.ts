@@ -740,16 +740,26 @@ async function calcularPosiciones(
 		return false;
 	};
 
-	const FRACCIONES_CODO = [0.5, 0.25, 0.75, 0.1, 0.9];
+	// Progenitor→unión: quiebro pegado a `a` (fracción 0 = la propia altura
+	// del progenitor) — así la línea sale en horizontal desde el lado de la
+	// casilla que mira al otro progenitor, no hacia abajo, y las dos se
+	// encuentran justo encima de la unión antes de bajar juntas (el propio
+	// dibujo de pareja que pide el doc). El resto de fracciones son solo
+	// red de seguridad si esa altura exacta choca con algo.
+	const FRACCIONES_ENTRADA = [0, 0.15, 0.3, 0.5, 0.7, 0.85, 0.95, 0.05];
+	// Unión→hijo: quiebro a mitad de camino por defecto — reparte varios
+	// hijos en un tronco común (mergeEdges) sin sesgar hacia ninguno.
+	const FRACCIONES_SALIDA = [0.5, 0.25, 0.75, 0.1, 0.9, 0.05, 0.95];
 
 	const codo = (
 		idA: string,
 		a: { x: number; y: number },
 		idB: string,
 		b: { x: number; y: number },
+		fracciones: number[] = FRACCIONES_SALIDA,
 	): { x: number; y: number }[] => {
 		if (a.x === b.x) return [];
-		for (const f of FRACCIONES_CODO) {
+		for (const f of fracciones) {
 			const y = a.y + (b.y - a.y) * f;
 			const puntos = [
 				{ x: a.x, y },
@@ -826,7 +836,10 @@ async function calcularPosiciones(
 		for (const { e, i } of entrantes) {
 			const posPadre = posiciones.get(e.desde);
 			if (!posPadre) continue;
-			quiebres.set(i, codo(e.desde, posPadre, u.id, nuevaPos));
+			quiebres.set(
+				i,
+				codo(e.desde, posPadre, u.id, nuevaPos, FRACCIONES_ENTRADA),
+			);
 		}
 		for (const { e, i } of salientes) {
 			const posHijo = posiciones.get(e.hasta);
