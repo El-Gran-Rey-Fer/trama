@@ -740,13 +740,13 @@ async function calcularPosiciones(
 		return false;
 	};
 
-	// Progenitor→unión: quiebro pegado a `a` (fracción 0 = la propia altura
-	// del progenitor) — así la línea sale en horizontal desde el lado de la
-	// casilla que mira al otro progenitor, no hacia abajo, y las dos se
-	// encuentran justo encima de la unión antes de bajar juntas (el propio
-	// dibujo de pareja que pide el doc). El resto de fracciones son solo
-	// red de seguridad si esa altura exacta choca con algo.
-	const FRACCIONES_ENTRADA = [0, 0.15, 0.3, 0.5, 0.7, 0.85, 0.95, 0.05];
+	// Progenitor→unión: quiebro pegado a `b` (fracción 1 = la propia altura
+	// de la unión) — cada progenitor baja hasta la fila de la unión y ahí
+	// gira en horizontal hasta encontrarse con el otro justo en el punto de
+	// unión, sin tramo vertical extra después del cruce (el cruce YA es el
+	// punto). El resto de fracciones son solo red de seguridad si esa altura
+	// exacta choca con algo.
+	const FRACCIONES_ENTRADA = [1, 0.85, 0.7, 0.5, 0.3, 0.15, 0.05, 0.95];
 	// Unión→hijo: quiebro a mitad de camino por defecto — reparte varios
 	// hijos en un tronco común (mergeEdges) sin sesgar hacia ninguno.
 	const FRACCIONES_SALIDA = [0.5, 0.25, 0.75, 0.1, 0.9, 0.05, 0.95];
