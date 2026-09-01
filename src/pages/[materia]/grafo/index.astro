@@ -34,10 +34,20 @@ const retratos = new Map(
 const posiciones = new Map(
 	[...(vista?.nodos ?? []), ...(vista?.uniones ?? [])].map((n) => [n.id, n]),
 );
-// Aparte de `posiciones` (nodos + uniones mezclados): para saber si el
-// destino de un enlace es un hijo colapsado (§4) hace falta el tipo
+// Aparte de `posiciones` (nodos + uniones mezclados): para saber si un
+// extremo de un enlace es un nodo colapsado (§4) hace falta el tipo
 // concreto de `NodoGrafo` — las uniones no tienen `colapsadoEn`.
 const nodosPorId = new Map((vista?.nodos ?? []).map((n) => [n.id, n]));
+// Grupo de colapso de un enlace o de una unión: el de cualquiera de sus dos
+// extremos/progenitores que esté colapsado (normalmente comparten el mismo
+// grupo, por ser hermanos colapsados juntos). Antes solo se miraba el
+// destino del enlace — funcionaba para unión→hijo (el hijo es el destino),
+// pero no para progenitor→unión (el destino ahí es la propia unión, que
+// nunca tiene `colapsadoEn`), así que un progenitor colapsado dejaba su
+// línea hacia la unión — y la propia unión, que tampoco se ocultaba nunca —
+// flotando sin el nodo que las origina.
+const grupoDe = (idA: string, idB: string): string | undefined =>
+	nodosPorId.get(idA)?.colapsadoEn ?? nodosPorId.get(idB)?.colapsadoEn;
 // Un hub duplicado (§3) mete varias copias en `vista.nodos` — para el
 // contador de la cabecera se cuentan entidades reales, no copias.
 const totalEntidades = new Set((vista?.nodos ?? []).map((n) => n.idEntidad))
@@ -134,7 +144,7 @@ const radioMiniNodo = Math.max(1.5, 2.2 / escalaMini);
                 const puntos = [desde, ...(enlace.puntos ?? []), hasta]
                   .map((p) => `${p.x},${p.y}`)
                   .join(" ");
-                const grupo = nodosPorId.get(enlace.hasta)?.colapsadoEn;
+                const grupo = grupoDe(enlace.desde, enlace.hasta);
                 return (
                   <polyline
                     points={puntos}
@@ -147,17 +157,22 @@ const radioMiniNodo = Math.max(1.5, 2.2 / escalaMini);
                   />
                 );
               })}
-              {vista.uniones.map((u) => (
-                <circle
-                  class="union"
-                  cx={u.x}
-                  cy={u.y}
-                  r="3.5"
-                  data-id={u.id}
-                  data-tipo-a={tipoPorIdEntidad.get(u.padres[0])}
-                  data-tipo-b={tipoPorIdEntidad.get(u.padres[1])}
-                />
-              ))}
+              {vista.uniones.map((u) => {
+                const grupo = grupoDe(u.padres[0], u.padres[1]);
+                return (
+                  <circle
+                    class="union"
+                    cx={u.x}
+                    cy={u.y}
+                    r="3.5"
+                    data-id={u.id}
+                    data-tipo-a={tipoPorIdEntidad.get(u.padres[0])}
+                    data-tipo-b={tipoPorIdEntidad.get(u.padres[1])}
+                    data-grupo={grupo}
+                    style={grupo ? "display:none" : undefined}
+                  />
+                );
+              })}
             </svg>
             {vista.nodos.map((n) => (
               <div
@@ -204,6 +219,7 @@ const radioMiniNodo = Math.max(1.5, 2.2 / escalaMini);
               const desde = posiciones.get(enlace.desde);
               const hasta = posiciones.get(enlace.hasta);
               if (!desde || !hasta) return null;
+              const grupo = grupoDe(enlace.desde, enlace.hasta);
               return (
                 <line
                   x1={desde.x}
@@ -214,11 +230,21 @@ const radioMiniNodo = Math.max(1.5, 2.2 / escalaMini);
                   stroke-width={grosorMiniLinea}
                   data-desde={enlace.desde}
                   data-hasta={enlace.hasta}
+                  data-grupo={grupo}
+                  style={grupo ? "display:none" : undefined}
                 />
               );
             })}
             {vista.nodos.map((n) => (
-              <circle class="minimapa-nodo" cx={n.x} cy={n.y} r={radioMiniNodo} data-id={n.id} />
+              <circle
+                class="minimapa-nodo"
+                cx={n.x}
+                cy={n.y}
+                r={radioMiniNodo}
+                data-id={n.id}
+                data-grupo={n.colapsadoEn}
+                style={n.colapsadoEn ? "display:none" : undefined}
+              />
             ))}
             <rect id="minimapa-viewport" x="0" y="0" width={vista.ancho} height={vista.alto} />
           </svg>
