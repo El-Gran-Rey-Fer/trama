@@ -791,7 +791,50 @@ async function calcularPosiciones(
 		if (p) entidadesReales.push({ id: u.id, x: p.x, y: p.y });
 	}
 
-	const cruzaAlguna = (
+	// Cada tramo evita, además de nodos y uniones, las líneas ya trazadas
+	// antes que él — es lo que de verdad reduce los cruces con el tamaño
+	// del grafo en vez de solo evitar colisiones con cajas: dos tramos sin
+	// ningún nodo de por medio pueden cruzarse igualmente si nadie los
+	// compara entre sí. Se rellena según se van resolviendo los tramos
+	// (pasadas 2 y 3, de arriba abajo) — un tramo solo puede evitar a los
+	// que ya existen cuando le toca su turno, no a los que vienen después.
+	const lineasFinalizadas: {
+		desde: string;
+		hasta: string;
+		puntos: { x: number; y: number }[];
+	}[] = [];
+
+	// Cruce estricto de dos segmentos — no cuenta un simple roce en un
+	// extremo compartido (los productos de orientación con el mismo signo
+	// en ambos lados significan "toca pero no cruza" o "no toca").
+	const segmentosCruzan = (
+		p1: { x: number; y: number },
+		p2: { x: number; y: number },
+		p3: { x: number; y: number },
+		p4: { x: number; y: number },
+	): boolean => {
+		const orientacion = (
+			p: { x: number; y: number },
+			q: { x: number; y: number },
+			r: { x: number; y: number },
+		) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+		const d1 = orientacion(p3, p4, p1);
+		const d2 = orientacion(p3, p4, p2);
+		const d3 = orientacion(p1, p2, p3);
+		const d4 = orientacion(p1, p2, p4);
+		return (
+			((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+			((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
+		);
+	};
+
+	// Chocar con una CAJA (nodo o unión) es mucho peor que cruzarse con otra
+	// LÍNEA: una línea atravesando una casilla se lee como un error de
+	// dibujo, dos líneas cruzándose es un rasgo normal de cualquier árbol
+	// con bastantes miembros (el propio elk minimiza cruces, no los
+	// elimina). Se comprueban por separado para poder priorizar: evitar
+	// cajas siempre, evitar líneas cuando se pueda.
+	const chocaConCaja = (
 		idA: string,
 		idB: string,
 		puntos: { x: number; y: number }[],
@@ -817,6 +860,48 @@ async function calcularPosiciones(
 		}
 		return false;
 	};
+
+	const chocaConLinea = (
+		idA: string,
+		idB: string,
+		puntos: { x: number; y: number }[],
+	): boolean => {
+		for (const linea of lineasFinalizadas) {
+			// Compartir un extremo (dos hijos de la misma unión, dos tramos
+			// del mismo nodo) es normal — ahí se tocan a propósito, no es
+			// un cruce que evitar.
+			if (
+				linea.desde === idA ||
+				linea.desde === idB ||
+				linea.hasta === idA ||
+				linea.hasta === idB
+			) {
+				continue;
+			}
+			for (let i = 0; i < puntos.length - 1; i++) {
+				for (let j = 0; j < linea.puntos.length - 1; j++) {
+					if (
+						segmentosCruzan(
+							puntos[i],
+							puntos[i + 1],
+							linea.puntos[j],
+							linea.puntos[j + 1],
+						)
+					) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	};
+
+	const cruzaAlguna = (
+		idA: string,
+		idB: string,
+		puntos: { x: number; y: number }[],
+	): boolean =>
+		chocaConCaja(idA, idB, puntos) || chocaConLinea(idA, idB, puntos);
 
 	// Todas las fracciones posibles (0, 0.05, ..., 1), priorizadas por
 	// cercanía a la fracción "natural" de cada tipo de tramo — la primera
@@ -859,21 +944,28 @@ async function calcularPosiciones(
 	// propia, solo hace falta ALGÚN quiebro ortogonal libre.
 	const PREFERIDA_DIRECTA = 0.5;
 
-	const buscarQuiebro = (
+	// Prueba fracciones simples y, si ninguna sirve, la rejilla de desvíos
+	// — contra el criterio de colisión que se le pase (con o sin líneas).
+	// `undefined` si nada de esta ronda sirve.
+	const intentarCandidatos = (
 		idA: string,
 		a: { x: number; y: number },
 		idB: string,
 		b: { x: number; y: number },
 		preferida: number,
-	): { x: number; y: number }[] => {
-		if (a.x === b.x) return [];
+		choca: (
+			idA: string,
+			idB: string,
+			puntos: { x: number; y: number }[],
+		) => boolean,
+	): { x: number; y: number }[] | undefined => {
 		for (const f of fraccionesPriorizadas(preferida)) {
 			const y = a.y + (b.y - a.y) * f;
 			const puntos = [
 				{ x: a.x, y },
 				{ x: b.x, y },
 			];
-			if (!cruzaAlguna(idA, idB, [a, ...puntos, b])) return puntos;
+			if (!choca(idA, idB, [a, ...puntos, b])) return puntos;
 		}
 		const columnasDesvio = [
 			...DESVIOS_FX_ENTRE.map((fx) => a.x + (b.x - a.x) * fx),
@@ -890,17 +982,31 @@ async function calcularPosiciones(
 					{ x: midX, y: y2 },
 					{ x: b.x, y: y2 },
 				];
-				if (!cruzaAlguna(idA, idB, [a, ...puntos, b])) return puntos;
+				if (!choca(idA, idB, [a, ...puntos, b])) return puntos;
 			}
 		}
-		// Zona ya muy congestionada incluso con la rejilla de desvíos — no
-		// hay más que probar, se deja el quiebro simple en la fracción
-		// preferida.
-		const y = a.y + (b.y - a.y) * preferida;
-		return [
-			{ x: a.x, y },
-			{ x: b.x, y },
-		];
+		return undefined;
+	};
+
+	const buscarQuiebro = (
+		idA: string,
+		a: { x: number; y: number },
+		idB: string,
+		b: { x: number; y: number },
+		preferida: number,
+	): { x: number; y: number }[] => {
+		if (a.x === b.x) return [];
+		// Primero se intenta evitar cajas Y líneas a la vez. Si la zona está
+		// tan saturada que ni la rejilla de desvíos encuentra hueco, se
+		// repite la búsqueda evitando solo cajas — un cruce de línea de más
+		// se nota menos que un tramo atravesando una casilla real.
+		return (
+			intentarCandidatos(idA, a, idB, b, preferida, cruzaAlguna) ??
+			intentarCandidatos(idA, a, idB, b, preferida, chocaConCaja) ?? [
+				{ x: a.x, y: a.y + (b.y - a.y) * preferida },
+				{ x: b.x, y: a.y + (b.y - a.y) * preferida },
+			]
+		);
 	};
 
 	// Unión→hijos: todos los hermanos deberían girar a la MISMA altura — es
@@ -934,9 +1040,15 @@ async function calcularPosiciones(
 	};
 
 	// PASADA 2: con las 20 uniones ya en su posición final, se traza cada
-	// tramo progenitor↔unión↔hijo.
+	// tramo progenitor↔unión↔hijo. De arriba abajo (por la fila de cada
+	// unión): así una unión más profunda evita como obstáculo a las líneas
+	// de una más alta, que es como se lee el árbol — no tendría sentido al
+	// revés, evitando algo que ni existe todavía.
+	const unionesOrdenadas = [...uniones].sort(
+		(a, b) => (posiciones.get(a.id)?.y ?? 0) - (posiciones.get(b.id)?.y ?? 0),
+	);
 	const indicesDeUniones = new Set<number>();
-	for (const u of uniones) {
+	for (const u of unionesOrdenadas) {
 		const nuevaPos = posiciones.get(u.id);
 		const entrantes = entrantesPorUnion.get(u.id);
 		const salientes = salientesPorUnion.get(u.id);
@@ -945,10 +1057,19 @@ async function calcularPosiciones(
 		for (const { e, i } of entrantes) {
 			const posPadre = posiciones.get(e.desde);
 			if (!posPadre) continue;
-			quiebres.set(
-				i,
-				buscarQuiebro(e.desde, posPadre, u.id, nuevaPos, PREFERIDA_ENTRADA),
+			const quiebro = buscarQuiebro(
+				e.desde,
+				posPadre,
+				u.id,
+				nuevaPos,
+				PREFERIDA_ENTRADA,
 			);
+			quiebres.set(i, quiebro);
+			lineasFinalizadas.push({
+				desde: e.desde,
+				hasta: u.id,
+				puntos: [posPadre, ...quiebro, nuevaPos],
+			});
 			indicesDeUniones.add(i);
 		}
 
@@ -961,20 +1082,30 @@ async function calcularPosiciones(
 		const alturaCompartida = buscarAlturaCompartida(u.id, nuevaPos, hijos);
 
 		for (const { e, i, pos: posHijo } of hijos) {
+			let quiebro: { x: number; y: number }[];
 			if (alturaCompartida !== undefined && nuevaPos.x !== posHijo.x) {
 				const y = nuevaPos.y + (posHijo.y - nuevaPos.y) * alturaCompartida;
-				quiebres.set(i, [
+				quiebro = [
 					{ x: nuevaPos.x, y },
 					{ x: posHijo.x, y },
-				]);
+				];
 			} else if (alturaCompartida === undefined) {
-				quiebres.set(
-					i,
-					buscarQuiebro(u.id, nuevaPos, e.hasta, posHijo, PREFERIDA_SALIDA),
+				quiebro = buscarQuiebro(
+					u.id,
+					nuevaPos,
+					e.hasta,
+					posHijo,
+					PREFERIDA_SALIDA,
 				);
 			} else {
-				quiebres.set(i, []); // union.x === posHijo.x: recto, sin quiebro
+				quiebro = []; // union.x === posHijo.x: recto, sin quiebro
 			}
+			quiebres.set(i, quiebro);
+			lineasFinalizadas.push({
+				desde: u.id,
+				hasta: e.hasta,
+				puntos: [nuevaPos, ...quiebro, posHijo],
+			});
 			indicesDeUniones.add(i);
 		}
 	}
@@ -984,19 +1115,38 @@ async function calcularPosiciones(
 	// una unión iba a aparecer más tarde en su camino (pasada 1) — se
 	// revalida contra el resultado final y solo se recalcula si hace
 	// falta, para no tocar el trazado de elk (normalmente mejor que el
-	// quiebro local de aquí) donde ya sigue siendo válido.
-	for (let i = 0; i < enlaces.length; i++) {
-		if (indicesDeUniones.has(i)) continue;
+	// quiebro local de aquí) donde ya sigue siendo válido. También de arriba
+	// abajo, por la misma razón que la pasada 2 — y cada tramo, se toque o
+	// no, entra en `lineasFinalizadas` para que el siguiente (más abajo)
+	// pueda evitarlo.
+	const indicesDirectos = [...enlaces.keys()]
+		.filter((i) => !indicesDeUniones.has(i))
+		.sort((a, b) => {
+			const ya = Math.min(
+				posiciones.get(enlaces[a].desde)?.y ?? 0,
+				posiciones.get(enlaces[a].hasta)?.y ?? 0,
+			);
+			const yb = Math.min(
+				posiciones.get(enlaces[b].desde)?.y ?? 0,
+				posiciones.get(enlaces[b].hasta)?.y ?? 0,
+			);
+			return ya - yb;
+		});
+	for (const i of indicesDirectos) {
 		const e = enlaces[i];
 		const posA = posiciones.get(e.desde);
 		const posB = posiciones.get(e.hasta);
 		if (!posA || !posB) continue;
-		const actuales = quiebres.get(i) ?? [];
-		if (!cruzaAlguna(e.desde, e.hasta, [posA, ...actuales, posB])) continue;
-		quiebres.set(
-			i,
-			buscarQuiebro(e.desde, posA, e.hasta, posB, PREFERIDA_DIRECTA),
-		);
+		let puntos = quiebres.get(i) ?? [];
+		if (cruzaAlguna(e.desde, e.hasta, [posA, ...puntos, posB])) {
+			puntos = buscarQuiebro(e.desde, posA, e.hasta, posB, PREFERIDA_DIRECTA);
+			quiebres.set(i, puntos);
+		}
+		lineasFinalizadas.push({
+			desde: e.desde,
+			hasta: e.hasta,
+			puntos: [posA, ...puntos, posB],
+		});
 	}
 
 	return { posiciones, quiebres };
