@@ -691,27 +691,106 @@ async function calcularPosiciones(
 	// nodo más. El resultado: la unión sale alineada bajo cualquiera de los
 	// dos (el que le da un tramo recto a elk), nunca entre ambos, y de paso
 	// puede acabar en la misma columna que la descendencia de un progenitor
-	// sin relación, como si fuera hermana suya. Se recoloca aquí a mano, en
-	// el punto medio de sus dos progenitores, y se reconstruye en ángulo
-	// recto el tramo de cada progenitor a la unión y de la unión a cada
-	// hijo — más simple y más predecible que perseguir a elk con opciones
-	// de layout para un caso tan local (siempre un salto de una capa).
+	// sin relación, como si fuera hermana suya. Se recoloca aquí a mano.
 	//
-	// El quiebro (dónde gira de vertical a horizontal) no es un punto fijo:
-	// se prueban varias alturas y se usa la primera que no atraviese
-	// ninguna entidad real ajena a este tramo. Hace falta porque la unión
-	// puede caer varias generaciones por debajo de sus progenitores (ver
-	// más abajo), así que ni "el punto medio" ni "cerca del origen" son
-	// seguros en todos los casos — cualquiera de los dos puede coincidir
-	// con una fila real intermedia sin relación y el tramo la atraviesa, el
-	// mismo bug de "líneas por encima de nodos" que ya se arregló una vez
-	// para elk, reaparecido aquí porque este quiebro no lo calcula elk.
-	const entidadesReales = nodoPlan
+	// Posiciones de los nodos reales (elk ya las coloca de una vez, no
+	// cambian en el resto de esta función) — hace falta tenerlas ANTES de
+	// la pasada 1 para poder comprobar si el punto "en la fila de los
+	// progenitores" de una unión simétrica coincide por casualidad con la
+	// posición exacta de un nodo real ajeno (dos hermanos, mismo hueco
+	// entre generaciones, un tercer hermano puede acabar justo en medio).
+	const entidadesRealesSolas = nodoPlan
 		.map((n) => {
 			const p = posiciones.get(n.id);
 			return p ? { id: n.id, x: p.x, y: p.y } : undefined;
 		})
 		.filter((n): n is { id: string; x: number; y: number } => n !== undefined);
+	const coincideConNodoReal = (
+		x: number,
+		y: number,
+		idsExcluidos: string[],
+	): boolean => {
+		const mitad = TAMANO_NODO_ELK / 2;
+		return entidadesRealesSolas.some(
+			(n) =>
+				!idsExcluidos.includes(n.id) &&
+				Math.abs(n.x - x) < mitad &&
+				Math.abs(n.y - y) < mitad,
+		);
+	};
+
+	// PASADA 1: solo posiciones. Ninguna unión traza su línea todavía —
+	// hace falta que las 20 tengan ya su posición FINAL antes de trazar
+	// nada, porque el trazado (pasada 2) evita otras uniones además de
+	// nodos reales, y una unión trazada antes de tiempo no existiría como
+	// obstáculo para las líneas de otra procesada después.
+	const entrantesPorUnion = new Map<string, { e: EnlaceGrafo; i: number }[]>();
+	const salientesPorUnion = new Map<string, { e: EnlaceGrafo; i: number }[]>();
+	for (const u of uniones) {
+		const entrantes = enlaces
+			.map((e, i) => ({ e, i }))
+			.filter(({ e }) => e.hasta === u.id);
+		const posPadres = entrantes
+			.map(({ e }) => posiciones.get(e.desde))
+			.filter((p): p is { x: number; y: number } => p !== undefined);
+		if (posPadres.length !== 2) continue; // dato incompleto: se deja como salió de elk
+
+		const salientes = enlaces
+			.map((e, i) => ({ e, i }))
+			.filter(({ e }) => e.desde === u.id);
+		entrantesPorUnion.set(u.id, entrantes);
+		salientesPorUnion.set(u.id, salientes);
+
+		const nuevaX = (posPadres[0].x + posPadres[1].x) / 2;
+		// Caso normal (los dos progenitores comparten fila, p. ej. Crono y
+		// Rea): la unión es el punto de "pareja" y vive en esa misma fila —
+		// el tramo hasta los hijos lo recorre aparte el quiebro unión→hijo.
+		//
+		// Caso asimétrico (un progenitor llega por un camino mucho más
+		// largo que el otro — p. ej. Ío frente a Zeus, o Libia frente a
+		// Poseidón — y quedan a varias generaciones de distancia), O el
+		// punto "en la fila de los progenitores" coincide por casualidad
+		// con un nodo real ajeno (dos hermanos contiguos, un tercero puede
+		// acabar exactamente en medio): no hay una fila segura única, así
+		// que la unión se reparte a medio camino entre progenitores E
+		// hijos, para no aterrizar encima de algo que no le corresponde.
+		const yPadres = (posPadres[0].y + posPadres[1].y) / 2;
+		let nuevaY = yPadres;
+		const idsPadres = entrantes.map(({ e }) => e.desde);
+		if (
+			posPadres[0].y !== posPadres[1].y ||
+			coincideConNodoReal(nuevaX, yPadres, idsPadres)
+		) {
+			const posHijos = salientes
+				.map(({ e }) => posiciones.get(e.hasta))
+				.filter((p): p is { x: number; y: number } => p !== undefined);
+			const posUnionOriginal = posiciones.get(u.id);
+			const yHijos =
+				posHijos.length > 0
+					? posHijos.reduce((s, p) => s + p.y, 0) / posHijos.length
+					: (posUnionOriginal?.y ?? yPadres);
+			nuevaY = (yPadres + yHijos) / 2;
+		}
+		posiciones.set(u.id, { x: nuevaX, y: nuevaY });
+	}
+
+	// El resto de esta función traza líneas: cada quiebro (dónde gira de
+	// vertical a horizontal) no es un punto fijo, se prueban varias alturas
+	// y — si ninguna sirve — varios desvíos por una tercera columna, hasta
+	// dar con la primera que no atraviese ninguna entidad ajena (nodo real
+	// o unión). Hace falta variar tanto porque la unión puede caer varias
+	// generaciones por debajo de sus progenitores como porque, aunque no
+	// caiga, ahora vive en la misma fila que sus progenitores — una fila ya
+	// ocupada por hermanos, otras uniones y las líneas que elk trazó para
+	// ellos sin saber que esta unión iba a aparecer ahí después.
+	const entidadesReales = [...entidadesRealesSolas];
+	// Las uniones se añaden aparte porque su posición final (arriba) no
+	// existe hasta que termina la pasada 1 — a diferencia de los nodos
+	// reales, que elk ya coloca de una vez.
+	for (const u of uniones) {
+		const p = posiciones.get(u.id);
+		if (p) entidadesReales.push({ id: u.id, x: p.x, y: p.y });
+	}
 
 	const cruzaAlguna = (
 		idA: string,
@@ -740,26 +819,56 @@ async function calcularPosiciones(
 		return false;
 	};
 
-	// Progenitor→unión: quiebro pegado a `b` (fracción 1 = la propia altura
-	// de la unión) — cada progenitor baja hasta la fila de la unión y ahí
-	// gira en horizontal hasta encontrarse con el otro justo en el punto de
-	// unión, sin tramo vertical extra después del cruce (el cruce YA es el
-	// punto). El resto de fracciones son solo red de seguridad si esa altura
-	// exacta choca con algo.
-	const FRACCIONES_ENTRADA = [1, 0.85, 0.7, 0.5, 0.3, 0.15, 0.05, 0.95];
-	// Unión→hijo: quiebro a mitad de camino por defecto — reparte varios
-	// hijos en un tronco común (mergeEdges) sin sesgar hacia ninguno.
-	const FRACCIONES_SALIDA = [0.5, 0.25, 0.75, 0.1, 0.9, 0.05, 0.95];
+	// Todas las fracciones posibles (0, 0.05, ..., 1), priorizadas por
+	// cercanía a la fracción "natural" de cada tipo de tramo — la primera
+	// que no choque con nada se usa tal cual, así que en el caso normal
+	// (sin obstáculos) el resultado es idéntico al de antes.
+	const TODAS_FRACCIONES = Array.from({ length: 21 }, (_, i) => i / 20);
+	const fraccionesPriorizadas = (preferida: number): number[] =>
+		[...TODAS_FRACCIONES].sort(
+			(a, b) => Math.abs(a - preferida) - Math.abs(b - preferida),
+		);
+	// Rejilla de desvíos por una tercera columna (para cuando ningún
+	// quiebro simple queda libre — pasa cuando la columna de `a` y la de
+	// `b` tienen cada una algo ajeno en la fila intermedia, y cambiar solo
+	// la altura del quiebro no ayuda porque la última vertical siempre
+	// acaba cruzando alguna de las dos columnas). Varía tanto la columna
+	// del desvío como la altura de sus dos quiebros, no un único valor fijo.
+	//
+	// La columna del desvío no se limita al tramo entre `a` y `b`: cuando
+	// los dos extremos están cerca entre sí (p. ej. dos hermanos contiguos),
+	// todo el hueco entre ambos puede estar ocupado por un tercero — hace
+	// falta poder salir por fuera, a la izquierda de `a` o a la derecha de
+	// `b`, no solo pasar por en medio.
+	const DESVIOS_FX_ENTRE = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8];
+	const MARGEN_ESCAPE = ESPACIO_HERMANOS + TAMANO_NODO_ELK;
+	const DESVIOS_Y = [
+		[0.15, 0.85],
+		[0.25, 0.75],
+		[0.1, 0.9],
+		[0.35, 0.65],
+	] as const;
 
-	const codo = (
+	// Progenitor→unión: preferida 1 (a la altura de la unión) — cada
+	// progenitor baja hasta la fila de la unión y ahí gira, encontrándose
+	// con el otro justo en el punto (ver más arriba).
+	const PREFERIDA_ENTRADA = 1;
+	// Unión→hijo: preferida 0.5 — reparte varios hijos en un tronco común
+	// (mergeEdges) sin sesgar hacia ninguno.
+	const PREFERIDA_SALIDA = 0.5;
+	// Tramo directo (sin unión de por medio): sin preferencia de forma
+	// propia, solo hace falta ALGÚN quiebro ortogonal libre.
+	const PREFERIDA_DIRECTA = 0.5;
+
+	const buscarQuiebro = (
 		idA: string,
 		a: { x: number; y: number },
 		idB: string,
 		b: { x: number; y: number },
-		fracciones: number[] = FRACCIONES_SALIDA,
+		preferida: number,
 	): { x: number; y: number }[] => {
 		if (a.x === b.x) return [];
-		for (const f of fracciones) {
+		for (const f of fraccionesPriorizadas(preferida)) {
 			const y = a.y + (b.y - a.y) * f;
 			const puntos = [
 				{ x: a.x, y },
@@ -767,85 +876,81 @@ async function calcularPosiciones(
 			];
 			if (!cruzaAlguna(idA, idB, [a, ...puntos, b])) return puntos;
 		}
-		// Ningún quiebro simple queda libre: pasa cuando la columna de `a`
-		// Y la de `b` tienen cada una algo ajeno exactamente en la fila
-		// intermedia — cambiar solo la altura del quiebro no ayuda, la
-		// última vertical siempre acaba cruzando alguna de las dos columnas.
-		// Se prueba un desvío por una tercera columna (el punto medio entre
-		// `a` y `b`, que no es ninguna de las dos con el problema) con el
-		// quiebro pegado a cada extremo.
-		for (const fx of [0.5, 0.35, 0.65]) {
-			const midX = a.x + (b.x - a.x) * fx;
-			const y1 = a.y + (b.y - a.y) * 0.15;
-			const y2 = a.y + (b.y - a.y) * 0.85;
-			const puntos = [
-				{ x: a.x, y: y1 },
-				{ x: midX, y: y1 },
-				{ x: midX, y: y2 },
-				{ x: b.x, y: y2 },
-			];
-			if (!cruzaAlguna(idA, idB, [a, ...puntos, b])) return puntos;
+		const columnasDesvio = [
+			...DESVIOS_FX_ENTRE.map((fx) => a.x + (b.x - a.x) * fx),
+			Math.min(a.x, b.x) - MARGEN_ESCAPE,
+			Math.max(a.x, b.x) + MARGEN_ESCAPE,
+		];
+		for (const [fy1, fy2] of DESVIOS_Y) {
+			for (const midX of columnasDesvio) {
+				const y1 = a.y + (b.y - a.y) * fy1;
+				const y2 = a.y + (b.y - a.y) * fy2;
+				const puntos = [
+					{ x: a.x, y: y1 },
+					{ x: midX, y: y1 },
+					{ x: midX, y: y2 },
+					{ x: b.x, y: y2 },
+				];
+				if (!cruzaAlguna(idA, idB, [a, ...puntos, b])) return puntos;
+			}
 		}
-		// Zona ya muy congestionada incluso con el desvío — no hay más que
-		// probar, se deja el quiebro simple del medio.
-		const y = a.y + (b.y - a.y) * 0.5;
+		// Zona ya muy congestionada incluso con la rejilla de desvíos — no
+		// hay más que probar, se deja el quiebro simple en la fracción
+		// preferida.
+		const y = a.y + (b.y - a.y) * preferida;
 		return [
 			{ x: a.x, y },
 			{ x: b.x, y },
 		];
 	};
 
+	// PASADA 2: con las 20 uniones ya en su posición final, se traza cada
+	// tramo progenitor↔unión↔hijo.
+	const indicesDeUniones = new Set<number>();
 	for (const u of uniones) {
-		const entrantes = enlaces
-			.map((e, i) => ({ e, i }))
-			.filter(({ e }) => e.hasta === u.id);
-		const posPadres = entrantes
-			.map(({ e }) => posiciones.get(e.desde))
-			.filter((p): p is { x: number; y: number } => p !== undefined);
-		if (posPadres.length !== 2) continue; // dato incompleto: se deja como salió de elk
-
-		const salientes = enlaces
-			.map((e, i) => ({ e, i }))
-			.filter(({ e }) => e.desde === u.id);
-		const posHijos = salientes
-			.map(({ e }) => posiciones.get(e.hasta))
-			.filter((p): p is { x: number; y: number } => p !== undefined);
-
-		const posUnion = posiciones.get(u.id);
-		if (!posUnion) continue;
-
-		const nuevaX = (posPadres[0].x + posPadres[1].x) / 2;
-		// La `y` NO es la que le tocó a elk: elk obliga a la unión a caer
-		// justo una capa por debajo de sus progenitores (una arista no
-		// puede quedarse en la misma capa que su origen), aunque los hijos
-		// reales estén más lejos todavía por otro motivo — por ejemplo, si
-		// alcanzan esa generación por un camino más largo en otra rama del
-		// árbol, y su capa (Kahn, camino más largo desde la raíz) sale más
-		// profunda que "progenitores + 1". El resultado era una unión
-		// pegada a los progenitores con un tramo larguísimo y
-		// desproporcionado hasta los hijos, en vez de a medio camino entre
-		// ambas filas — se recalcula aquí con las posiciones reales.
-		const yPadres = (posPadres[0].y + posPadres[1].y) / 2;
-		const yHijos =
-			posHijos.length > 0
-				? posHijos.reduce((s, p) => s + p.y, 0) / posHijos.length
-				: posUnion.y;
-		const nuevaPos = { x: nuevaX, y: (yPadres + yHijos) / 2 };
-		posiciones.set(u.id, nuevaPos);
+		const nuevaPos = posiciones.get(u.id);
+		const entrantes = entrantesPorUnion.get(u.id);
+		const salientes = salientesPorUnion.get(u.id);
+		if (!nuevaPos || !entrantes || !salientes) continue;
 
 		for (const { e, i } of entrantes) {
 			const posPadre = posiciones.get(e.desde);
 			if (!posPadre) continue;
 			quiebres.set(
 				i,
-				codo(e.desde, posPadre, u.id, nuevaPos, FRACCIONES_ENTRADA),
+				buscarQuiebro(e.desde, posPadre, u.id, nuevaPos, PREFERIDA_ENTRADA),
 			);
+			indicesDeUniones.add(i);
 		}
 		for (const { e, i } of salientes) {
 			const posHijo = posiciones.get(e.hasta);
 			if (!posHijo) continue;
-			quiebres.set(i, codo(u.id, nuevaPos, e.hasta, posHijo));
+			quiebres.set(
+				i,
+				buscarQuiebro(u.id, nuevaPos, e.hasta, posHijo, PREFERIDA_SALIDA),
+			);
+			indicesDeUniones.add(i);
 		}
+	}
+
+	// PASADA 3: el resto de tramos (sin ninguna unión de por medio) ya
+	// traía un trazado válido de elk, pero elk lo calculó sin saber que
+	// una unión iba a aparecer más tarde en su camino (pasada 1) — se
+	// revalida contra el resultado final y solo se recalcula si hace
+	// falta, para no tocar el trazado de elk (normalmente mejor que el
+	// quiebro local de aquí) donde ya sigue siendo válido.
+	for (let i = 0; i < enlaces.length; i++) {
+		if (indicesDeUniones.has(i)) continue;
+		const e = enlaces[i];
+		const posA = posiciones.get(e.desde);
+		const posB = posiciones.get(e.hasta);
+		if (!posA || !posB) continue;
+		const actuales = quiebres.get(i) ?? [];
+		if (!cruzaAlguna(e.desde, e.hasta, [posA, ...actuales, posB])) continue;
+		quiebres.set(
+			i,
+			buscarQuiebro(e.desde, posA, e.hasta, posB, PREFERIDA_DIRECTA),
+		);
 	}
 
 	return { posiciones, quiebres };
