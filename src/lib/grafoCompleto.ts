@@ -903,6 +903,36 @@ async function calcularPosiciones(
 		];
 	};
 
+	// Unión→hijos: todos los hermanos deberían girar a la MISMA altura — es
+	// lo que hace que se lean como un tronco común en vez de una fila de
+	// líneas sueltas cada una entrando por su cuenta. Buscar el quiebro de
+	// cada hijo por separado (como con `buscarQuiebro`) puede dar una altura
+	// distinta a cada uno si alguno choca con algo que los demás no tienen
+	// en su camino — technically sin colisión, pero rompe la formación y el
+	// hermano que giró distinto parece "salido de la nada", cruzando por una
+	// zona que no es la suya. Se prueba primero una altura ÚNICA que sirva
+	// para todos a la vez; solo si ninguna sirve para el grupo completo se
+	// cae al caso por hijo (mejor una formación rota que una colisión real).
+	const buscarAlturaCompartida = (
+		idUnion: string,
+		union: { x: number; y: number },
+		hijos: { id: string; pos: { x: number; y: number } }[],
+	): number | undefined => {
+		for (const f of fraccionesPriorizadas(PREFERIDA_SALIDA)) {
+			const sirveParaTodos = hijos.every(({ id, pos }) => {
+				if (union.x === pos.x) return true; // sin quiebro, no puede chocar
+				const y = union.y + (pos.y - union.y) * f;
+				const puntos = [
+					{ x: union.x, y },
+					{ x: pos.x, y },
+				];
+				return !cruzaAlguna(idUnion, id, [union, ...puntos, pos]);
+			});
+			if (sirveParaTodos) return f;
+		}
+		return undefined;
+	};
+
 	// PASADA 2: con las 20 uniones ya en su posición final, se traza cada
 	// tramo progenitor↔unión↔hijo.
 	const indicesDeUniones = new Set<number>();
@@ -921,13 +951,30 @@ async function calcularPosiciones(
 			);
 			indicesDeUniones.add(i);
 		}
-		for (const { e, i } of salientes) {
-			const posHijo = posiciones.get(e.hasta);
-			if (!posHijo) continue;
-			quiebres.set(
-				i,
-				buscarQuiebro(u.id, nuevaPos, e.hasta, posHijo, PREFERIDA_SALIDA),
-			);
+
+		const hijos = salientes
+			.map(({ e, i }) => {
+				const posHijo = posiciones.get(e.hasta);
+				return posHijo ? { e, i, id: e.hasta, pos: posHijo } : undefined;
+			})
+			.filter((h): h is NonNullable<typeof h> => h !== undefined);
+		const alturaCompartida = buscarAlturaCompartida(u.id, nuevaPos, hijos);
+
+		for (const { e, i, pos: posHijo } of hijos) {
+			if (alturaCompartida !== undefined && nuevaPos.x !== posHijo.x) {
+				const y = nuevaPos.y + (posHijo.y - nuevaPos.y) * alturaCompartida;
+				quiebres.set(i, [
+					{ x: nuevaPos.x, y },
+					{ x: posHijo.x, y },
+				]);
+			} else if (alturaCompartida === undefined) {
+				quiebres.set(
+					i,
+					buscarQuiebro(u.id, nuevaPos, e.hasta, posHijo, PREFERIDA_SALIDA),
+				);
+			} else {
+				quiebres.set(i, []); // union.x === posHijo.x: recto, sin quiebro
+			}
 			indicesDeUniones.add(i);
 		}
 	}
