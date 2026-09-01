@@ -696,12 +696,89 @@ async function calcularPosiciones(
 	// recto el tramo de cada progenitor a la unión y de la unión a cada
 	// hijo — más simple y más predecible que perseguir a elk con opciones
 	// de layout para un caso tan local (siempre un salto de una capa).
+	//
+	// El quiebro (dónde gira de vertical a horizontal) no es un punto fijo:
+	// se prueban varias alturas y se usa la primera que no atraviese
+	// ninguna entidad real ajena a este tramo. Hace falta porque la unión
+	// puede caer varias generaciones por debajo de sus progenitores (ver
+	// más abajo), así que ni "el punto medio" ni "cerca del origen" son
+	// seguros en todos los casos — cualquiera de los dos puede coincidir
+	// con una fila real intermedia sin relación y el tramo la atraviesa, el
+	// mismo bug de "líneas por encima de nodos" que ya se arregló una vez
+	// para elk, reaparecido aquí porque este quiebro no lo calcula elk.
+	const entidadesReales = nodoPlan
+		.map((n) => {
+			const p = posiciones.get(n.id);
+			return p ? { id: n.id, x: p.x, y: p.y } : undefined;
+		})
+		.filter((n): n is { id: string; x: number; y: number } => n !== undefined);
+
+	const cruzaAlguna = (
+		idA: string,
+		idB: string,
+		puntos: { x: number; y: number }[],
+	): boolean => {
+		const mitad = TAMANO_NODO_ELK / 2;
+		for (const caja of entidadesReales) {
+			if (caja.id === idA || caja.id === idB) continue;
+			for (let i = 0; i < puntos.length - 1; i++) {
+				const [p1, p2] = [puntos[i], puntos[i + 1]];
+				const minX = Math.min(p1.x, p2.x);
+				const maxX = Math.max(p1.x, p2.x);
+				const minY = Math.min(p1.y, p2.y);
+				const maxY = Math.max(p1.y, p2.y);
+				if (
+					maxX >= caja.x - mitad &&
+					minX <= caja.x + mitad &&
+					maxY >= caja.y - mitad &&
+					minY <= caja.y + mitad
+				) {
+					return true;
+				}
+			}
+		}
+		return false;
+	};
+
+	const FRACCIONES_CODO = [0.5, 0.25, 0.75, 0.1, 0.9];
+
 	const codo = (
+		idA: string,
 		a: { x: number; y: number },
+		idB: string,
 		b: { x: number; y: number },
 	): { x: number; y: number }[] => {
 		if (a.x === b.x) return [];
-		const y = a.y + (b.y - a.y) / 2;
+		for (const f of FRACCIONES_CODO) {
+			const y = a.y + (b.y - a.y) * f;
+			const puntos = [
+				{ x: a.x, y },
+				{ x: b.x, y },
+			];
+			if (!cruzaAlguna(idA, idB, [a, ...puntos, b])) return puntos;
+		}
+		// Ningún quiebro simple queda libre: pasa cuando la columna de `a`
+		// Y la de `b` tienen cada una algo ajeno exactamente en la fila
+		// intermedia — cambiar solo la altura del quiebro no ayuda, la
+		// última vertical siempre acaba cruzando alguna de las dos columnas.
+		// Se prueba un desvío por una tercera columna (el punto medio entre
+		// `a` y `b`, que no es ninguna de las dos con el problema) con el
+		// quiebro pegado a cada extremo.
+		for (const fx of [0.5, 0.35, 0.65]) {
+			const midX = a.x + (b.x - a.x) * fx;
+			const y1 = a.y + (b.y - a.y) * 0.15;
+			const y2 = a.y + (b.y - a.y) * 0.85;
+			const puntos = [
+				{ x: a.x, y: y1 },
+				{ x: midX, y: y1 },
+				{ x: midX, y: y2 },
+				{ x: b.x, y: y2 },
+			];
+			if (!cruzaAlguna(idA, idB, [a, ...puntos, b])) return puntos;
+		}
+		// Zona ya muy congestionada incluso con el desvío — no hay más que
+		// probar, se deja el quiebro simple del medio.
+		const y = a.y + (b.y - a.y) * 0.5;
 		return [
 			{ x: a.x, y },
 			{ x: b.x, y },
@@ -749,12 +826,12 @@ async function calcularPosiciones(
 		for (const { e, i } of entrantes) {
 			const posPadre = posiciones.get(e.desde);
 			if (!posPadre) continue;
-			quiebres.set(i, codo(posPadre, nuevaPos));
+			quiebres.set(i, codo(e.desde, posPadre, u.id, nuevaPos));
 		}
 		for (const { e, i } of salientes) {
 			const posHijo = posiciones.get(e.hasta);
 			if (!posHijo) continue;
-			quiebres.set(i, codo(nuevaPos, posHijo));
+			quiebres.set(i, codo(u.id, nuevaPos, e.hasta, posHijo));
 		}
 	}
 
